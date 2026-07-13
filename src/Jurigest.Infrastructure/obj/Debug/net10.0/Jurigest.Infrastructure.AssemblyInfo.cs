@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jurigest.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+27ec9ef6cfb5a7073cf5a2a5ea502065103b17db")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8d5494e5c8a985688d6a56d6bb8528cc5b3248fc")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jurigest.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jurigest.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
