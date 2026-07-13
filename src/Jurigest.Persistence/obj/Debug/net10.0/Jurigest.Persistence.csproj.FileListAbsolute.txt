@@ -1,0 +1,12 @@
+C:\jurigestenterprise\src\Jurigest.Persistence\bin\Debug\net10.0\Jurigest.Persistence.deps.json
+C:\jurigestenterprise\src\Jurigest.Persistence\bin\Debug\net10.0\Jurigest.Persistence.dll
+C:\jurigestenterprise\src\Jurigest.Persistence\bin\Debug\net10.0\Jurigest.Persistence.pdb
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.GeneratedMSBuildEditorConfig.editorconfig
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.AssemblyInfoInputs.cache
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.AssemblyInfo.cs
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.csproj.CoreCompileInputs.cache
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.sourcelink.json
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.dll
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\refint\Jurigest.Persistence.dll
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\Jurigest.Persistence.pdb
+C:\jurigestenterprise\src\Jurigest.Persistence\obj\Debug\net10.0\ref\Jurigest.Persistence.dll

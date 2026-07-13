@@ -1,0 +1,10 @@
+<api type="debug" assembly-name="Jurigest.Mobile" mvid="b78f0991dbcd4a939f3d226965c64c41">
+  <java-to-managed>
+    <entry java-name="crc64671eeb6c02ae99d1/MainActivity" managed-name="Jurigest.Mobile.MainActivity, Jurigest.Mobile" managed-type-token-id="33554441" />
+    <entry java-name="crc64671eeb6c02ae99d1/MainApplication" managed-name="Jurigest.Mobile.MainApplication, Jurigest.Mobile" managed-type-token-id="33554442" />
+  </java-to-managed>
+  <managed-to-java>
+    <entry java-name="crc64671eeb6c02ae99d1/MainActivity" managed-name="Jurigest.Mobile.MainActivity, Jurigest.Mobile" managed-type-token-id="33554441" />
+    <entry java-name="crc64671eeb6c02ae99d1/MainApplication" managed-name="Jurigest.Mobile.MainApplication, Jurigest.Mobile" managed-type-token-id="33554442" />
+  </managed-to-java>
+</api>

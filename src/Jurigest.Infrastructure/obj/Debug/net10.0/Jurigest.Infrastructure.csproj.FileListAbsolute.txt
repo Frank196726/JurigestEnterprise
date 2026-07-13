@@ -1,0 +1,12 @@
+C:\jurigestenterprise\src\Jurigest.Infrastructure\bin\Debug\net10.0\Jurigest.Infrastructure.deps.json
+C:\jurigestenterprise\src\Jurigest.Infrastructure\bin\Debug\net10.0\Jurigest.Infrastructure.dll
+C:\jurigestenterprise\src\Jurigest.Infrastructure\bin\Debug\net10.0\Jurigest.Infrastructure.pdb
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.GeneratedMSBuildEditorConfig.editorconfig
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.AssemblyInfoInputs.cache
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.AssemblyInfo.cs
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.csproj.CoreCompileInputs.cache
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.sourcelink.json
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.dll
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\refint\Jurigest.Infrastructure.dll
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\Jurigest.Infrastructure.pdb
+C:\jurigestenterprise\src\Jurigest.Infrastructure\obj\Debug\net10.0\ref\Jurigest.Infrastructure.dll

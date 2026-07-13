@@ -1,0 +1,12 @@
+C:\jurigestenterprise\src\Jurigest.Application\bin\Debug\net10.0\Jurigest.Application.deps.json
+C:\jurigestenterprise\src\Jurigest.Application\bin\Debug\net10.0\Jurigest.Application.dll
+C:\jurigestenterprise\src\Jurigest.Application\bin\Debug\net10.0\Jurigest.Application.pdb
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.GeneratedMSBuildEditorConfig.editorconfig
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.AssemblyInfoInputs.cache
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.AssemblyInfo.cs
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.csproj.CoreCompileInputs.cache
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.sourcelink.json
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.dll
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\refint\Jurigest.Application.dll
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\Jurigest.Application.pdb
+C:\jurigestenterprise\src\Jurigest.Application\obj\Debug\net10.0\ref\Jurigest.Application.dll

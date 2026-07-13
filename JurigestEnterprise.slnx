@@ -1,0 +1,16 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Jurigest.API/Jurigest.API.csproj" />
+    <Project Path="src/Jurigest.Application/Jurigest.Application.csproj" />
+    <Project Path="src/Jurigest.Domain/Jurigest.Domain.csproj" />
+    <Project Path="src/Jurigest.Infrastructure/Jurigest.Infrastructure.csproj" />
+    <Project Path="src/Jurigest.Mobile/Jurigest.Mobile.csproj" />
+    <Project Path="src/Jurigest.Persistence/Jurigest.Persistence.csproj" />
+    <Project Path="src/Jurigest.Web/Jurigest.Web.csproj" />
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Jurigest.Application.Tests/Jurigest.Application.Tests.csproj" />
+    <Project Path="test/Jurigest.Domain.Tests/Jurigest.Domain.Tests.csproj" />
+    <Project Path="test/Jurigest.Integration.Tests/Jurigest.Integration.Tests.csproj" />
+  </Folder>
+</Solution>

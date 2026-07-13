@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "dgSpecHash": "Yyha/tv0LSI=",
+  "success": true,
+  "projectFilePath": "C:\\jurigestenterprise\\src\\Jurigest.Web\\Jurigest.Web.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\TECH\\.nuget\\packages\\microsoft.aspnetcore.app.internal.assets\\10.0.9\\microsoft.aspnetcore.app.internal.assets.10.0.9.nupkg.sha512"
+  ],
+  "logs": []
+}
