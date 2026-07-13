@@ -10,6 +10,7 @@ public sealed class Encargo : AggregateRoot<Guid>
 {
     private readonly List<Diligencia> _diligencias = [];
     private readonly List<Documento> _documentos = [];
+    private readonly List<Resolucion> _resoluciones = [];
 
     private Encargo()
     {
@@ -34,6 +35,9 @@ public sealed class Encargo : AggregateRoot<Guid>
     public IReadOnlyCollection<Documento> Documentos
         => _documentos.AsReadOnly();
 
+    public IReadOnlyCollection<Resolucion> Resoluciones
+        => _resoluciones.AsReadOnly();
+
     public void AgregarDiligencia(Diligencia diligencia)
     {
         ArgumentNullException.ThrowIfNull(diligencia);
@@ -55,5 +59,16 @@ public sealed class Encargo : AggregateRoot<Guid>
     public void CambiarEstado(EstadoEncargo nuevoEstado)
     {
         Estado = nuevoEstado;
+    }
+
+    public void RegistrarResolucion(Resolucion resolucion)
+    {
+        ArgumentNullException.ThrowIfNull(resolucion);
+
+        if (_resoluciones.Any(r => r.Id == resolucion.Id))
+            throw new InvalidOperationException(
+                "La resolución ya fue registrada.");
+
+        _resoluciones.Add(resolucion);
     }
 }
