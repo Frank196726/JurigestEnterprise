@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jurigest.Domain")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+88bff1ac7923f2074fa922aab72574a99316536e")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+27ec9ef6cfb5a7073cf5a2a5ea502065103b17db")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jurigest.Domain")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jurigest.Domain")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
