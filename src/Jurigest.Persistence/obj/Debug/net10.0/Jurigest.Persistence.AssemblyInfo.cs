@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jurigest.Persistence")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+8d5494e5c8a985688d6a56d6bb8528cc5b3248fc")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+34b5a28f67e6caede00567194e289469193b968f")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jurigest.Persistence")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jurigest.Persistence")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

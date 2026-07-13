@@ -22,4 +22,16 @@ public sealed class Causa : AggregateRoot<Guid>
     /// Rol Único del Tribunal (RIT).
     /// </summary>
     public RolUnicoTribunal Rit { get; private set; }
+    public Encargo? Encargo { get; private set; }
+
+public void AsignarEncargo(Encargo encargo)
+{
+    ArgumentNullException.ThrowIfNull(encargo);
+
+    if (Encargo is not null)
+        throw new InvalidOperationException("La causa ya posee un encargo.");
+
+    Encargo = encargo;
+}
+    
 }
