@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Jurigest.Mobile")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+34b5a28f67e6caede00567194e289469193b968f")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0+5130e66bb9ecbe842edeafbbf183a022944f61db")]
 [assembly: System.Reflection.AssemblyProductAttribute("Jurigest.Mobile")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Jurigest.Mobile")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
