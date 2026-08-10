@@ -27,6 +27,9 @@ public sealed class Encargo : AggregateRoot<Guid>
 
     public string Descripcion { get; private set; }
 
+    // Clave foránea hacia Causa
+    public Guid CausaId { get; private set; }
+
     public EstadoEncargo Estado { get; private set; }
 
     public IReadOnlyCollection<Diligencia> Diligencias

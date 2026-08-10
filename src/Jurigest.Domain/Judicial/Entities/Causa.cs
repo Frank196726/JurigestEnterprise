@@ -1,37 +1,105 @@
-using Jurigest.Domain.Kernel.Common;
-using Jurigest.Domain.Judicial.ValueObjects;
+using Jurigest.Domain.Judicial.Enums;
 
 namespace Jurigest.Domain.Judicial.Entities;
 
-/// <summary>
-/// Representa una causa judicial.
-/// </summary>
-public sealed class Causa : AggregateRoot<Guid>
+public sealed class Causa
 {
+    private readonly List<Diligencia> _diligencias = new();
+
     private Causa()
     {
     }
 
-    public Causa(Guid id, RolUnicoTribunal rit)
-        : base(id)
+    public Causa(
+        string rit,
+        string tribunal,
+        string descripcion)
     {
-        Rit = rit;
+        if (string.IsNullOrWhiteSpace(rit))
+            throw new ArgumentException("El RIT es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(tribunal))
+            throw new ArgumentException("El Tribunal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(descripcion))
+            throw new ArgumentException("La descripción es obligatoria.");
+
+        Id = Guid.NewGuid();
+        Rit = rit.Trim();
+        Tribunal = tribunal.Trim();
+        Descripcion = descripcion.Trim();
+        FechaCreacion = DateTime.UtcNow;
+        Estado = EstadoCausa.Ingresada;
     }
 
-    /// <summary>
-    /// Rol Único del Tribunal (RIT).
-    /// </summary>
-    public RolUnicoTribunal Rit { get; private set; }
-    public Encargo? Encargo { get; private set; }
+    public Guid Id { get; private set; }
 
-public void AsignarEncargo(Encargo encargo)
-{
-    ArgumentNullException.ThrowIfNull(encargo);
+    public string Rit { get; private set; }
 
-    if (Encargo is not null)
-        throw new InvalidOperationException("La causa ya posee un encargo.");
+    public string Tribunal { get; private set; }
 
-    Encargo = encargo;
-}
-    
+    public string Descripcion { get; private set; }
+
+    public DateTime FechaCreacion { get; private set; }
+
+    public EstadoCausa Estado { get; private set; }
+
+    public IReadOnlyCollection<Diligencia> Diligencias
+        => _diligencias.AsReadOnly();
+
+    public void ActualizarDatos(
+        string tribunal,
+        string descripcion)
+    {
+        if (string.IsNullOrWhiteSpace(tribunal))
+            throw new ArgumentException("El Tribunal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(descripcion))
+            throw new ArgumentException("La descripción es obligatoria.");
+
+        Tribunal = tribunal.Trim();
+        Descripcion = descripcion.Trim();
+    }
+
+    public void ActualizarDatos(
+        string rit,
+        string tribunal,
+        string descripcion)
+    {
+        if (string.IsNullOrWhiteSpace(rit))
+            throw new ArgumentException("El RIT es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(tribunal))
+            throw new ArgumentException("El Tribunal es obligatorio.");
+
+        if (string.IsNullOrWhiteSpace(descripcion))
+            throw new ArgumentException("La descripción es obligatoria.");
+
+        Rit = rit.Trim();
+        Tribunal = tribunal.Trim();
+        Descripcion = descripcion.Trim();
+    }
+
+    public Diligencia AgregarDiligencia(string descripcion)
+    {
+        if (string.IsNullOrWhiteSpace(descripcion))
+            throw new ArgumentException("La descripción es obligatoria.");
+
+        var diligencia = new Diligencia(
+            Guid.NewGuid(),
+            Id,
+            descripcion);
+
+        _diligencias.Add(diligencia);
+
+        return diligencia;
+    }
+
+    public void EliminarDiligencia(Guid diligenciaId)
+    {
+        var diligencia = _diligencias.FirstOrDefault(d => d.Id == diligenciaId);
+
+        if (diligencia is not null)
+            _diligencias.Remove(diligencia);
+    }
 }
