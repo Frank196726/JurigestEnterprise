@@ -14,6 +14,10 @@ public class JurigestDbContext : DbContext
 
     public DbSet<Diligencia> Diligencias => Set<Diligencia>();
 
+    public DbSet<Documento> Documentos => Set<Documento>();
+
+    public DbSet<Resolucion> Resoluciones => Set<Resolucion>();
+
         protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(JurigestDbContext).Assembly);

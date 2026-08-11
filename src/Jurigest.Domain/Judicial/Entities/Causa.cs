@@ -34,11 +34,11 @@ public sealed class Causa
 
     public Guid Id { get; private set; }
 
-    public string Rit { get; private set; }
+    public string Rit { get; private set; } = string.Empty;
 
-    public string Tribunal { get; private set; }
+    public string Tribunal { get; private set; } = string.Empty;
 
-    public string Descripcion { get; private set; }
+    public string Descripcion { get; private set; } = string.Empty;
 
     public DateTime FechaCreacion { get; private set; }
 

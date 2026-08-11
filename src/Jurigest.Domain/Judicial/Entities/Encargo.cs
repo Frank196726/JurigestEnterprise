@@ -25,7 +25,7 @@ public sealed class Encargo : AggregateRoot<Guid>
         Estado = EstadoEncargo.Creado;
     }
 
-    public string Descripcion { get; private set; }
+    public string Descripcion { get; private set; } = string.Empty;
 
     // Clave foránea hacia Causa
     public Guid CausaId { get; private set; }
