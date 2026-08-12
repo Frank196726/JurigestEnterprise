@@ -25,6 +25,13 @@ public sealed class DocumentoConfiguration
             .HasMaxLength(1000)
             .IsRequired();
 
+        builder.Property(x => x.ContentType)
+            .HasMaxLength(150)
+            .IsRequired();
+
+        builder.Property(x => x.TamanoBytes)
+            .IsRequired();
+
         builder.Property(x => x.FechaRegistro)
             .IsRequired();
 

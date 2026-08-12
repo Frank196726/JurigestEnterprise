@@ -37,3 +37,6 @@ TestResults/
 # NuGet
 # ==========================
 packages/
+
+# Uploaded files
+**/App_Data/

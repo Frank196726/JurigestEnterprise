@@ -8,7 +8,8 @@ public sealed class ObtenerDocumentoHandler
 {
     private readonly IDocumentoRepository _repository;
 
-    public ObtenerDocumentoHandler(IDocumentoRepository repository)
+    public ObtenerDocumentoHandler(
+        IDocumentoRepository repository)
     {
         _repository = repository;
     }
@@ -30,6 +31,8 @@ public sealed class ObtenerDocumentoHandler
             documento.Nombre,
             documento.Tipo,
             documento.RutaArchivo,
+            documento.ContentType,
+            documento.TamanoBytes,
             documento.FechaRegistro);
     }
 }

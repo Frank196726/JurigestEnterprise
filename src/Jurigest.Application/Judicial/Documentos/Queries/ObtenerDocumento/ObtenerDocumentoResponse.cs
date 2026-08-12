@@ -8,4 +8,6 @@ public sealed record ObtenerDocumentoResponse(
     string Nombre,
     TipoDocumento Tipo,
     string RutaArchivo,
+    string ContentType,
+    long TamanoBytes,
     DateTime FechaRegistro);

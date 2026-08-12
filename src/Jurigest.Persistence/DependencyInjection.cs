@@ -4,6 +4,8 @@ using Jurigest.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Jurigest.Application.Abstractions.Storage;
+using Jurigest.Persistence.Storage;
 
 namespace Jurigest.Persistence;
 
@@ -24,6 +26,8 @@ public static class DependencyInjection
         services.AddScoped<IDocumentoRepository, DocumentoRepository>();
 
         services.AddScoped<IResolucionRepository, ResolucionRepository>();
+
+        services.AddSingleton<IArchivoStorage, ArchivoStorage>();
 
         return services;
     }

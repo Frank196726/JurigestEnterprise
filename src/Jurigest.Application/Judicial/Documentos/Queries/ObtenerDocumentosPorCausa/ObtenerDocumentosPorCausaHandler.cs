@@ -26,13 +26,15 @@ public sealed class ObtenerDocumentosPorCausaHandler
             cancellationToken);
 
         return documentos
-            .Select(documento => new ObtenerDocumentoResponse(
-                documento.Id,
-                documento.CausaId,
-                documento.Nombre,
-                documento.Tipo,
-                documento.RutaArchivo,
-                documento.FechaRegistro))
-            .ToList();
+    .Select(documento => new ObtenerDocumentoResponse(
+        documento.Id,
+        documento.CausaId,
+        documento.Nombre,
+        documento.Tipo,
+        documento.RutaArchivo,
+        documento.ContentType,
+        documento.TamanoBytes,
+        documento.FechaRegistro))
+    .ToList();
     }
 }
