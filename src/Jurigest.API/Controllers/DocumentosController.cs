@@ -2,7 +2,6 @@ using Jurigest.API.Contracts;
 using Jurigest.Application.Abstractions.Storage;
 using Jurigest.Application.Judicial.Documentos.Commands.CargarDocumento;
 using Jurigest.Application.Judicial.Documentos.Commands.EliminarDocumento;
-using Jurigest.Application.Judicial.Documentos.Commands.RegistrarDocumento;
 using Jurigest.Application.Judicial.Documentos.Queries.ObtenerDocumento;
 using Jurigest.Application.Judicial.Documentos.Queries.ObtenerDocumentosPorCausa;
 using Jurigest.Domain.Judicial.Enums;
@@ -25,65 +24,6 @@ public sealed class DocumentosController : ControllerBase
             _mediator = mediator;
             _archivoStorage = archivoStorage;
 }
-
-    [HttpPost("Causas/{causaId:guid}/documentos")]
-    public async Task<IActionResult> Registrar(
-        Guid causaId,
-        [FromBody] RegistrarDocumentoRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (request is null ||
-            string.IsNullOrWhiteSpace(request.Nombre) ||
-            string.IsNullOrWhiteSpace(request.RutaArchivo))
-        {
-            return BadRequest(new
-            {
-                mensaje = "Debe indicar nombre, tipo y ruta del documento."
-            });
-        }
-
-        if (!Enum.IsDefined(typeof(TipoDocumento), request.Tipo))
-        {
-            return BadRequest(new
-            {
-                mensaje = "El tipo de documento no es valido."
-            });
-        }
-
-        try
-        {
-            var documentoId = await _mediator.Send(
-                new RegistrarDocumentoCommand(
-                    causaId,
-                    request.Nombre,
-                    request.Tipo,
-                    request.RutaArchivo),
-                cancellationToken);
-
-            if (documentoId is null)
-            {
-                return NotFound(new
-                {
-                    mensaje = "La causa no existe."
-                });
-            }
-
-            return Created(
-                $"/api/Documentos/{documentoId}",
-                new
-                {
-                    id = documentoId,
-                    mensaje = "Documento registrado correctamente."
-                });
-        }
-        catch (ArgumentException ex)
-        {
-            return BadRequest(new
-            {
-                mensaje = ex.Message
-            });
-        }
-    }
 
     [HttpPost("Causas/{causaId:guid}/documentos/archivo")]
     [Consumes("multipart/form-data")]
@@ -154,7 +94,6 @@ public sealed class DocumentosController : ControllerBase
                     request.Nombre,
                     request.Tipo,
                     request.Archivo.FileName,
-                    contentType,
                     request.Archivo.Length,
                     contenido),
                 cancellationToken);

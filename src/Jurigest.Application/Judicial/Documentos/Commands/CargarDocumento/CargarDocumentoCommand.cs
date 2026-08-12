@@ -8,7 +8,6 @@ public sealed record CargarDocumentoCommand(
     string Nombre,
     TipoDocumento Tipo,
     string NombreArchivo,
-    string ContentType,
     long TamanoBytes,
     Stream Contenido)
     : IRequest<Guid?>;

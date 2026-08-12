@@ -1,5 +1,6 @@
 using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Application.Abstractions.Storage;
+using Jurigest.Application.Judicial.Documentos.Validation;
 using Jurigest.Domain.Judicial.Entities;
 using MediatR;
 
@@ -8,6 +9,8 @@ namespace Jurigest.Application.Judicial.Documentos.Commands.CargarDocumento;
 public sealed class CargarDocumentoHandler
     : IRequestHandler<CargarDocumentoCommand, Guid?>
 {
+    private const long MaximoBytes = 10 * 1024 * 1024;
+
     private readonly ICausaRepository _causaRepository;
     private readonly IDocumentoRepository _documentoRepository;
     private readonly IArchivoStorage _archivoStorage;
@@ -26,6 +29,13 @@ public sealed class CargarDocumentoHandler
         CargarDocumentoCommand request,
         CancellationToken cancellationToken)
     {
+        if (request.TamanoBytes <= 0 ||
+            request.TamanoBytes > MaximoBytes)
+        {
+            throw new ArgumentException(
+                "El archivo debe tener un tamaño entre 1 byte y 10 MB.");
+        }
+
         var causaExiste = await _causaRepository.ExistsAsync(
             request.CausaId,
             cancellationToken);
@@ -33,11 +43,15 @@ public sealed class CargarDocumentoHandler
         if (!causaExiste)
             return null;
 
-        var extension = Path.GetExtension(request.NombreArchivo);
+        var contentType =
+            await ArchivoDocumentoValidator.ValidarAsync(
+                request.Contenido,
+                request.NombreArchivo,
+                cancellationToken);
 
-        if (string.IsNullOrWhiteSpace(extension))
-            throw new ArgumentException(
-                "El archivo debe tener una extension valida.");
+        request.Contenido.Position = 0;
+
+        var extension = Path.GetExtension(request.NombreArchivo);
 
         var rutaArchivo = await _archivoStorage.GuardarAsync(
             request.Contenido,
@@ -52,7 +66,7 @@ public sealed class CargarDocumentoHandler
                 request.Nombre,
                 request.Tipo,
                 rutaArchivo,
-                request.ContentType,
+                contentType,
                 request.TamanoBytes);
 
             await _documentoRepository.AddAsync(
