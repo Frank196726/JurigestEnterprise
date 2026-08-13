@@ -6,6 +6,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Jurigest.Application.Abstractions.Storage;
 using Jurigest.Persistence.Storage;
+using Jurigest.Application.Abstractions.Security;
+using Jurigest.Persistence.Security;
 
 namespace Jurigest.Persistence;
 
@@ -28,6 +30,10 @@ public static class DependencyInjection
         services.AddScoped<IResolucionRepository, ResolucionRepository>();
 
         services.AddSingleton<IArchivoStorage, ArchivoStorage>();
+
+        services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+
+        services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         return services;
     }

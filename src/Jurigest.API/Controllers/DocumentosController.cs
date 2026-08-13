@@ -4,6 +4,7 @@ using Jurigest.Application.Judicial.Documentos.Commands.CargarDocumento;
 using Jurigest.Application.Judicial.Documentos.Commands.EliminarDocumento;
 using Jurigest.Application.Judicial.Documentos.Queries.ObtenerDocumento;
 using Jurigest.Application.Judicial.Documentos.Queries.ObtenerDocumentosPorCausa;
+using Microsoft.AspNetCore.Authorization;
 using Jurigest.Domain.Judicial.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -28,6 +29,7 @@ public sealed class DocumentosController : ControllerBase
     [HttpPost("Causas/{causaId:guid}/documentos/archivo")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(11_534_336)]
+    [Authorize(Policy = "DocumentosCarga")]
     public async Task<IActionResult> CargarArchivo(
         Guid causaId,
         [FromForm] CargarDocumentoRequest request,
@@ -124,6 +126,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpGet("Documentos/{id:guid}")]
+    [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> Obtener(
         Guid id,
         CancellationToken cancellationToken)
@@ -144,6 +147,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpGet("Documentos/{id:guid}/archivo")]
+    [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> Descargar(
         Guid id,
         CancellationToken cancellationToken)
@@ -185,6 +189,7 @@ public sealed class DocumentosController : ControllerBase
             enableRangeProcessing: true);
 }
     [HttpGet("Causas/{causaId:guid}/documentos")]
+    [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> ObtenerPorCausa(
         Guid causaId,
         CancellationToken cancellationToken)
@@ -197,6 +202,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpDelete("Documentos/{id:guid}")]
+    [Authorize(Policy = "DocumentosEliminacion")]
     public async Task<IActionResult> Eliminar(
         Guid id,
         CancellationToken cancellationToken)

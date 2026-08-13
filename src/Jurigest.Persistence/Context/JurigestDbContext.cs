@@ -1,4 +1,5 @@
 using Jurigest.Domain.Judicial.Entities;
+using Jurigest.Domain.Seguridad.Entities;
 using Microsoft.EntityFrameworkCore;
 
 namespace Jurigest.Persistence.Context;
@@ -17,6 +18,8 @@ public class JurigestDbContext : DbContext
     public DbSet<Documento> Documentos => Set<Documento>();
 
     public DbSet<Resolucion> Resoluciones => Set<Resolucion>();
+
+    public DbSet<Usuario> Usuarios => Set<Usuario>();
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
