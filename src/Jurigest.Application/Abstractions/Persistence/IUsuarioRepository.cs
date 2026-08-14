@@ -18,4 +18,8 @@ public interface IUsuarioRepository
 
     Task<bool> AnyAsync(
         CancellationToken cancellationToken);
+
+        Task UpdateAsync(
+    Usuario usuario,
+    CancellationToken cancellationToken);
 }

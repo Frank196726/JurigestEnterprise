@@ -58,4 +58,12 @@ public sealed class UsuarioRepository : IUsuarioRepository
         return _context.Usuarios.AnyAsync(
             cancellationToken);
     }
+
+    public async Task UpdateAsync(
+    Usuario usuario,
+    CancellationToken cancellationToken)
+{
+    _context.Usuarios.Update(usuario);
+    await _context.SaveChangesAsync(cancellationToken);
+}
 }

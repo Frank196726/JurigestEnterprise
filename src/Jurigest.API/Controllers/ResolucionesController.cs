@@ -4,6 +4,7 @@ using Jurigest.Application.Judicial.Resoluciones.Queries.ObtenerResolucionesPorC
 using Jurigest.Application.Judicial.Resoluciones.Commands.EliminarResolucion;
 using Jurigest.Domain.Judicial.Enums;
 using Jurigest.Application.Judicial.Resoluciones.Queries.ObtenerResolucion;
+using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -20,11 +21,12 @@ public sealed class ResolucionesController : ControllerBase
         _mediator = mediator;
     }
 
-    [HttpPost("Causas/{causaId:guid}/resoluciones")]
-    public async Task<IActionResult> Registrar(
-        Guid causaId,
-        [FromBody] RegistrarResolucionRequest request,
-        CancellationToken cancellationToken)
+        [Authorize(Policy = "ResolucionesRegistro")]
+        [HttpPost("Causas/{causaId:guid}/resoluciones")]
+        public async Task<IActionResult> Registrar(
+            Guid causaId,
+            [FromBody] RegistrarResolucionRequest request,
+            CancellationToken cancellationToken)
     {
         if (request is null ||
             request.Fecha == default ||
@@ -78,10 +80,12 @@ public sealed class ResolucionesController : ControllerBase
             });
         }
     }
+
+        [Authorize(Policy = "ResolucionesLectura")]
         [HttpGet("Resoluciones/{id:guid}")]
-    public async Task<IActionResult> Obtener(
-        Guid id,
-        CancellationToken cancellationToken)
+        public async Task<IActionResult> Obtener(
+            Guid id,
+            CancellationToken cancellationToken)
     {
         var resolucion = await _mediator.Send(
             new ObtenerResolucionQuery(id),
@@ -98,10 +102,11 @@ public sealed class ResolucionesController : ControllerBase
         return Ok(resolucion);
     }
 
-    [HttpGet("Causas/{causaId:guid}/resoluciones")]
-    public async Task<IActionResult> ObtenerPorCausa(
-        Guid causaId,
-        CancellationToken cancellationToken)
+        [Authorize(Policy = "ResolucionesLectura")]
+        [HttpGet("Causas/{causaId:guid}/resoluciones")]
+        public async Task<IActionResult> ObtenerPorCausa(
+            Guid causaId,
+            CancellationToken cancellationToken)
     {
         var resoluciones = await _mediator.Send(
             new ObtenerResolucionesPorCausaQuery(causaId),
@@ -110,10 +115,11 @@ public sealed class ResolucionesController : ControllerBase
         return Ok(resoluciones);
     }
 
-    [HttpDelete("Resoluciones/{id:guid}")]
-    public async Task<IActionResult> Eliminar(
-        Guid id,
-        CancellationToken cancellationToken)
+        [Authorize(Policy = "ResolucionesEliminacion")]
+        [HttpDelete("Resoluciones/{id:guid}")]
+        public async Task<IActionResult> Eliminar(
+            Guid id,
+            CancellationToken cancellationToken)
     {
         var eliminada = await _mediator.Send(
             new EliminarResolucionCommand(id),

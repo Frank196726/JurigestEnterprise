@@ -4,6 +4,7 @@ using Jurigest.Application.Seguridad.Commands.IniciarSesion;
 using Jurigest.Application.Seguridad.Commands.CrearUsuario;
 using Jurigest.Domain.Seguridad.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Jurigest.Application.Seguridad.Commands.RestablecerPassword;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -160,6 +161,52 @@ namespace Jurigest.API.Controllers;
                 id = resultado.UsuarioId,
                 mensaje = "Usuario creado correctamente."
             });
+    }
+    catch (ArgumentException ex)
+    {
+        return BadRequest(new
+        {
+            mensaje = ex.Message
+        });
+    }
+}
+
+    [Authorize(Roles = "Administrador")]
+    [HttpPut("usuarios/password")]
+    public async Task<IActionResult> RestablecerPassword(
+        [FromBody] RestablecerPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+    if (request is null ||
+        string.IsNullOrWhiteSpace(request.Email) ||
+        string.IsNullOrWhiteSpace(request.NuevaPassword))
+    {
+        return BadRequest(new
+        {
+            mensaje = "Debe indicar email y nueva contraseña."
+        });
+    }
+
+    try
+    {
+        var actualizado = await _mediator.Send(
+            new RestablecerPasswordCommand(
+                request.Email,
+                request.NuevaPassword),
+            cancellationToken);
+
+        if (!actualizado)
+        {
+            return NotFound(new
+            {
+                mensaje = "El usuario no existe."
+            });
+        }
+
+        return Ok(new
+        {
+            mensaje = "Contraseña restablecida correctamente."
+        });
     }
     catch (ArgumentException ex)
     {

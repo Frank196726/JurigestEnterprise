@@ -89,8 +89,28 @@ builder.Services.AddAuthorization(options =>
             "Abogado",
             "Procurador"));
 
-    options.AddPolicy(
+        options.AddPolicy(
         "DocumentosEliminacion",
+        policy => policy.RequireRole(
+            "Administrador"));
+
+    options.AddPolicy(
+        "ResolucionesLectura",
+        policy => policy.RequireRole(
+            "Administrador",
+            "Abogado",
+            "Procurador",
+            "Consulta"));
+
+    options.AddPolicy(
+        "ResolucionesRegistro",
+        policy => policy.RequireRole(
+            "Administrador",
+            "Abogado",
+            "Procurador"));
+
+    options.AddPolicy(
+        "ResolucionesEliminacion",
         policy => policy.RequireRole(
             "Administrador"));
 });
