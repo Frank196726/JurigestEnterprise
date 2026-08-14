@@ -11,6 +11,7 @@ using Jurigest.Application.Judicial.Diligencias.Commands.ProgramarDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Commands.SuspenderDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligenciasPorCausa;
+using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -18,6 +19,7 @@ namespace Jurigest.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Authorize(Policy = "DiligenciasLectura")]
 public sealed class DiligenciasController : ControllerBase
 {
     private readonly IMediator _mediator;
@@ -28,7 +30,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpGet("{id:guid}")]
-    public async Task<IActionResult> Obtener(
+        public async Task<IActionResult> Obtener(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -48,7 +50,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpGet("causa/{causaId:guid}")]
-    public async Task<IActionResult> ObtenerPorCausa(
+        public async Task<IActionResult> ObtenerPorCausa(
         Guid causaId,
         CancellationToken cancellationToken)
     {
@@ -60,7 +62,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/iniciar")]
-    public async Task<IActionResult> Iniciar(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> Iniciar(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -93,7 +96,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/completar")]
-    public async Task<IActionResult> Completar(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> Completar(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -126,7 +130,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/programar")]
-    public async Task<IActionResult> Programar(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> Programar(
         Guid id,
         [FromBody] ProgramarDiligenciaRequest request,
         CancellationToken cancellationToken)
@@ -170,7 +175,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/asignar-receptor")]
-    public async Task<IActionResult> AsignarReceptor(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> AsignarReceptor(
         Guid id,
         [FromBody] AsignarReceptorRequest request,
         CancellationToken cancellationToken)
@@ -215,7 +221,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/tipo")]
-    public async Task<IActionResult> CambiarTipo(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> CambiarTipo(
         Guid id,
         [FromBody] CambiarTipoDiligenciaRequest request,
         CancellationToken cancellationToken)
@@ -259,7 +266,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/suspender")]
-    public async Task<IActionResult> Suspender(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> Suspender(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -291,7 +299,8 @@ public sealed class DiligenciasController : ControllerBase
         }
     }
     [HttpPut("{id:guid}/rechazar")]
-    public async Task<IActionResult> Rechazar(
+    [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> Rechazar(
         Guid id,
         CancellationToken cancellationToken)
 {
@@ -323,7 +332,8 @@ public sealed class DiligenciasController : ControllerBase
     }
 
 }
-[HttpPut("{id:guid}/ubicacion")]
+    [HttpPut("{id:guid}/ubicacion")]
+    [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> AsignarUbicacion(
         Guid id,
         [FromBody] AsignarUbicacionRequest request,
@@ -379,10 +389,11 @@ public sealed class DiligenciasController : ControllerBase
 
 
         [HttpPut("{id:guid}/coordenadas")]
-    public async Task<IActionResult> RegistrarCoordenadas(
-        Guid id,
-        [FromBody] RegistrarCoordenadasRequest request,
-        CancellationToken cancellationToken)
+        [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> RegistrarCoordenadas(
+            Guid id,
+            [FromBody] RegistrarCoordenadasRequest request,
+            CancellationToken cancellationToken)
     {
         if (request is null)
         {
@@ -430,11 +441,12 @@ public sealed class DiligenciasController : ControllerBase
         }
     }
 
-    [HttpPut("{id:guid}/observacion")]
-    public async Task<IActionResult> AgregarObservacion(
-        Guid id,
-        [FromBody] AgregarObservacionRequest request,
-        CancellationToken cancellationToken)
+        [HttpPut("{id:guid}/observacion")]
+        [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> AgregarObservacion(
+            Guid id,
+            [FromBody] AgregarObservacionRequest request,
+            CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Observacion))

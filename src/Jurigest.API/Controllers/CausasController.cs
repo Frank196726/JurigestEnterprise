@@ -5,6 +5,7 @@ using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
 using Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
 using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
 using Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
+using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -22,6 +23,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpPost]
+    [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> Crear(
         [FromBody] CrearCausaRequest request,
         CancellationToken cancellationToken)
@@ -50,6 +52,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpGet]
+    [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> ObtenerTodos(
         CancellationToken cancellationToken)
     {
@@ -61,6 +64,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpGet("rit/{rit}")]
+    [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> BuscarPorRit(
         string rit,
         CancellationToken cancellationToken)
@@ -80,7 +84,8 @@ public sealed class CausasController : ControllerBase
         return Ok(resultado);
     }
 
-    [HttpPut("{id:guid}")]
+        [HttpPut("{id:guid}")]
+    [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> Actualizar(
         Guid id,
         [FromBody] ActualizarCausaRequest request,
@@ -114,6 +119,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Policy = "CausasEliminacion")]
     public async Task<IActionResult> Eliminar(
         Guid id,
         CancellationToken cancellationToken)
@@ -126,6 +132,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpPost("{causaId:guid}/diligencias")]
+    [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> CrearDiligencia(
         Guid causaId,
         [FromBody] CrearDiligenciaRequest request,
@@ -154,4 +161,4 @@ public sealed class CausasController : ControllerBase
             mensaje = "Diligencia creada correctamente."
         });
     }
-}
+    }

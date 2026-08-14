@@ -89,7 +89,7 @@ builder.Services.AddAuthorization(options =>
             "Abogado",
             "Procurador"));
 
-        options.AddPolicy(
+    options.AddPolicy(
         "DocumentosEliminacion",
         policy => policy.RequireRole(
             "Administrador"));
@@ -113,6 +113,40 @@ builder.Services.AddAuthorization(options =>
         "ResolucionesEliminacion",
         policy => policy.RequireRole(
             "Administrador"));
+
+    options.AddPolicy(
+        "CausasLectura",
+        policy => policy.RequireRole(
+            "Administrador",
+            "Abogado",
+            "Procurador",
+            "Consulta"));
+
+    options.AddPolicy(
+        "CausasEscritura",
+        policy => policy.RequireRole(
+            "Administrador",
+            "Abogado"));
+
+    options.AddPolicy(
+        "CausasEliminacion",
+        policy => policy.RequireRole(
+            "Administrador"));
+
+    options.AddPolicy(
+        "DiligenciasLectura",
+        policy => policy.RequireRole(
+            "Administrador",
+            "Abogado",
+            "Procurador",
+            "Consulta"));
+
+    options.AddPolicy(
+        "DiligenciasGestion",
+        policy => policy.RequireRole(
+            "Administrador",
+            "Abogado",
+            "Procurador"));
 });
 
 var app = builder.Build();
@@ -136,4 +170,5 @@ foreach (var endpoint in app.Services
 {
     Console.WriteLine(endpoint.DisplayName);
 }
+
 app.Run();
