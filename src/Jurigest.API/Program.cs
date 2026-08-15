@@ -177,3 +177,7 @@ foreach (var endpoint in app.Services
 }
 
 app.Run();
+
+public partial class Program
+{
+}
