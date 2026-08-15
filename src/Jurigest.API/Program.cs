@@ -36,6 +36,8 @@ builder.Services.AddPersistence(builder.Configuration);
 // JWT
 builder.Services.AddSingleton<ITokenService, JwtTokenService>();
 
+builder.Services.AddScoped<JwtTokenValidationEvents>();
+
 var jwtIssuer = builder.Configuration["Jwt:Issuer"]
     ?? throw new InvalidOperationException(
         "Falta la configuracion Jwt:Issuer.");
@@ -70,6 +72,9 @@ builder.Services
                 ValidateLifetime = true,
                 ClockSkew = TimeSpan.FromMinutes(1)
             };
+
+        options.EventsType =
+            typeof(JwtTokenValidationEvents);
     });
 
 builder.Services.AddAuthorization(options =>

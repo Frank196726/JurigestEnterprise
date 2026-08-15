@@ -1,4 +1,5 @@
 using System.IdentityModel.Tokens.Jwt;
+using System.Globalization;
 using System.Security.Claims;
 using System.Text;
 using Jurigest.Application.Abstractions.Security;
@@ -38,6 +39,11 @@ public sealed class JwtTokenService : ITokenService
             new Claim(
                 JwtRegisteredClaimNames.Sub,
                 usuario.Id.ToString()),
+
+            new Claim(
+                "token_version",
+            usuario.VersionSeguridad.ToString(
+            CultureInfo.InvariantCulture)),
 
             new Claim(
                 JwtRegisteredClaimNames.Email,

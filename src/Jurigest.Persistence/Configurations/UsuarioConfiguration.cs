@@ -32,6 +32,10 @@ public sealed class UsuarioConfiguration
         builder.Property(x => x.Activo)
             .IsRequired();
 
+        builder.Property(x => x.VersionSeguridad)
+            .HasDefaultValue(1)
+            .IsRequired();
+
         builder.Property(x => x.FechaCreacion)
             .IsRequired();
 
