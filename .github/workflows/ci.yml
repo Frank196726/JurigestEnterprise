@@ -1,0 +1,100 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  ASPNETCORE_ENVIRONMENT: Development
+  Jwt__Issuer: Jurigest.CI
+  Jwt__Audience: Jurigest.CI.Client
+  Jwt__Key: Jurigest.CI.Key.0123456789.abcdefghijklmnopqrstuvwxyz.ABCDEFGHIJ
+  Jwt__ExpirationMinutes: 60
+
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Descargar repositorio
+        uses: actions/checkout@v7
+
+      - name: Instalar .NET 10
+        uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Mostrar entorno
+        run: dotnet --info
+
+      - name: Restaurar API
+        run: >
+          dotnet restore
+          src/Jurigest.API/Jurigest.API.csproj
+
+      - name: Restaurar pruebas de dominio
+        run: >
+          dotnet restore
+          test/Jurigest.Domain.Tests/Jurigest.Domain.Tests.csproj
+
+      - name: Restaurar pruebas de aplicación
+        run: >
+          dotnet restore
+          test/Jurigest.Application.Tests/Jurigest.Application.Tests.csproj
+
+      - name: Restaurar pruebas de integración
+        run: >
+          dotnet restore
+          test/Jurigest.Integration.Tests/Jurigest.Integration.Tests.csproj
+
+      - name: Compilar API
+        run: >
+          dotnet build
+          src/Jurigest.API/Jurigest.API.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Ejecutar pruebas de dominio
+        run: >
+          dotnet test
+          test/Jurigest.Domain.Tests/Jurigest.Domain.Tests.csproj
+          --configuration Release
+          --no-restore
+          --logger "trx;LogFileName=domain-tests.trx"
+          --results-directory TestResults
+
+      - name: Ejecutar pruebas de aplicación
+        run: >
+          dotnet test
+          test/Jurigest.Application.Tests/Jurigest.Application.Tests.csproj
+          --configuration Release
+          --no-restore
+          --logger "trx;LogFileName=application-tests.trx"
+          --results-directory TestResults
+
+      - name: Ejecutar pruebas de integración
+        run: >
+          dotnet test
+          test/Jurigest.Integration.Tests/Jurigest.Integration.Tests.csproj
+          --configuration Release
+          --no-restore
+          --logger "trx;LogFileName=integration-tests.trx"
+          --results-directory TestResults
+
+      - name: Publicar resultados
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-results
+          path: TestResults
+          if-no-files-found: ignore
+          retention-days: 7
