@@ -25,6 +25,25 @@ public sealed class UsuarioRepository : IUsuarioRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
+        public async Task<Usuario?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        return await _context.Usuarios
+            .FirstOrDefaultAsync(
+                usuario => usuario.Id == id,
+                cancellationToken);
+    }
+
+    public async Task<List<Usuario>> GetAllAsync(
+        CancellationToken cancellationToken)
+    {
+        return await _context.Usuarios
+            .AsNoTracking()
+            .OrderBy(usuario => usuario.Nombre)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<Usuario?> GetByEmailAsync(
         string email,
         CancellationToken cancellationToken)
@@ -59,11 +78,11 @@ public sealed class UsuarioRepository : IUsuarioRepository
             cancellationToken);
     }
 
-    public async Task UpdateAsync(
-    Usuario usuario,
-    CancellationToken cancellationToken)
-{
-    _context.Usuarios.Update(usuario);
-    await _context.SaveChangesAsync(cancellationToken);
-}
+        public async Task UpdateAsync(
+        Usuario usuario,
+        CancellationToken cancellationToken)
+    {
+        _context.Usuarios.Update(usuario);
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

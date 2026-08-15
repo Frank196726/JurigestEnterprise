@@ -5,6 +5,10 @@ using Jurigest.Application.Seguridad.Commands.CrearUsuario;
 using Jurigest.Domain.Seguridad.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Jurigest.Application.Seguridad.Commands.RestablecerPassword;
+using System.Security.Claims;
+using Jurigest.Application.Seguridad.Commands.CambiarEstadoUsuario;
+using Jurigest.Application.Seguridad.Queries.ObtenerUsuario;
+using Jurigest.Application.Seguridad.Queries.ObtenerUsuarios;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -216,4 +220,101 @@ namespace Jurigest.API.Controllers;
         });
     }
 }
+    [Authorize(Roles = "Administrador")]
+    [HttpGet("usuarios")]
+    public async Task<IActionResult> ObtenerUsuarios(
+        CancellationToken cancellationToken)
+    {
+        var usuarios = await _mediator.Send(
+            new ObtenerUsuariosQuery(),
+            cancellationToken);
+
+        return Ok(new
+        {
+            value = usuarios,
+            count = usuarios.Count
+        });
+    }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpGet("usuarios/{id:guid}")]
+        public async Task<IActionResult> ObtenerUsuario(
+        Guid id,
+        CancellationToken cancellationToken)
+    {
+        var usuario = await _mediator.Send(
+            new ObtenerUsuarioQuery(id),
+            cancellationToken);
+
+        if (usuario is null)
+        {
+            return NotFound(new
+            {
+                mensaje = "El usuario no existe."
+            });
+        }
+
+        return Ok(usuario);
+    }
+
+        [Authorize(Roles = "Administrador")]
+        [HttpPut("usuarios/{id:guid}/estado")]
+        public async Task<IActionResult> CambiarEstadoUsuario(
+        Guid id,
+        [FromBody] CambiarEstadoUsuarioRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null)
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar el estado del usuario."
+            });
+        }
+
+        var administradorIdTexto =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(
+            administradorIdTexto,
+            out var administradorId))
+        {
+            return Unauthorized(new
+            {
+                mensaje = "El token no contiene un usuario valido."
+            });
+        }
+
+        var resultado = await _mediator.Send(
+            new CambiarEstadoUsuarioCommand(
+                id,
+                request.Activo,
+                administradorId),
+            cancellationToken);
+
+        return resultado switch
+        {
+            CambiarEstadoUsuarioResultado.NoEncontrado =>
+                NotFound(new
+                {
+                    mensaje = "El usuario no existe."
+                }),
+
+            CambiarEstadoUsuarioResultado
+                .AutodesactivacionNoPermitida =>
+                Conflict(new
+                {
+                    mensaje =
+                        "No puede desactivar su propia cuenta."
+                }),
+
+            _ => Ok(new
+            {
+                mensaje = request.Activo
+                    ? "Usuario activado correctamente."
+                    : "Usuario desactivado correctamente."
+            })
+        };
+    }
 }
