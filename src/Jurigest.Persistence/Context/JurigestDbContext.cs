@@ -21,7 +21,10 @@ public class JurigestDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
 
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
+    public DbSet<AuditoriaSeguridad> AuditoriasSeguridad =>
+    Set<AuditoriaSeguridad>();
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(JurigestDbContext).Assembly);
 

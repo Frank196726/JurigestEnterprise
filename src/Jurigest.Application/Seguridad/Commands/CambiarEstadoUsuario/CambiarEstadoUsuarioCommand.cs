@@ -5,5 +5,6 @@ namespace Jurigest.Application.Seguridad.Commands.CambiarEstadoUsuario;
 public sealed record CambiarEstadoUsuarioCommand(
     Guid UsuarioId,
     bool Activo,
-    Guid AdministradorId)
+    Guid AdministradorId,
+    string? DireccionIp)
     : IRequest<CambiarEstadoUsuarioResultado>;

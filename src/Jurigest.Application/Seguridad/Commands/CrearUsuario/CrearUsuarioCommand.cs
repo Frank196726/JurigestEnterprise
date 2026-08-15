@@ -7,7 +7,9 @@ public sealed record CrearUsuarioCommand(
     string Nombre,
     string Email,
     string Password,
-    RolUsuario Rol)
+    RolUsuario Rol,
+    Guid UsuarioActorId,
+    string? DireccionIp)
     : IRequest<CrearUsuarioResult>;
 
 public sealed record CrearUsuarioResult(

@@ -1,5 +1,6 @@
 using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Application.Abstractions.Security;
+using Jurigest.Domain.Seguridad.Entities;
 using MediatR;
 
 namespace Jurigest.Application.Seguridad.Commands.RestablecerPassword;
@@ -9,13 +10,17 @@ public sealed class RestablecerPasswordHandler
 {
     private readonly IUsuarioRepository _repository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IAuditoriaSeguridadRepository
+        _auditoriaRepository;
 
     public RestablecerPasswordHandler(
         IUsuarioRepository repository,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        IAuditoriaSeguridadRepository auditoriaRepository)
     {
         _repository = repository;
         _passwordHasher = passwordHasher;
+        _auditoriaRepository = auditoriaRepository;
     }
 
     public async Task<bool> Handle(
@@ -36,6 +41,18 @@ public sealed class RestablecerPasswordHandler
 
         await _repository.UpdateAsync(
             usuario,
+            cancellationToken);
+
+        var auditoria = new AuditoriaSeguridad(
+            Guid.NewGuid(),
+            request.UsuarioActorId,
+            "PasswordRestablecida",
+            usuario.Id,
+            "Se restablecio la contraseña del usuario.",
+            request.DireccionIp);
+
+        await _auditoriaRepository.AddAsync(
+            auditoria,
             cancellationToken);
 
         return true;

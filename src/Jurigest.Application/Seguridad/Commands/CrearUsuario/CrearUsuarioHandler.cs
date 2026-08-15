@@ -10,13 +10,17 @@ public sealed class CrearUsuarioHandler
 {
     private readonly IUsuarioRepository _repository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IAuditoriaSeguridadRepository
+        _auditoriaRepository;
 
     public CrearUsuarioHandler(
         IUsuarioRepository repository,
-        IPasswordHasher passwordHasher)
+        IPasswordHasher passwordHasher,
+        IAuditoriaSeguridadRepository auditoriaRepository)
     {
         _repository = repository;
         _passwordHasher = passwordHasher;
+        _auditoriaRepository = auditoriaRepository;
     }
 
     public async Task<CrearUsuarioResult> Handle(
@@ -45,6 +49,18 @@ public sealed class CrearUsuarioHandler
 
         await _repository.AddAsync(
             usuario,
+            cancellationToken);
+
+        var auditoria = new AuditoriaSeguridad(
+            Guid.NewGuid(),
+            request.UsuarioActorId,
+            "UsuarioCreado",
+            usuario.Id,
+            $"Rol asignado: {usuario.Rol}.",
+            request.DireccionIp);
+
+        await _auditoriaRepository.AddAsync(
+            auditoria,
             cancellationToken);
 
         return new CrearUsuarioResult(

@@ -4,5 +4,7 @@ namespace Jurigest.Application.Seguridad.Commands.RestablecerPassword;
 
 public sealed record RestablecerPasswordCommand(
     string Email,
-    string NuevaPassword)
+    string NuevaPassword,
+    Guid UsuarioActorId,
+    string? DireccionIp)
     : IRequest<bool>;

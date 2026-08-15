@@ -33,6 +33,10 @@ public static class DependencyInjection
 
         services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
+        services.AddScoped<
+            IAuditoriaSeguridadRepository,
+            AuditoriaSeguridadRepository>();
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
 
         return services;

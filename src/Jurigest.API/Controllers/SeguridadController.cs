@@ -9,6 +9,7 @@ using System.Security.Claims;
 using Jurigest.Application.Seguridad.Commands.CambiarEstadoUsuario;
 using Jurigest.Application.Seguridad.Queries.ObtenerUsuario;
 using Jurigest.Application.Seguridad.Queries.ObtenerUsuarios;
+using Jurigest.Application.Seguridad.Queries.ObtenerAuditoriasSeguridad;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -16,7 +17,7 @@ namespace Jurigest.API.Controllers;
 
 [ApiController]
 [Route("api/seguridad")]
-    public sealed class SeguridadController : ControllerBase
+public sealed class SeguridadController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly IWebHostEnvironment _environment;
@@ -83,10 +84,10 @@ namespace Jurigest.API.Controllers;
             });
         }
     }
-        [HttpPost("login")]
-        public async Task<IActionResult> IniciarSesion(
-        [FromBody] IniciarSesionRequest request,
-        CancellationToken cancellationToken)
+    [HttpPost("login")]
+    public async Task<IActionResult> IniciarSesion(
+    [FromBody] IniciarSesionRequest request,
+    CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Email) ||
@@ -120,60 +121,79 @@ namespace Jurigest.API.Controllers;
     public async Task<IActionResult> CrearUsuario(
     [FromBody] CrearUsuarioRequest request,
     CancellationToken cancellationToken)
-{
-    if (request is null ||
-        string.IsNullOrWhiteSpace(request.Nombre) ||
-        string.IsNullOrWhiteSpace(request.Email) ||
-        string.IsNullOrWhiteSpace(request.Password))
     {
-        return BadRequest(new
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.Nombre) ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.Password))
         {
-            mensaje = "Debe indicar nombre, email, contraseña y rol."
-        });
-    }
-
-    if (!Enum.IsDefined(typeof(RolUsuario), request.Rol))
-    {
-        return BadRequest(new
-        {
-            mensaje = "El rol no es valido."
-        });
-    }
-
-    try
-    {
-        var resultado = await _mediator.Send(
-            new CrearUsuarioCommand(
-                request.Nombre,
-                request.Email,
-                request.Password,
-                request.Rol),
-            cancellationToken);
-
-        if (resultado.EmailDuplicado)
-        {
-            return Conflict(new
+            return BadRequest(new
             {
-                mensaje = "Ya existe un usuario con ese email."
+                mensaje = "Debe indicar nombre, email, contraseña y rol."
             });
         }
 
-        return Created(
-            $"/api/usuarios/{resultado.UsuarioId}",
-            new
-            {
-                id = resultado.UsuarioId,
-                mensaje = "Usuario creado correctamente."
-            });
-    }
-    catch (ArgumentException ex)
-    {
-        return BadRequest(new
+        if (!Enum.IsDefined(typeof(RolUsuario), request.Rol))
         {
-            mensaje = ex.Message
-        });
+            return BadRequest(new
+            {
+                mensaje = "El rol no es valido."
+            });
+        }
+
+        var usuarioActorIdTexto =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(
+            usuarioActorIdTexto,
+            out var usuarioActorId))
+        {
+            return Unauthorized(new
+            {
+                mensaje = "El token no contiene un usuario valido."
+            });
+        }
+
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        try
+        {
+            var resultado = await _mediator.Send(
+                new CrearUsuarioCommand(
+                    request.Nombre,
+                    request.Email,
+                    request.Password,
+                    request.Rol,
+                    usuarioActorId,
+                    direccionIp),
+                cancellationToken);
+
+            if (resultado.EmailDuplicado)
+            {
+                return Conflict(new
+                {
+                    mensaje = "Ya existe un usuario con ese email."
+                });
+            }
+
+            return Created(
+                $"/api/usuarios/{resultado.UsuarioId}",
+                new
+                {
+                    id = resultado.UsuarioId,
+                    mensaje = "Usuario creado correctamente."
+                });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                mensaje = ex.Message
+            });
+        }
     }
-}
 
     [Authorize(Roles = "Administrador")]
     [HttpPut("usuarios/password")]
@@ -181,45 +201,64 @@ namespace Jurigest.API.Controllers;
         [FromBody] RestablecerPasswordRequest request,
         CancellationToken cancellationToken)
     {
-    if (request is null ||
-        string.IsNullOrWhiteSpace(request.Email) ||
-        string.IsNullOrWhiteSpace(request.NuevaPassword))
-    {
-        return BadRequest(new
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.Email) ||
+            string.IsNullOrWhiteSpace(request.NuevaPassword))
         {
-            mensaje = "Debe indicar email y nueva contraseña."
-        });
-    }
-
-    try
-    {
-        var actualizado = await _mediator.Send(
-            new RestablecerPasswordCommand(
-                request.Email,
-                request.NuevaPassword),
-            cancellationToken);
-
-        if (!actualizado)
-        {
-            return NotFound(new
+            return BadRequest(new
             {
-                mensaje = "El usuario no existe."
+                mensaje = "Debe indicar email y nueva contraseña."
             });
         }
 
-        return Ok(new
+        var usuarioActorIdTexto =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(
+            usuarioActorIdTexto,
+        out var usuarioActorId))
         {
-            mensaje = "Contraseña restablecida correctamente."
-        });
-    }
-    catch (ArgumentException ex)
-    {
-        return BadRequest(new
+            return Unauthorized(new
+            {
+                mensaje = "El token no contiene un usuario valido."
+            });
+        }
+
+        var direccionIp =
+        HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        try
         {
-            mensaje = ex.Message
-        });
+            var actualizado = await _mediator.Send(
+            new RestablecerPasswordCommand(
+                request.Email,
+                request.NuevaPassword,
+                usuarioActorId,
+                direccionIp),
+            cancellationToken);
+
+            if (!actualizado)
+            {
+                return NotFound(new
+                {
+                    mensaje = "El usuario no existe."
+                });
+            }
+
+            return Ok(new
+            {
+                mensaje = "Contraseña restablecida correctamente."
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                mensaje = ex.Message
+            });
+        }
     }
-}
     [Authorize(Roles = "Administrador")]
     [HttpGet("usuarios")]
     public async Task<IActionResult> ObtenerUsuarios(
@@ -236,11 +275,11 @@ namespace Jurigest.API.Controllers;
         });
     }
 
-        [Authorize(Roles = "Administrador")]
-        [HttpGet("usuarios/{id:guid}")]
-        public async Task<IActionResult> ObtenerUsuario(
-        Guid id,
-        CancellationToken cancellationToken)
+    [Authorize(Roles = "Administrador")]
+    [HttpGet("usuarios/{id:guid}")]
+    public async Task<IActionResult> ObtenerUsuario(
+    Guid id,
+    CancellationToken cancellationToken)
     {
         var usuario = await _mediator.Send(
             new ObtenerUsuarioQuery(id),
@@ -257,12 +296,12 @@ namespace Jurigest.API.Controllers;
         return Ok(usuario);
     }
 
-        [Authorize(Roles = "Administrador")]
-        [HttpPut("usuarios/{id:guid}/estado")]
-        public async Task<IActionResult> CambiarEstadoUsuario(
-        Guid id,
-        [FromBody] CambiarEstadoUsuarioRequest request,
-        CancellationToken cancellationToken)
+    [Authorize(Roles = "Administrador")]
+    [HttpPut("usuarios/{id:guid}/estado")]
+    public async Task<IActionResult> CambiarEstadoUsuario(
+    Guid id,
+    [FromBody] CambiarEstadoUsuarioRequest request,
+    CancellationToken cancellationToken)
     {
         if (request is null)
         {
@@ -277,8 +316,8 @@ namespace Jurigest.API.Controllers;
             ?? User.FindFirst("sub")?.Value;
 
         if (!Guid.TryParse(
-            administradorIdTexto,
-            out var administradorId))
+        administradorIdTexto,
+        out var administradorId))
         {
             return Unauthorized(new
             {
@@ -286,11 +325,15 @@ namespace Jurigest.API.Controllers;
             });
         }
 
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
         var resultado = await _mediator.Send(
             new CambiarEstadoUsuarioCommand(
                 id,
                 request.Activo,
-                administradorId),
+                administradorId,
+                direccionIp),
             cancellationToken);
 
         return resultado switch
@@ -316,5 +359,23 @@ namespace Jurigest.API.Controllers;
                     : "Usuario desactivado correctamente."
             })
         };
+
+            }
+
+    [Authorize(Roles = "Administrador")]
+    [HttpGet("auditorias")]
+    public async Task<IActionResult> ObtenerAuditoriasSeguridad(
+        [FromQuery] int cantidad = 100,
+        CancellationToken cancellationToken = default)
+    {
+        var auditorias = await _mediator.Send(
+            new ObtenerAuditoriasSeguridadQuery(cantidad),
+            cancellationToken);
+
+        return Ok(new
+        {
+            value = auditorias,
+            count = auditorias.Count
+        });
     }
 }
