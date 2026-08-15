@@ -4,6 +4,8 @@ using Jurigest.API.Security;
 using Jurigest.Application.Abstractions.Security;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.RateLimiting;
+using System.Threading.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using MediatR;
 using Microsoft.AspNetCore.Routing;
@@ -76,6 +78,31 @@ builder.Services
         options.EventsType =
             typeof(JwtTokenValidationEvents);
     });
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode =
+        StatusCodes.Status429TooManyRequests;
+
+    options.AddPolicy(
+        "Login",
+        httpContext =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                partitionKey:
+                    httpContext.Connection.RemoteIpAddress
+                        ?.ToString()
+                    ?? "ip-desconocida",
+                factory: _ =>
+                    new FixedWindowRateLimiterOptions
+                    {
+                        PermitLimit = 5,
+                        Window = TimeSpan.FromMinutes(1),
+                        QueueLimit = 0,
+                        QueueProcessingOrder =
+                            QueueProcessingOrder.OldestFirst,
+                        AutoReplenishment = true
+                    }));
+
+});
 
 builder.Services.AddAuthorization(options =>
 {
@@ -163,10 +190,12 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseRouting();
+app.UseRateLimiter();
+
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Habilita los controladores
 app.MapControllers();
 
 foreach (var endpoint in app.Services

@@ -12,6 +12,7 @@ using Jurigest.Application.Seguridad.Queries.ObtenerUsuarios;
 using Jurigest.Application.Seguridad.Queries.ObtenerAuditoriasSeguridad;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace Jurigest.API.Controllers;
 
@@ -84,6 +85,7 @@ public sealed class SeguridadController : ControllerBase
             });
         }
     }
+    [EnableRateLimiting("Login")]
     [HttpPost("login")]
     public async Task<IActionResult> IniciarSesion(
     [FromBody] IniciarSesionRequest request,
@@ -360,7 +362,7 @@ public sealed class SeguridadController : ControllerBase
             })
         };
 
-            }
+    }
 
     [Authorize(Roles = "Administrador")]
     [HttpGet("auditorias")]
