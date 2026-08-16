@@ -14,17 +14,21 @@ public sealed class RenovarSesionHandler
     private readonly IUsuarioRepository _usuarioRepository;
     private readonly IRefreshTokenService _refreshTokenService;
     private readonly ITokenService _tokenService;
+    private readonly IAuditoriaSeguridadRepository
+        _auditoriaRepository;
 
     public RenovarSesionHandler(
         ISesionUsuarioRepository sesionRepository,
         IUsuarioRepository usuarioRepository,
         IRefreshTokenService refreshTokenService,
-        ITokenService tokenService)
+        ITokenService tokenService,
+        IAuditoriaSeguridadRepository auditoriaRepository)
     {
         _sesionRepository = sesionRepository;
         _usuarioRepository = usuarioRepository;
         _refreshTokenService = refreshTokenService;
         _tokenService = tokenService;
+        _auditoriaRepository = auditoriaRepository;
     }
 
     public async Task<RenovarSesionResponse?> Handle(
@@ -46,11 +50,25 @@ public sealed class RenovarSesionHandler
 
         var fechaUtc = DateTime.UtcNow;
 
-        if (sesionAnterior is null ||
-            !sesionAnterior.EstaActiva(fechaUtc))
+        if (sesionAnterior is null)
+            return null;
+
+        if (sesionAnterior.RevocadaUtc.HasValue)
         {
+            if (sesionAnterior.ReemplazadaPorId.HasValue)
+            {
+                await ProcesarReutilizacionAsync(
+                    sesionAnterior,
+                    fechaUtc,
+                    request.DireccionIp,
+                    cancellationToken);
+            }
+
             return null;
         }
+
+        if (!sesionAnterior.EstaActiva(fechaUtc))
+            return null;
 
         var usuario =
             await _usuarioRepository.GetByIdAsync(
@@ -108,6 +126,45 @@ public sealed class RenovarSesionHandler
             accessToken.ExpiresAtUtc,
             nuevoRefreshToken,
             nuevoRefreshTokenExpiraUtc);
+    }
+
+    private async Task ProcesarReutilizacionAsync(
+        SesionUsuario sesionReutilizada,
+        DateTime fechaUtc,
+        string? direccionIp,
+        CancellationToken cancellationToken)
+    {
+        var usuario =
+            await _usuarioRepository.GetByIdAsync(
+                sesionReutilizada.UsuarioId,
+                cancellationToken);
+
+        if (usuario is null)
+            return;
+
+        usuario.InvalidarSesiones();
+
+        await _usuarioRepository.UpdateAsync(
+            usuario,
+            cancellationToken);
+
+        await _sesionRepository.RevokeAllActiveAsync(
+            usuario.Id,
+            fechaUtc,
+            cancellationToken);
+
+        var auditoria = new AuditoriaSeguridad(
+            Guid.NewGuid(),
+            null,
+            "RefreshTokenReutilizado",
+            usuario.Id,
+            "Se detecto la reutilizacion de un refresh token. " +
+            "Todas las sesiones del usuario fueron invalidadas.",
+            Limitar(direccionIp, 45));
+
+        await _auditoriaRepository.AddAsync(
+            auditoria,
+            cancellationToken);
     }
 
     private static string? Limitar(

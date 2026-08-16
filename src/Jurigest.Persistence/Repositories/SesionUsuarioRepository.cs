@@ -63,4 +63,24 @@ public sealed class SesionUsuarioRepository
 
         await _context.SaveChangesAsync(cancellationToken);
     }
+
+    public async Task RevokeAllActiveAsync(
+        Guid usuarioId,
+        DateTime fechaUtc,
+        CancellationToken cancellationToken)
+    {
+        var sesiones = await _context.SesionesUsuario
+            .Where(sesion =>
+                sesion.UsuarioId == usuarioId &&
+                sesion.RevocadaUtc == null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var sesion in sesiones)
+        {
+            sesion.Revocar(fechaUtc);
+        }
+
+        await _context.SaveChangesAsync(cancellationToken);
+
+    }
 }

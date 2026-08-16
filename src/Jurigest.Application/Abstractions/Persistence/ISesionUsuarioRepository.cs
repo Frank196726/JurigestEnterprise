@@ -20,4 +20,9 @@ public interface ISesionUsuarioRepository
         SesionUsuario sesionAnterior,
         SesionUsuario sesionNueva,
         CancellationToken cancellationToken);
+
+    Task RevokeAllActiveAsync(
+        Guid usuarioId,
+        DateTime fechaUtc,
+        CancellationToken cancellationToken);
 }

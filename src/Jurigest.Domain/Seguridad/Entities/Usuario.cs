@@ -137,7 +137,7 @@ public sealed class Usuario : Entity<Guid>
         BloqueadoHastaUtc = null;
     }
 
-    private void InvalidarSesiones()
+    public void InvalidarSesiones()
     {
         VersionSeguridad =
             checked(VersionSeguridad + 1);
