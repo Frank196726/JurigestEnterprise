@@ -10,6 +10,8 @@ using Jurigest.Application.Seguridad.Commands.CambiarEstadoUsuario;
 using Jurigest.Application.Seguridad.Queries.ObtenerUsuario;
 using Jurigest.Application.Seguridad.Queries.ObtenerUsuarios;
 using Jurigest.Application.Seguridad.Queries.ObtenerAuditoriasSeguridad;
+using Jurigest.Application.Seguridad.Commands.RenovarSesion;
+using Jurigest.Application.Seguridad.Commands.CerrarSesion;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -100,15 +102,18 @@ public sealed class SeguridadController : ControllerBase
                 mensaje = "Debe indicar email y contraseña."
             });
         }
-
         var direccionIp =
             HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var userAgent =
+            Request.Headers.UserAgent.ToString();
 
         var resultado = await _mediator.Send(
             new IniciarSesionCommand(
                 request.Email,
                 request.Password,
-                direccionIp),
+                direccionIp,
+                userAgent),
             cancellationToken);
 
         if (resultado is null)
@@ -120,6 +125,69 @@ public sealed class SeguridadController : ControllerBase
         }
 
         return Ok(resultado);
+    }
+
+    [HttpPost("refresh")]
+    public async Task<IActionResult> RenovarSesion(
+    [FromBody] RenovarSesionRequest request,
+    CancellationToken cancellationToken)
+    {
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar el refresh token."
+            });
+        }
+
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var userAgent =
+            Request.Headers.UserAgent.ToString();
+
+        var resultado = await _mediator.Send(
+            new RenovarSesionCommand(
+                request.RefreshToken,
+                direccionIp,
+                userAgent),
+            cancellationToken);
+
+        if (resultado is null)
+        {
+            return Unauthorized(new
+            {
+                mensaje = "El refresh token no es valido."
+            });
+        }
+
+        return Ok(resultado);
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> CerrarSesion(
+    [FromBody] CerrarSesionRequest request,
+    CancellationToken cancellationToken)
+    {
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.RefreshToken))
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar el refresh token."
+            });
+        }
+
+        await _mediator.Send(
+        new CerrarSesionCommand(
+            request.RefreshToken),
+        cancellationToken);
+
+        return Ok(new
+        {
+            mensaje = "Sesion cerrada correctamente."
+        });
     }
     [Authorize(Roles = "Administrador")]
     [HttpPost("usuarios")]

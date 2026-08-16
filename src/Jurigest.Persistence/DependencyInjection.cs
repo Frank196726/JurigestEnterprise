@@ -37,7 +37,15 @@ public static class DependencyInjection
             IAuditoriaSeguridadRepository,
             AuditoriaSeguridadRepository>();
 
+        services.AddScoped<
+            ISesionUsuarioRepository,
+            SesionUsuarioRepository>();
+
         services.AddSingleton<IPasswordHasher, PasswordHasher>();
+
+        services.AddSingleton<
+            IRefreshTokenService,
+            RefreshTokenService>();
 
         return services;
     }

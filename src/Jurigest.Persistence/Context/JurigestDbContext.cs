@@ -21,6 +21,9 @@ public class JurigestDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
 
+    public DbSet<SesionUsuario> SesionesUsuario =>
+    Set<SesionUsuario>();
+
     public DbSet<AuditoriaSeguridad> AuditoriasSeguridad =>
     Set<AuditoriaSeguridad>();
 

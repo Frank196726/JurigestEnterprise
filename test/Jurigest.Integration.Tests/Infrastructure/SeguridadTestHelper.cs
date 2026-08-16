@@ -34,10 +34,10 @@ internal static class SeguridadTestHelper
         var detalle = await response.Content
     .ReadAsStringAsync();
 
-    Assert.True(
-        response.StatusCode == HttpStatusCode.Created,
-        $"Bootstrap devolvio {(int)response.StatusCode}. " +
-        $"Detalle: {detalle}");
+        Assert.True(
+            response.StatusCode == HttpStatusCode.Created,
+            $"Bootstrap devolvio {(int)response.StatusCode}. " +
+            $"Detalle: {detalle}");
 
     }
 
@@ -68,6 +68,9 @@ internal static class SeguridadTestHelper
             raiz.GetProperty("accessToken").GetString()
                 ?? throw new InvalidOperationException(
                     "La respuesta no contiene accessToken."),
+            raiz.GetProperty("refreshToken").GetString()
+                ?? throw new InvalidOperationException(
+                    "La respuesta no contiene refreshToken."),
             raiz.GetProperty("usuarioId").GetGuid());
     }
 
@@ -129,4 +132,5 @@ internal static class SeguridadTestHelper
 
 internal sealed record LoginResult(
     string Token,
+    string RefreshToken,
     Guid UsuarioId);
