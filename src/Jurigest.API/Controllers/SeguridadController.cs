@@ -88,8 +88,8 @@ public sealed class SeguridadController : ControllerBase
     [EnableRateLimiting("Login")]
     [HttpPost("login")]
     public async Task<IActionResult> IniciarSesion(
-    [FromBody] IniciarSesionRequest request,
-    CancellationToken cancellationToken)
+     [FromBody] IniciarSesionRequest request,
+     CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Email) ||
@@ -101,10 +101,14 @@ public sealed class SeguridadController : ControllerBase
             });
         }
 
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
         var resultado = await _mediator.Send(
             new IniciarSesionCommand(
                 request.Email,
-                request.Password),
+                request.Password,
+                direccionIp),
             cancellationToken);
 
         if (resultado is null)
@@ -117,7 +121,6 @@ public sealed class SeguridadController : ControllerBase
 
         return Ok(resultado);
     }
-
     [Authorize(Roles = "Administrador")]
     [HttpPost("usuarios")]
     public async Task<IActionResult> CrearUsuario(

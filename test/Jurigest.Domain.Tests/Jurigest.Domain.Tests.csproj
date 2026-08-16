@@ -18,4 +18,8 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Jurigest.Domain\Jurigest.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

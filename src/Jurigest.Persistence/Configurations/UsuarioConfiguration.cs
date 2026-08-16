@@ -36,10 +36,16 @@ public sealed class UsuarioConfiguration
             .HasDefaultValue(1)
             .IsRequired();
 
+        builder.Property(x => x.IntentosFallidos)
+               .HasDefaultValue(0)
+               .IsRequired();
+
+        builder.Property(x => x.BloqueadoHastaUtc);
+
         builder.Property(x => x.FechaCreacion)
-            .IsRequired();
+               .IsRequired();
 
         builder.HasIndex(x => x.Email)
-            .IsUnique();
+               .IsUnique();
     }
 }

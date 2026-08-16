@@ -30,6 +30,8 @@ public sealed class Usuario : Entity<Guid>
         Rol = rol;
         Activo = true;
         VersionSeguridad = 1;
+        IntentosFallidos = 0;
+        BloqueadoHastaUtc = null;
         FechaCreacion = DateTime.UtcNow;
     }
 
@@ -45,6 +47,10 @@ public sealed class Usuario : Entity<Guid>
 
     public int VersionSeguridad { get; private set; }
 
+    public int IntentosFallidos { get; private set; }
+
+    public DateTime? BloqueadoHastaUtc { get; private set; }
+
     public DateTime FechaCreacion { get; private set; }
 
     public void CambiarPasswordHash(string passwordHash)
@@ -52,6 +58,7 @@ public sealed class Usuario : Entity<Guid>
         ArgumentException.ThrowIfNullOrWhiteSpace(passwordHash);
 
         PasswordHash = passwordHash;
+        RestablecerIntentosFallidos();
         InvalidarSesiones();
     }
 
@@ -81,8 +88,58 @@ public sealed class Usuario : Entity<Guid>
         Activo = true;
     }
 
+    public bool EstaBloqueado(DateTime fechaUtc)
+    {
+        return BloqueadoHastaUtc.HasValue &&
+            BloqueadoHastaUtc.Value > fechaUtc;
+    }
+
+    public bool RegistrarIntentoFallido(
+        DateTime fechaUtc,
+        int maximoIntentos,
+        TimeSpan duracionBloqueo)
+    {
+        if (maximoIntentos <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(maximoIntentos));
+        }
+
+        if (duracionBloqueo <= TimeSpan.Zero)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(duracionBloqueo));
+        }
+
+        if (BloqueadoHastaUtc.HasValue &&
+            BloqueadoHastaUtc.Value <= fechaUtc)
+        {
+            IntentosFallidos = 0;
+            BloqueadoHastaUtc = null;
+        }
+
+        IntentosFallidos =
+            checked(IntentosFallidos + 1);
+
+        if (IntentosFallidos < maximoIntentos)
+            return false;
+
+        IntentosFallidos = 0;
+        BloqueadoHastaUtc =
+            fechaUtc.Add(duracionBloqueo);
+
+        return true;
+    }
+
+    public void RestablecerIntentosFallidos()
+    {
+        IntentosFallidos = 0;
+        BloqueadoHastaUtc = null;
+    }
+
     private void InvalidarSesiones()
     {
-        VersionSeguridad = checked(VersionSeguridad + 1);
+        VersionSeguridad =
+            checked(VersionSeguridad + 1);
     }
 }
