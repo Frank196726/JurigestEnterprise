@@ -119,7 +119,9 @@ public sealed class RenovarSesionHandler
             cancellationToken);
 
         var accessToken =
-            _tokenService.CrearToken(usuario);
+            _tokenService.CrearToken(
+            usuario,
+            sesionNueva.Id);
 
         return new RenovarSesionResponse(
             accessToken.AccessToken,

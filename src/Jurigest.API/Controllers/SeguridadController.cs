@@ -12,6 +12,9 @@ using Jurigest.Application.Seguridad.Queries.ObtenerUsuarios;
 using Jurigest.Application.Seguridad.Queries.ObtenerAuditoriasSeguridad;
 using Jurigest.Application.Seguridad.Commands.RenovarSesion;
 using Jurigest.Application.Seguridad.Commands.CerrarSesion;
+using Jurigest.Application.Seguridad.Queries.ObtenerSesionesUsuario;
+using Jurigest.Application.Seguridad.Commands.CerrarSesionPorId;
+using Jurigest.Application.Seguridad.Commands.CerrarOtrasSesiones;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -61,7 +64,7 @@ public sealed class SeguridadController : ControllerBase
                     request.Nombre,
                     request.Email,
                     request.Password),
-                cancellationToken);
+                    cancellationToken);
 
             if (usuarioId is null)
             {
@@ -114,7 +117,7 @@ public sealed class SeguridadController : ControllerBase
                 request.Password,
                 direccionIp,
                 userAgent),
-            cancellationToken);
+                cancellationToken);
 
         if (resultado is null)
         {
@@ -152,7 +155,7 @@ public sealed class SeguridadController : ControllerBase
                 request.RefreshToken,
                 direccionIp,
                 userAgent),
-            cancellationToken);
+                cancellationToken);
 
         if (resultado is null)
         {
@@ -182,7 +185,7 @@ public sealed class SeguridadController : ControllerBase
         await _mediator.Send(
         new CerrarSesionCommand(
             request.RefreshToken),
-        cancellationToken);
+            cancellationToken);
 
         return Ok(new
         {
@@ -241,7 +244,7 @@ public sealed class SeguridadController : ControllerBase
                     request.Rol,
                     usuarioActorId,
                     direccionIp),
-                cancellationToken);
+                    cancellationToken);
 
             if (resultado.EmailDuplicado)
             {
@@ -309,7 +312,7 @@ public sealed class SeguridadController : ControllerBase
                 request.NuevaPassword,
                 usuarioActorId,
                 direccionIp),
-            cancellationToken);
+                cancellationToken);
 
             if (!actualizado)
             {
@@ -407,23 +410,23 @@ public sealed class SeguridadController : ControllerBase
                 request.Activo,
                 administradorId,
                 direccionIp),
-            cancellationToken);
+                cancellationToken);
 
         return resultado switch
         {
             CambiarEstadoUsuarioResultado.NoEncontrado =>
-                NotFound(new
-                {
-                    mensaje = "El usuario no existe."
-                }),
+            NotFound(new
+            {
+                mensaje = "El usuario no existe."
+            }),
 
             CambiarEstadoUsuarioResultado
-                .AutodesactivacionNoPermitida =>
-                Conflict(new
-                {
-                    mensaje =
-                        "No puede desactivar su propia cuenta."
-                }),
+            .AutodesactivacionNoPermitida =>
+            Conflict(new
+            {
+                mensaje =
+                    "No puede desactivar su propia cuenta."
+            }),
 
             _ => Ok(new
             {
@@ -435,11 +438,135 @@ public sealed class SeguridadController : ControllerBase
 
     }
 
+    [Authorize]
+    [HttpGet("sesiones")]
+    public async Task<IActionResult> ObtenerSesiones(
+    CancellationToken cancellationToken)
+    {
+        var usuarioIdTexto =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        var sesionIdTexto =
+            User.FindFirst("session_id")?.Value;
+
+        if (!Guid.TryParse(
+                usuarioIdTexto,
+                out var usuarioId) ||
+                !Guid.TryParse(
+                sesionIdTexto,
+                out var sesionId))
+        {
+            return Unauthorized(new
+            {
+                mensaje = "El token no contiene una sesion valida."
+            });
+        }
+
+        var sesiones = await _mediator.Send(
+            new ObtenerSesionesUsuarioQuery(
+                usuarioId,
+                sesionId),
+                cancellationToken);
+
+        return Ok(new
+        {
+            value = sesiones,
+            count = sesiones.Count
+        });
+    }
+
+    [Authorize]
+    [HttpDelete("sesiones/otras")]
+    public async Task<IActionResult> CerrarOtrasSesiones(
+    CancellationToken cancellationToken)
+    {
+        var usuarioIdTexto =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        var sesionIdTexto =
+            User.FindFirst("session_id")?.Value;
+
+        if (!Guid.TryParse(
+                usuarioIdTexto,
+                out var usuarioId) ||
+            !Guid.TryParse(
+                sesionIdTexto,
+                out var sesionId))
+        {
+            return Unauthorized(new
+            {
+                mensaje = "El token no contiene una sesion valida."
+            });
+        }
+
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var cantidad = await _mediator.Send(
+            new CerrarOtrasSesionesCommand(
+                usuarioId,
+                sesionId,
+                direccionIp),
+                cancellationToken);
+
+        return Ok(new
+        {
+            mensaje = "Las otras sesiones fueron cerradas correctamente.",
+            cantidad
+        });
+    }
+
+    [Authorize]
+    [HttpDelete("sesiones/{id:guid}")]
+    public async Task<IActionResult> CerrarSesionPorId(
+    Guid id,
+    CancellationToken cancellationToken)
+    {
+        var usuarioIdTexto =
+            User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+
+        if (!Guid.TryParse(
+                usuarioIdTexto,
+                out var usuarioId))
+        {
+            return Unauthorized(new
+            {
+                mensaje = "El token no contiene un usuario valido."
+            });
+        }
+
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var encontrada = await _mediator.Send(
+            new CerrarSesionPorIdCommand(
+                usuarioId,
+                id,
+                direccionIp),
+                cancellationToken);
+
+        if (!encontrada)
+        {
+            return NotFound(new
+            {
+                mensaje = "La sesion no existe."
+            });
+        }
+
+        return Ok(new
+        {
+            mensaje = "Sesion cerrada correctamente."
+        });
+    }
+
     [Authorize(Roles = "Administrador")]
     [HttpGet("auditorias")]
     public async Task<IActionResult> ObtenerAuditoriasSeguridad(
-        [FromQuery] int cantidad = 100,
-        CancellationToken cancellationToken = default)
+    [FromQuery] int cantidad = 100,
+    CancellationToken cancellationToken = default)
     {
         var auditorias = await _mediator.Send(
             new ObtenerAuditoriasSeguridadQuery(cantidad),

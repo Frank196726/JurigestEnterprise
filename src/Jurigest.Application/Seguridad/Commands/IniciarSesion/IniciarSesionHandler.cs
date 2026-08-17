@@ -99,7 +99,6 @@ public sealed class IniciarSesionHandler
                 cancellationToken);
         }
 
-        var token = _tokenService.CrearToken(usuario);
 
         var refreshToken =
             _refreshTokenService.GenerarToken();
@@ -124,6 +123,10 @@ public sealed class IniciarSesionHandler
         await _sesionRepository.AddAsync(
             sesion,
             cancellationToken);
+
+        var token = _tokenService.CrearToken(
+            usuario,
+            sesion.Id);
 
         return new IniciarSesionResponse(
             token.AccessToken,

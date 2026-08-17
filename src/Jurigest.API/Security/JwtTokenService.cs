@@ -1,5 +1,5 @@
-using System.IdentityModel.Tokens.Jwt;
 using System.Globalization;
+using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using Jurigest.Application.Abstractions.Security;
@@ -12,27 +12,45 @@ public sealed class JwtTokenService : ITokenService
 {
     private readonly IConfiguration _configuration;
 
-    public JwtTokenService(IConfiguration configuration)
+    public JwtTokenService(
+        IConfiguration configuration)
     {
         _configuration = configuration;
     }
 
-    public TokenResult CrearToken(Usuario usuario)
+    public TokenResult CrearToken(
+        Usuario usuario,
+        Guid sesionId)
     {
-        var issuer = ObtenerConfiguracion("Jwt:Issuer");
-        var audience = ObtenerConfiguracion("Jwt:Audience");
-        var key = ObtenerConfiguracion("Jwt:Key");
+        if (sesionId == Guid.Empty)
+        {
+            throw new ArgumentException(
+                "La sesion es obligatoria.",
+                nameof(sesionId));
+        }
+
+        var issuer =
+            ObtenerConfiguracion("Jwt:Issuer");
+
+        var audience =
+            ObtenerConfiguracion("Jwt:Audience");
+
+        var key =
+            ObtenerConfiguracion("Jwt:Key");
 
         var expirationMinutes =
             _configuration.GetValue<int>(
                 "Jwt:ExpirationMinutes");
 
         if (expirationMinutes <= 0)
+        {
             throw new InvalidOperationException(
                 "La expiracion JWT no es valida.");
+        }
 
-        var expiresAtUtc = DateTime.UtcNow.AddMinutes(
-            expirationMinutes);
+        var expiresAtUtc =
+            DateTime.UtcNow.AddMinutes(
+                expirationMinutes);
 
         var claims = new[]
         {
@@ -41,9 +59,13 @@ public sealed class JwtTokenService : ITokenService
                 usuario.Id.ToString()),
 
             new Claim(
+                "session_id",
+                sesionId.ToString()),
+
+            new Claim(
                 "token_version",
-            usuario.VersionSeguridad.ToString(
-            CultureInfo.InvariantCulture)),
+                usuario.VersionSeguridad.ToString(
+                    CultureInfo.InvariantCulture)),
 
             new Claim(
                 JwtRegisteredClaimNames.Email,
@@ -62,12 +84,14 @@ public sealed class JwtTokenService : ITokenService
                 Guid.NewGuid().ToString())
         };
 
-        var signingKey = new SymmetricSecurityKey(
-            Encoding.UTF8.GetBytes(key));
+        var signingKey =
+            new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(key));
 
-        var credentials = new SigningCredentials(
-            signingKey,
-            SecurityAlgorithms.HmacSha256);
+        var credentials =
+            new SigningCredentials(
+                signingKey,
+                SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(
             issuer: issuer,
@@ -83,7 +107,8 @@ public sealed class JwtTokenService : ITokenService
             expiresAtUtc);
     }
 
-    private string ObtenerConfiguracion(string clave)
+    private string ObtenerConfiguracion(
+        string clave)
     {
         var valor = _configuration[clave];
 

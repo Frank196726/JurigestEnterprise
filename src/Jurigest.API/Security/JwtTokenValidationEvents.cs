@@ -8,12 +8,16 @@ namespace Jurigest.API.Security;
 public sealed class JwtTokenValidationEvents
     : JwtBearerEvents
 {
-    private readonly IUsuarioRepository _repository;
+    private readonly IUsuarioRepository _usuarioRepository;
+    private readonly ISesionUsuarioRepository
+        _sesionRepository;
 
     public JwtTokenValidationEvents(
-        IUsuarioRepository repository)
+        IUsuarioRepository usuarioRepository,
+        ISesionUsuarioRepository sesionRepository)
     {
-        _repository = repository;
+        _usuarioRepository = usuarioRepository;
+        _sesionRepository = sesionRepository;
     }
 
     public override async Task TokenValidated(
@@ -29,14 +33,40 @@ public sealed class JwtTokenValidationEvents
             context.Principal?
                 .FindFirstValue("token_version");
 
-        if (!Guid.TryParse(usuarioIdTexto, out var usuarioId) ||
-            !int.TryParse(versionTexto, out var versionToken))
+        var sesionIdTexto =
+            context.Principal?
+                .FindFirstValue("session_id");
+
+        if (!Guid.TryParse(
+                usuarioIdTexto,
+                out var usuarioId) ||
+            !int.TryParse(
+                versionTexto,
+                out var versionToken) ||
+            !Guid.TryParse(
+                sesionIdTexto,
+                out var sesionId))
         {
-            context.Fail("El token no contiene datos de seguridad validos.");
+            context.Fail(
+                "El token no contiene datos de seguridad validos.");
+
             return;
         }
 
-        var usuario = await _repository.GetByIdAsync(
+        var sesion = await _sesionRepository.GetByIdAsync(
+            sesionId,
+            context.HttpContext.RequestAborted);
+
+        if (sesion is null ||
+            sesion.UsuarioId != usuarioId ||
+            sesion.VersionSeguridad != versionToken ||
+            !sesion.EstaActiva(DateTime.UtcNow))
+        {
+            context.Fail("La sesion fue invalidada.");
+            return;
+        }
+
+        var usuario = await _usuarioRepository.GetByIdAsync(
             usuarioId,
             context.HttpContext.RequestAborted);
 

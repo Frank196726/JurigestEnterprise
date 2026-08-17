@@ -4,7 +4,9 @@ namespace Jurigest.Application.Abstractions.Security;
 
 public interface ITokenService
 {
-    TokenResult CrearToken(Usuario usuario);
+    TokenResult CrearToken(
+    Usuario usuario,
+    Guid sesionId);
 }
 
 public sealed record TokenResult(

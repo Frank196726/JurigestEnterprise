@@ -12,6 +12,15 @@ public interface ISesionUsuarioRepository
         string refreshTokenHash,
         CancellationToken cancellationToken);
 
+    Task<SesionUsuario?> GetByIdAsync(
+        Guid id,
+        CancellationToken cancellationToken);
+
+    Task<List<SesionUsuario>> GetActiveByUsuarioIdAsync(
+        Guid usuarioId,
+        DateTime fechaUtc,
+        CancellationToken cancellationToken);
+
     Task UpdateAsync(
         SesionUsuario sesion,
         CancellationToken cancellationToken);
@@ -23,6 +32,12 @@ public interface ISesionUsuarioRepository
 
     Task RevokeAllActiveAsync(
         Guid usuarioId,
+        DateTime fechaUtc,
+        CancellationToken cancellationToken);
+
+    Task<int> RevokeAllExceptAsync(
+        Guid usuarioId,
+        Guid sesionActualId,
         DateTime fechaUtc,
         CancellationToken cancellationToken);
 }
