@@ -47,6 +47,14 @@ public static class DependencyInjection
             IRefreshTokenService,
             RefreshTokenService>();
 
+        services.AddScoped<
+            ITokenRecuperacionPasswordRepository,
+            TokenRecuperacionPasswordRepository>();
+
+        services.AddSingleton<
+            ITokenRecuperacionPasswordService,
+            TokenRecuperacionPasswordService>();
+
         return services;
     }
 }

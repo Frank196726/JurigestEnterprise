@@ -102,6 +102,24 @@ builder.Services.AddRateLimiter(options =>
                         AutoReplenishment = true
                     }));
 
+    options.AddPolicy(
+    "RecuperacionPassword",
+    httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            partitionKey:
+                httpContext.Connection.RemoteIpAddress
+                    ?.ToString()
+                ?? "ip-desconocida",
+            factory: _ =>
+                new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = 3,
+                    Window = TimeSpan.FromMinutes(15),
+                    QueueLimit = 0,
+                    QueueProcessingOrder =
+                        QueueProcessingOrder.OldestFirst,
+                    AutoReplenishment = true
+                }));
 });
 
 builder.Services.AddAuthorization(options =>

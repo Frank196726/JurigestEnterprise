@@ -24,6 +24,9 @@ public class JurigestDbContext : DbContext
     public DbSet<SesionUsuario> SesionesUsuario =>
     Set<SesionUsuario>();
 
+    public DbSet<TokenRecuperacionPassword>
+    TokensRecuperacionPassword => Set<TokenRecuperacionPassword>();
+
     public DbSet<AuditoriaSeguridad> AuditoriasSeguridad =>
     Set<AuditoriaSeguridad>();
 

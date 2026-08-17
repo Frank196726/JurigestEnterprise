@@ -4,6 +4,7 @@ using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jurigest.Persistence.Migrations
 {
     [DbContext(typeof(JurigestDbContext))]
-    partial class JurigestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260817014609_CrearTokensRecuperacionPassword")]
+    partial class CrearTokensRecuperacionPassword
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -276,12 +279,6 @@ namespace Jurigest.Persistence.Migrations
 
                     b.Property<DateTime?>("RevocadoUtc")
                         .HasColumnType("datetime2");
-
-                    b.Property<byte[]>("RowVersion")
-                        .IsConcurrencyToken()
-                        .IsRequired()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("rowversion");
 
                     b.Property<string>("TokenHash")
                         .IsRequired()

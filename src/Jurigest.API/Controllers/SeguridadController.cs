@@ -15,6 +15,8 @@ using Jurigest.Application.Seguridad.Commands.CerrarSesion;
 using Jurigest.Application.Seguridad.Queries.ObtenerSesionesUsuario;
 using Jurigest.Application.Seguridad.Commands.CerrarSesionPorId;
 using Jurigest.Application.Seguridad.Commands.CerrarOtrasSesiones;
+using Jurigest.Application.Seguridad.Commands.SolicitarRecuperacionPassword;
+using Jurigest.Application.Seguridad.Commands.ConfirmarRecuperacionPassword;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
@@ -90,11 +92,110 @@ public sealed class SeguridadController : ControllerBase
             });
         }
     }
+
+    [EnableRateLimiting("RecuperacionPassword")]
+    [HttpPost("password/recuperacion/solicitar")]
+    public async Task<IActionResult> SolicitarRecuperacionPassword(
+        [FromBody] SolicitarRecuperacionPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.Email))
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar el email."
+            });
+        }
+
+        var direccionIp =
+        HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        var resultado = await _mediator.Send(
+        new SolicitarRecuperacionPasswordCommand(
+            request.Email,
+            direccionIp),
+        cancellationToken);
+
+        const string mensaje =
+        "Si la cuenta existe, se enviaron las " +
+        "instrucciones de recuperacion.";
+
+        if (_environment.IsDevelopment() &&
+        resultado is not null)
+        {
+            return Ok(new
+            {
+                mensaje,
+                tokenDesarrollo = resultado.Token,
+                expiraUtc = resultado.ExpiraUtc
+            });
+        }
+
+        return Ok(new
+        {
+            mensaje
+        });
+    }
+
+    [EnableRateLimiting("RecuperacionPassword")]
+    [HttpPost("password/recuperacion/confirmar")]
+    public async Task<IActionResult> ConfirmarRecuperacionPassword(
+        [FromBody] ConfirmarRecuperacionPasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.Token) ||
+            string.IsNullOrWhiteSpace(request.NuevaPassword))
+        {
+            return BadRequest(new
+            {
+                mensaje =
+                    "Debe indicar el token y la nueva contraseña."
+            });
+        }
+
+        var direccionIp =
+            HttpContext.Connection.RemoteIpAddress?.ToString();
+
+        try
+        {
+            var resultado = await _mediator.Send(
+                new ConfirmarRecuperacionPasswordCommand(
+                    request.Token,
+                    request.NuevaPassword,
+                    direccionIp),
+                cancellationToken);
+
+            if (resultado ==
+                ConfirmarRecuperacionPasswordResultado.TokenInvalido)
+            {
+                return BadRequest(new
+                {
+                    mensaje =
+                        "El token de recuperacion no es valido o expiro."
+                });
+            }
+
+            return Ok(new
+            {
+                mensaje = "Contraseña recuperada correctamente."
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                mensaje = ex.Message
+            });
+        }
+    }
+
     [EnableRateLimiting("Login")]
     [HttpPost("login")]
     public async Task<IActionResult> IniciarSesion(
-     [FromBody] IniciarSesionRequest request,
-     CancellationToken cancellationToken)
+        [FromBody] IniciarSesionRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Email) ||
@@ -132,8 +233,8 @@ public sealed class SeguridadController : ControllerBase
 
     [HttpPost("refresh")]
     public async Task<IActionResult> RenovarSesion(
-    [FromBody] RenovarSesionRequest request,
-    CancellationToken cancellationToken)
+        [FromBody] RenovarSesionRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.RefreshToken))
@@ -170,8 +271,8 @@ public sealed class SeguridadController : ControllerBase
 
     [HttpPost("logout")]
     public async Task<IActionResult> CerrarSesion(
-    [FromBody] CerrarSesionRequest request,
-    CancellationToken cancellationToken)
+        [FromBody] CerrarSesionRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.RefreshToken))
@@ -195,8 +296,8 @@ public sealed class SeguridadController : ControllerBase
     [Authorize(Roles = "Administrador")]
     [HttpPost("usuarios")]
     public async Task<IActionResult> CrearUsuario(
-    [FromBody] CrearUsuarioRequest request,
-    CancellationToken cancellationToken)
+        [FromBody] CrearUsuarioRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Nombre) ||
@@ -354,8 +455,8 @@ public sealed class SeguridadController : ControllerBase
     [Authorize(Roles = "Administrador")]
     [HttpGet("usuarios/{id:guid}")]
     public async Task<IActionResult> ObtenerUsuario(
-    Guid id,
-    CancellationToken cancellationToken)
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var usuario = await _mediator.Send(
             new ObtenerUsuarioQuery(id),
@@ -375,9 +476,9 @@ public sealed class SeguridadController : ControllerBase
     [Authorize(Roles = "Administrador")]
     [HttpPut("usuarios/{id:guid}/estado")]
     public async Task<IActionResult> CambiarEstadoUsuario(
-    Guid id,
-    [FromBody] CambiarEstadoUsuarioRequest request,
-    CancellationToken cancellationToken)
+        Guid id,
+        [FromBody] CambiarEstadoUsuarioRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null)
         {
@@ -441,7 +542,7 @@ public sealed class SeguridadController : ControllerBase
     [Authorize]
     [HttpGet("sesiones")]
     public async Task<IActionResult> ObtenerSesiones(
-    CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var usuarioIdTexto =
             User.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -479,7 +580,7 @@ public sealed class SeguridadController : ControllerBase
     [Authorize]
     [HttpDelete("sesiones/otras")]
     public async Task<IActionResult> CerrarOtrasSesiones(
-    CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var usuarioIdTexto =
             User.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -521,8 +622,8 @@ public sealed class SeguridadController : ControllerBase
     [Authorize]
     [HttpDelete("sesiones/{id:guid}")]
     public async Task<IActionResult> CerrarSesionPorId(
-    Guid id,
-    CancellationToken cancellationToken)
+        Guid id,
+        CancellationToken cancellationToken)
     {
         var usuarioIdTexto =
             User.FindFirst(ClaimTypes.NameIdentifier)?.Value
@@ -565,8 +666,8 @@ public sealed class SeguridadController : ControllerBase
     [Authorize(Roles = "Administrador")]
     [HttpGet("auditorias")]
     public async Task<IActionResult> ObtenerAuditoriasSeguridad(
-    [FromQuery] int cantidad = 100,
-    CancellationToken cancellationToken = default)
+        [FromQuery] int cantidad = 100,
+        CancellationToken cancellationToken = default)
     {
         var auditorias = await _mediator.Send(
             new ObtenerAuditoriasSeguridadQuery(cantidad),
