@@ -32,6 +32,10 @@ builder.Services.AddScoped<
     AuthenticationStateProvider,
     SesionAuthenticationStateProvider>();
 
+builder.Services.AddScoped<
+    IJurigestApiClient,
+    JurigestApiClient>();
+
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
     ?? throw new InvalidOperationException(
         "Falta la configuración Api:BaseUrl.");

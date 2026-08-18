@@ -1,23 +1,65 @@
 ﻿@inherits LayoutComponentBase
 
-<div class="page">
-    <div class="sidebar">
+<div class="app-shell">
+    <aside class="sidebar">
         <NavMenu />
-    </div>
+    </aside>
 
-    <main>
-        <div class="top-row px-4">
-            <a href="https://learn.microsoft.com/aspnet/core/" target="_blank">About</a>
-        </div>
+    <section class="workspace">
+        <header class="topbar">
+            <div>
+                <span class="topbar-label">Jurigest Enterprise</span>
+                <strong>Gestión jurídica</strong>
+            </div>
 
-        <article class="content px-4">
+            <AuthorizeView>
+                <Authorized Context="sesion">
+                    <div class="account">
+                        <span class="avatar">
+                            @ObtenerInicial(sesion.User.Identity?.Name)
+                        </span>
+
+                        <span class="account-data">
+                            <strong>@sesion.User.Identity?.Name</strong>
+                            <small>
+                                @sesion.User.FindFirst(
+                                    System.Security.Claims.ClaimTypes.Role)?.Value
+                            </small>
+                        </span>
+
+                        <form method="post"
+                              action="/auth/logout">
+                            <AntiforgeryToken />
+
+                            <button class="logout-button"
+                                    type="submit">
+                                Salir
+                            </button>
+                        </form>
+                    </div>
+                </Authorized>
+            </AuthorizeView>
+        </header>
+
+        <main class="content">
             @Body
-        </article>
-    </main>
+        </main>
+    </section>
 </div>
 
-<div id="blazor-error-ui" data-nosnippet>
-    An unhandled error has occurred.
-    <a href="." class="reload">Reload</a>
-    <span class="dismiss">🗙</span>
+<div id="blazor-error-ui"
+     data-nosnippet>
+    Ocurrió un error inesperado.
+    <a href="." class="reload">Recargar</a>
+    <span class="dismiss">×</span>
 </div>
+
+@code {
+    private static string ObtenerInicial(
+        string? nombre)
+    {
+        return string.IsNullOrWhiteSpace(nombre)
+            ? "U"
+            : nombre.Trim()[0].ToString().ToUpperInvariant();
+    }
+}

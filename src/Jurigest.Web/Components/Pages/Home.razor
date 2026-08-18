@@ -1,25 +1,154 @@
 ﻿@page "/"
+@using System.Globalization
 @using Microsoft.AspNetCore.Authorization
 @attribute [Authorize]
 
-<PageTitle>Inicio | Jurigest Enterprise</PageTitle>
+<PageTitle>Panel principal | Jurigest Enterprise</PageTitle>
 
 <AuthorizeView>
     <Authorized Context="sesion">
-        <h1>Bienvenido, @sesion.User.Identity?.Name</h1>
+        <section class="dashboard">
+            <header class="welcome">
+                <div>
+                    <span class="eyebrow">Panel principal</span>
 
-        <p>
-            La sesión de Jurigest Enterprise está activa.
-        </p>
+                    <h1>
+                        Bienvenido,
+                        @sesion.User.Identity?.Name
+                    </h1>
 
-        <form method="post"
-              action="/auth/logout">
-            <AntiforgeryToken />
+                    <p>
+                        Administra la actividad jurídica desde un
+                        único espacio de trabajo.
+                    </p>
+                </div>
 
-            <button class="btn btn-outline-danger"
-                    type="submit">
-                Cerrar sesión
-            </button>
-        </form>
+                <div class="date-card">
+                    <small>Hoy</small>
+                    <strong>@FechaActual</strong>
+                </div>
+            </header>
+
+            <div class="module-grid">
+                <article class="module-card causes">
+                    <span class="module-icon">C</span>
+
+                    <div>
+                        <h2>Causas</h2>
+                        <p>
+                            Consulta expedientes, estados y antecedentes
+                            asociados.
+                        </p>
+                    </div>
+
+                    <span class="module-status">
+                        Siguiente módulo
+                    </span>
+                </article>
+
+                <article class="module-card">
+                    <span class="module-icon">D</span>
+
+                    <div>
+                        <h2>Diligencias</h2>
+                        <p>
+                            Revisa actividades programadas y el avance
+                            de cada gestión.
+                        </p>
+                    </div>
+
+                    <span class="module-status">
+                        Disponible próximamente
+                    </span>
+                </article>
+
+                <article class="module-card">
+                    <span class="module-icon">A</span>
+
+                    <div>
+                        <h2>Documentos</h2>
+                        <p>
+                            Centraliza archivos y antecedentes de las
+                            causas.
+                        </p>
+                    </div>
+
+                    <span class="module-status">
+                        Disponible próximamente
+                    </span>
+                </article>
+
+                <article class="module-card">
+                    <span class="module-icon">R</span>
+
+                    <div>
+                        <h2>Resoluciones</h2>
+                        <p>
+                            Accede al historial de decisiones y
+                            resoluciones judiciales.
+                        </p>
+                    </div>
+
+                    <span class="module-status">
+                        Disponible próximamente
+                    </span>
+                </article>
+            </div>
+
+            <div class="dashboard-bottom">
+                <section class="activity-card">
+                    <div class="section-heading">
+                        <div>
+                            <span class="eyebrow">Actividad</span>
+                            <h2>Resumen del sistema</h2>
+                        </div>
+
+                        <span class="role-badge">
+                            @sesion.User.FindFirst(
+                                System.Security.Claims.ClaimTypes.Role)?.Value
+                        </span>
+                    </div>
+
+                    <div class="empty-state">
+                        <span>✓</span>
+
+                        <div>
+                            <strong>Sesión protegida</strong>
+                            <p>
+                                Tu acceso se encuentra activo y listo
+                                para consultar información.
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <AuthorizeView Roles="Administrador">
+                    <Authorized>
+                        <aside class="admin-card">
+                            <span class="eyebrow">Administración</span>
+                            <h2>Control del sistema</h2>
+
+                            <p>
+                                Tu rol permite gestionar usuarios,
+                                sesiones y auditoría de seguridad.
+                            </p>
+
+                            <ul>
+                                <li>Gestión de usuarios</li>
+                                <li>Auditoría de seguridad</li>
+                                <li>Control de sesiones</li>
+                            </ul>
+                        </aside>
+                    </Authorized>
+                </AuthorizeView>
+            </div>
+        </section>
     </Authorized>
 </AuthorizeView>
+
+@code {
+    private static string FechaActual =>
+        DateTime.Today.ToString(
+            "dddd, d 'de' MMMM",
+            CultureInfo.GetCultureInfo("es-CL"));
+}

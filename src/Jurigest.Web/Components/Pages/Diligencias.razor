@@ -1,0 +1,261 @@
+@page "/diligencias"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Diligencias | Jurigest Enterprise</PageTitle>
+
+<section class="diligencias-page">
+    <header class="page-heading">
+        <div>
+            <span class="eyebrow">Gestión judicial</span>
+            <h1>Diligencias</h1>
+            <p>
+                Consulta las diligencias asociadas a cada causa.
+            </p>
+        </div>
+
+        <span class="count-badge">
+            @_diligencias.Count diligencias
+        </span>
+    </header>
+
+    <section class="toolbar">
+        <label>
+            <span>Seleccionar causa</span>
+
+            <select value="@_causaSeleccionadaId"
+                    @onchange="CambiarCausaAsync">
+                @foreach (var causa in _causas)
+                {
+                    <option value="@causa.Id">
+                        @causa.Rit — @causa.Tribunal
+                    </option>
+                }
+            </select>
+        </label>
+    </section>
+
+    @if (_cargando)
+    {
+        <div class="state-card">
+            <p>Cargando diligencias…</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_mensajeError))
+    {
+        <div class="state-card error">
+            <strong>No fue posible cargar las diligencias</strong>
+            <p>@_mensajeError</p>
+        </div>
+    }
+    else if (_causas.Count == 0)
+    {
+        <div class="state-card">
+            <strong>No existen causas registradas</strong>
+        </div>
+    }
+    else if (_diligencias.Count == 0)
+    {
+        <div class="state-card">
+            <strong>La causa no tiene diligencias</strong>
+            <p>
+                Selecciona otra causa para continuar.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Descripción</th>
+                        <th>Tipo</th>
+                        <th>Estado</th>
+                        <th>Programada</th>
+                        <th>Receptor</th>
+                        <th>Ubicación</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var diligencia in _diligencias)
+                    {
+                        <tr @key="diligencia.Id">
+                            <td>
+                                <strong>
+                                    @diligencia.Descripcion
+                                </strong>
+                            </td>
+
+                            <td>@ObtenerTipo(diligencia.Tipo)</td>
+
+                            <td>
+                                <span class="status status-@diligencia.Estado">
+                                    @ObtenerEstado(diligencia.Estado)
+                                </span>
+                            </td>
+
+                            <td>
+                                @(diligencia.FechaProgramada?
+                                    .ToString("dd-MM-yyyy HH:mm") ?? "—")
+                            </td>
+
+                            <td>
+                                @(diligencia.ReceptorJudicial ?? "—")
+                            </td>
+
+                            <td>
+                                @ObtenerUbicacion(diligencia)
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private readonly List<CausaResumen> _causas = [];
+    private readonly List<DiligenciaResumen> _diligencias = [];
+
+    private Guid _causaSeleccionadaId;
+    private string? _mensajeError;
+    private bool _cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var causas =
+                await ApiClient.GetAsync<List<CausaResumen>>(
+                    "/api/Causas");
+
+            if (causas is null || causas.Count == 0)
+                return;
+
+            _causas.AddRange(causas);
+            _causaSeleccionadaId = _causas[0].Id;
+
+            await CargarDiligenciasAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeError =
+                "El servicio no está disponible. " +
+                "Inténtalo nuevamente.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task CambiarCausaAsync(
+        ChangeEventArgs args)
+    {
+        if (!Guid.TryParse(
+                args.Value?.ToString(),
+                out var causaId))
+        {
+            return;
+        }
+
+        _causaSeleccionadaId = causaId;
+        _cargando = true;
+        _mensajeError = null;
+
+        try
+        {
+            await CargarDiligenciasAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeError =
+                "No fue posible cargar las diligencias.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task CargarDiligenciasAsync()
+    {
+        _diligencias.Clear();
+
+        var resultado =
+            await ApiClient.GetAsync<List<DiligenciaResumen>>(
+                $"/api/Diligencias/causa/{_causaSeleccionadaId}");
+
+        if (resultado is not null)
+            _diligencias.AddRange(resultado);
+    }
+
+    private static string ObtenerEstado(int estado) =>
+        estado switch
+        {
+            1 => "Pendiente",
+            2 => "En proceso",
+            3 => "Completada",
+            4 => "Reprogramada",
+            5 => "Cancelada",
+            6 => "Suspendida",
+            7 => "Rechazada",
+            _ => "Sin estado"
+        };
+
+    private static string ObtenerTipo(int tipo) =>
+        tipo switch
+        {
+            1 => "Notificación",
+            2 => "Requerimiento de pago",
+            3 => "Embargo",
+            4 => "Lanzamiento",
+            5 => "Retiro de exhorto",
+            6 => "Retiro de expediente",
+            7 => "Incautación",
+            8 => "Protesto",
+            9 => "Citación",
+            99 => "Otro",
+            _ => "Sin tipo"
+        };
+
+    private static string ObtenerUbicacion(
+        DiligenciaResumen diligencia)
+    {
+        var partes = new[]
+        {
+            diligencia.Direccion,
+            diligencia.Comuna
+        };
+
+        var ubicacion = string.Join(
+            ", ",
+            partes.Where(
+                parte => !string.IsNullOrWhiteSpace(parte)));
+
+        return string.IsNullOrWhiteSpace(ubicacion)
+            ? "—"
+            : ubicacion;
+    }
+}

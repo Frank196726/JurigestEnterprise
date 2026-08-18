@@ -1,0 +1,183 @@
+@page "/causas"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Causas | Jurigest Enterprise</PageTitle>
+
+<section class="causes-page">
+    <header class="page-heading">
+        <div>
+            <span class="eyebrow">Gestión judicial</span>
+            <h1>Causas</h1>
+            <p>
+                Consulta los expedientes registrados y su estado actual.
+            </p>
+        </div>
+
+        <span class="count-badge">
+            @_causas.Count causas
+        </span>
+    </header>
+
+    <section class="toolbar">
+        <label class="search-box">
+            <span>Buscar</span>
+
+            <input type="search"
+                   placeholder="RIT, tribunal o descripción"
+                   autocomplete="off"
+                   @bind="_filtro"
+                   @bind:event="oninput" />
+        </label>
+    </section>
+
+    @if (_cargando)
+    {
+        <div class="state-card">
+            <span class="spinner"></span>
+            <p>Cargando causas…</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_mensajeError))
+    {
+        <div class="state-card error">
+            <strong>No fue posible cargar las causas</strong>
+            <p>@_mensajeError</p>
+        </div>
+    }
+    else if (!CausasFiltradas.Any())
+    {
+        <div class="state-card">
+            <strong>No se encontraron resultados</strong>
+            <p>
+                Intenta utilizar otro RIT, tribunal o descripción.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>RIT</th>
+                        <th>Tribunal</th>
+                        <th>Descripción</th>
+                        <th>Estado</th>
+                        <th>Registro</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var causa in CausasFiltradas)
+                    {
+                        <tr @key="causa.Id">
+                            <td>
+                                <strong class="rit">@causa.Rit</strong>
+                            </td>
+
+                            <td>@causa.Tribunal</td>
+
+                            <td>
+                                <span class="description">
+                                    @causa.Descripcion
+                                </span>
+                            </td>
+
+                            <td>
+                                <span class="status status-@causa.Estado">
+                                    @ObtenerEstado(causa.Estado)
+                                </span>
+                            </td>
+
+                            <td>
+                                @causa.FechaCreacion.ToString(
+                                    "dd-MM-yyyy")
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private readonly List<CausaResumen> _causas = [];
+
+    private string _filtro = string.Empty;
+    private string? _mensajeError;
+    private bool _cargando = true;
+
+    private IEnumerable<CausaResumen> CausasFiltradas
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(_filtro))
+                return _causas;
+
+            var filtro = _filtro.Trim();
+
+            return _causas.Where(
+                causa =>
+                    causa.Rit.Contains(
+                        filtro,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    causa.Tribunal.Contains(
+                        filtro,
+                        StringComparison.OrdinalIgnoreCase) ||
+                    causa.Descripcion.Contains(
+                        filtro,
+                        StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var resultado =
+                await ApiClient.GetAsync<List<CausaResumen>>(
+                    "/api/Causas");
+
+            if (resultado is not null)
+                _causas.AddRange(resultado);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeError =
+                "El servicio no está disponible. " +
+                "Inténtalo nuevamente.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private static string ObtenerEstado(
+        int estado)
+    {
+        return estado switch
+        {
+            1 => "Ingresada",
+            2 => "En tramitación",
+            3 => "Suspendida",
+            4 => "Terminada",
+            5 => "Archivada",
+            _ => "Sin estado"
+        };
+    }
+}
