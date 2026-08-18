@@ -1,7 +1,25 @@
 ﻿@page "/"
+@using Microsoft.AspNetCore.Authorization
+@attribute [Authorize]
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Inicio | Jurigest Enterprise</PageTitle>
 
-<h1>Hello, world!</h1>
+<AuthorizeView>
+    <Authorized Context="sesion">
+        <h1>Bienvenido, @sesion.User.Identity?.Name</h1>
 
-Welcome to your new app.
+        <p>
+            La sesión de Jurigest Enterprise está activa.
+        </p>
+
+        <form method="post"
+              action="/auth/logout">
+            <AntiforgeryToken />
+
+            <button class="btn btn-outline-danger"
+                    type="submit">
+                Cerrar sesión
+            </button>
+        </form>
+    </Authorized>
+</AuthorizeView>

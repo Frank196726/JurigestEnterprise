@@ -1,10 +1,36 @@
 using Jurigest.Web.Components;
+using Jurigest.Web.Security;
+using Jurigest.Web.Endpoints;
+using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Authentication;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
+
+builder.Services.AddMemoryCache();
+
+builder.Services.AddSingleton<
+    ISesionWebStore,
+    MemorySesionWebStore>();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddAuthentication(
+        SesionAuthenticationHandler.SchemeName)
+    .AddScheme<
+        AuthenticationSchemeOptions,
+        SesionAuthenticationHandler>(
+            SesionAuthenticationHandler.SchemeName,
+            options => { });
+
+builder.Services.AddAuthorization();
+builder.Services.AddCascadingAuthenticationState();
+
+builder.Services.AddScoped<
+    AuthenticationStateProvider,
+    SesionAuthenticationStateProvider>();
 
 var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
     ?? throw new InvalidOperationException(
@@ -30,9 +56,15 @@ if (!app.Environment.IsDevelopment())
 app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.UseAntiforgery();
 
 app.MapStaticAssets();
+
+app.MapSeguridadWebEndpoints();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 
