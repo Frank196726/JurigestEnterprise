@@ -1,3 +1,4 @@
+using Jurigest.Application.Abstractions.Notifications;
 using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Application.Abstractions.Security;
 using Jurigest.Domain.Seguridad.Entities;
@@ -24,16 +25,21 @@ public sealed class SolicitarRecuperacionPasswordHandler
     private readonly IAuditoriaSeguridadRepository
         _auditoriaRepository;
 
+    private readonly IRecuperacionPasswordNotifier
+        _notifier;
+
     public SolicitarRecuperacionPasswordHandler(
         IUsuarioRepository usuarioRepository,
         ITokenRecuperacionPasswordRepository tokenRepository,
         ITokenRecuperacionPasswordService tokenService,
-        IAuditoriaSeguridadRepository auditoriaRepository)
+        IAuditoriaSeguridadRepository auditoriaRepository,
+        IRecuperacionPasswordNotifier notifier)
     {
         _usuarioRepository = usuarioRepository;
         _tokenRepository = tokenRepository;
         _tokenService = tokenService;
         _auditoriaRepository = auditoriaRepository;
+        _notifier = notifier;
     }
 
     public async Task<SolicitarRecuperacionPasswordResponse?>
@@ -41,12 +47,6 @@ public sealed class SolicitarRecuperacionPasswordHandler
             SolicitarRecuperacionPasswordCommand request,
             CancellationToken cancellationToken)
     {
-        var tokenOriginal =
-            _tokenService.GenerarToken();
-
-        var tokenHash =
-            _tokenService.CalcularHash(tokenOriginal);
-
         var usuario =
             await _usuarioRepository.GetByEmailAsync(
                 request.Email,
@@ -54,6 +54,12 @@ public sealed class SolicitarRecuperacionPasswordHandler
 
         if (usuario is null || !usuario.Activo)
             return null;
+
+        var tokenOriginal =
+            _tokenService.GenerarToken();
+
+        var tokenHash =
+            _tokenService.CalcularHash(tokenOriginal);
 
         var fechaUtc = DateTime.UtcNow;
         var expiraUtc = fechaUtc.Add(Vigencia);
@@ -81,6 +87,12 @@ public sealed class SolicitarRecuperacionPasswordHandler
 
         await _auditoriaRepository.AddAsync(
             auditoria,
+            cancellationToken);
+
+        await _notifier.EnviarAsync(
+            usuario.Email,
+            tokenOriginal,
+            expiraUtc,
             cancellationToken);
 
         return new SolicitarRecuperacionPasswordResponse(

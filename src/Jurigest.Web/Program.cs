@@ -6,6 +6,18 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
+var apiBaseUrl = builder.Configuration["Api:BaseUrl"]
+    ?? throw new InvalidOperationException(
+        "Falta la configuración Api:BaseUrl.");
+
+builder.Services.AddHttpClient(
+    "JurigestApi",
+    client =>
+    {
+        client.BaseAddress = new Uri(apiBaseUrl);
+        client.Timeout = TimeSpan.FromSeconds(30);
+    });
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.

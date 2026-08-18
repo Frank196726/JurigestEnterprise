@@ -74,7 +74,7 @@ public sealed class RecuperacionPasswordTests
             mensajeExistente,
             mensajeInexistente);
 
-        Assert.True(
+        Assert.False(
             documentoExistente.RootElement
                 .TryGetProperty(
                     "tokenDesarrollo",
@@ -85,6 +85,17 @@ public sealed class RecuperacionPasswordTests
                 .TryGetProperty(
                     "tokenDesarrollo",
                     out _));
+
+        var notificacionExistente =
+            factory.RecuperacionPasswordNotifier.ObtenerUltima(
+                SeguridadTestHelper.AdminEmail);
+
+        var notificacionInexistente =
+            factory.RecuperacionPasswordNotifier.ObtenerUltima(
+                "inexistente@jurigest.test");
+
+        Assert.NotNull(notificacionExistente);
+        Assert.Null(notificacionInexistente);
     }
 
     [Fact]
@@ -116,19 +127,15 @@ public sealed class RecuperacionPasswordTests
             HttpStatusCode.OK,
             solicitud.StatusCode);
 
-        var contenidoSolicitud =
-            await solicitud.Content.ReadAsStringAsync();
+        var notificacion =
+            factory.RecuperacionPasswordNotifier.ObtenerUltima(
+                SeguridadTestHelper.AdminEmail);
 
-        using var documentoSolicitud =
-            JsonDocument.Parse(contenidoSolicitud);
-
-        var token =
-            documentoSolicitud.RootElement
-                .GetProperty("tokenDesarrollo")
-                .GetString();
-
+        Assert.NotNull(notificacion);
         Assert.False(
-            string.IsNullOrWhiteSpace(token));
+            string.IsNullOrWhiteSpace(notificacion.Token));
+
+        var token = notificacion.Token;
 
         using var confirmacion =
             await client.PostAsJsonAsync(

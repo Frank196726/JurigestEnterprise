@@ -9,6 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
+using Jurigest.Application.Abstractions.Notifications;
 
 namespace Jurigest.Integration.Tests.Infrastructure;
 
@@ -26,6 +27,10 @@ public sealed class JurigestApiFactory
 
     private readonly string _databaseName =
         $"JurigestTests-{Guid.NewGuid()}";
+
+    public RecuperacionPasswordNotifierTest
+        RecuperacionPasswordNotifier
+    { get; } = new();
 
     protected override void ConfigureWebHost(
         IWebHostBuilder builder)
@@ -49,6 +54,12 @@ public sealed class JurigestApiFactory
             services.RemoveAll<
                 IDbContextOptionsConfiguration<
                     JurigestDbContext>>();
+
+            services.RemoveAll<IRecuperacionPasswordNotifier>();
+
+            services.AddSingleton<
+                IRecuperacionPasswordNotifier>(
+                RecuperacionPasswordNotifier);
 
             services.RemoveAll<
                 DbContextOptions<JurigestDbContext>>();

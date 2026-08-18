@@ -1,0 +1,22 @@
+@inherits LayoutComponentBase
+
+<div class="recovery-shell">
+    <header class="recovery-header">
+        <a class="brand" href="/" aria-label="Jurigest Enterprise">
+            <span class="brand-mark">J</span>
+
+            <span>
+                <strong>Jurigest</strong>
+                <small>Enterprise</small>
+            </span>
+        </a>
+    </header>
+
+    <main class="recovery-content">
+        @Body
+    </main>
+
+    <footer class="recovery-footer">
+        © @DateTime.UtcNow.Year Jurigest Enterprise
+    </footer>
+</div>

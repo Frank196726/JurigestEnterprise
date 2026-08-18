@@ -96,8 +96,8 @@ public sealed class SeguridadController : ControllerBase
     [EnableRateLimiting("RecuperacionPassword")]
     [HttpPost("password/recuperacion/solicitar")]
     public async Task<IActionResult> SolicitarRecuperacionPassword(
-        [FromBody] SolicitarRecuperacionPasswordRequest request,
-        CancellationToken cancellationToken)
+    [FromBody] SolicitarRecuperacionPasswordRequest request,
+    CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Email))
@@ -109,32 +109,19 @@ public sealed class SeguridadController : ControllerBase
         }
 
         var direccionIp =
-        HttpContext.Connection.RemoteIpAddress?.ToString();
+            HttpContext.Connection.RemoteIpAddress?.ToString();
 
-        var resultado = await _mediator.Send(
-        new SolicitarRecuperacionPasswordCommand(
-            request.Email,
-            direccionIp),
-        cancellationToken);
-
-        const string mensaje =
-        "Si la cuenta existe, se enviaron las " +
-        "instrucciones de recuperacion.";
-
-        if (_environment.IsDevelopment() &&
-        resultado is not null)
-        {
-            return Ok(new
-            {
-                mensaje,
-                tokenDesarrollo = resultado.Token,
-                expiraUtc = resultado.ExpiraUtc
-            });
-        }
+        await _mediator.Send(
+            new SolicitarRecuperacionPasswordCommand(
+                request.Email,
+                direccionIp),
+            cancellationToken);
 
         return Ok(new
         {
-            mensaje
+            mensaje =
+                "Si la cuenta existe, se enviaron las " +
+                "instrucciones de recuperacion."
         });
     }
 

@@ -8,6 +8,8 @@ using Jurigest.Application.Abstractions.Storage;
 using Jurigest.Persistence.Storage;
 using Jurigest.Application.Abstractions.Security;
 using Jurigest.Persistence.Security;
+using Jurigest.Application.Abstractions.Notifications;
+using Jurigest.Persistence.Notifications;
 
 namespace Jurigest.Persistence;
 
@@ -54,6 +56,13 @@ public static class DependencyInjection
         services.AddSingleton<
             ITokenRecuperacionPasswordService,
             TokenRecuperacionPasswordService>();
+
+        services.Configure<SmtpOptions>(
+            configuration.GetSection(SmtpOptions.SectionName));
+
+        services.AddScoped<
+            IRecuperacionPasswordNotifier,
+            SmtpRecuperacionPasswordNotifier>();
 
         return services;
     }
