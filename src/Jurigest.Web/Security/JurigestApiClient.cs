@@ -79,4 +79,98 @@ public sealed class JurigestApiClient
             .ReadFromJsonAsync<T>(
                 cancellationToken);
     }
+
+    public async Task<HttpResponseMessage> PostAsync(
+        string ruta,
+        HttpContent contenido,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(
+                _identificadorSesion))
+        {
+            throw new UnauthorizedAccessException(
+                "No existe una sesión web.");
+        }
+
+        var sesion =
+            _sesionStore.Obtener(
+                _identificadorSesion);
+
+        if (sesion is null)
+        {
+            throw new UnauthorizedAccessException(
+                "La sesión web expiró.");
+        }
+
+        var client =
+            _httpClientFactory.CreateClient(
+                "JurigestApi");
+
+        using var request =
+            new HttpRequestMessage(
+                HttpMethod.Post,
+                ruta);
+
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue(
+                "Bearer",
+                sesion.AccessToken);
+
+        request.Content = contenido;
+
+        var response =
+            await client.SendAsync(
+                request,
+                cancellationToken);
+
+        if (response.StatusCode ==
+            HttpStatusCode.Unauthorized)
+        {
+            response.Dispose();
+
+            throw new UnauthorizedAccessException(
+                "El acceso al API expiró.");
+        }
+
+        return response;
+    }
+
+    public Task<HttpResponseMessage> PutAsync(
+        string ruta,
+        HttpContent contenido,
+        CancellationToken cancellationToken = default) =>
+        SendAsync(HttpMethod.Put, ruta, contenido, cancellationToken);
+
+    private async Task<HttpResponseMessage> SendAsync(
+        HttpMethod metodo,
+        string ruta,
+        HttpContent contenido,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(_identificadorSesion))
+            throw new UnauthorizedAccessException("No existe una sesión web.");
+
+        var sesion = _sesionStore.Obtener(_identificadorSesion);
+
+        if (sesion is null)
+            throw new UnauthorizedAccessException("La sesión web expiró.");
+
+        var client = _httpClientFactory.CreateClient("JurigestApi");
+        using var request = new HttpRequestMessage(metodo, ruta);
+        request.Headers.Authorization = new AuthenticationHeaderValue(
+            "Bearer",
+            sesion.AccessToken);
+        request.Content = contenido;
+
+        var response = await client.SendAsync(request, cancellationToken);
+
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            response.Dispose();
+            throw new UnauthorizedAccessException("El acceso al API expiró.");
+        }
+
+        return response;
+    }
+
 }

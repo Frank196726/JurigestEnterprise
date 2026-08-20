@@ -4,6 +4,9 @@ namespace Jurigest.Domain.Judicial.Entities;
 
 public sealed class Causa
 {
+    private static readonly char[] CaracteresInvalidosRit =
+        ['/', '\\', '?', '%', '*', ':', '|', '"', '<', '>'];
+
     private readonly List<Diligencia> _diligencias = new();
 
     private Causa()
@@ -17,6 +20,9 @@ public sealed class Causa
     {
         if (string.IsNullOrWhiteSpace(rit))
             throw new ArgumentException("El RIT es obligatorio.");
+
+        if (rit.IndexOfAny(CaracteresInvalidosRit) >= 0)
+            throw new ArgumentException("El RIT contiene caracteres no permitidos.");
 
         if (string.IsNullOrWhiteSpace(tribunal))
             throw new ArgumentException("El Tribunal es obligatorio.");
@@ -68,6 +74,9 @@ public sealed class Causa
     {
         if (string.IsNullOrWhiteSpace(rit))
             throw new ArgumentException("El RIT es obligatorio.");
+
+        if (rit.IndexOfAny(CaracteresInvalidosRit) >= 0)
+            throw new ArgumentException("El RIT contiene caracteres no permitidos.");
 
         if (string.IsNullOrWhiteSpace(tribunal))
             throw new ArgumentException("El Tribunal es obligatorio.");

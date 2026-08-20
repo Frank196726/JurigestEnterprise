@@ -9,7 +9,9 @@ public sealed class CrearCausaValidator
     {
         RuleFor(x => x.Rit)
             .NotEmpty()
-            .MaximumLength(30);
+            .MaximumLength(30)
+            .Must(rit => rit is null || rit.IndexOfAny(['/','\\','?','%','*',':','|','\"','<','>']) < 0)
+            .WithMessage("El RIT contiene caracteres no permitidos.");
 
         RuleFor(x => x.Tribunal)
             .NotEmpty()

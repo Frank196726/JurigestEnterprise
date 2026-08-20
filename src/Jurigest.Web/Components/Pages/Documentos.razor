@@ -1,0 +1,331 @@
+@page "/documentos"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Documentos | Jurigest Enterprise</PageTitle>
+
+<section class="documentos-page">
+    <header class="page-heading">
+        <div>
+            <span class="eyebrow">Gestión documental</span>
+            <h1>Documentos</h1>
+            <p>
+                Consulta y descarga los archivos asociados a cada causa.
+            </p>
+        </div>
+
+        <span class="count-badge">
+            @_documentos.Count documentos
+        </span>
+    </header>
+
+    <section class="toolbar">
+        <label>
+            <span>Seleccionar causa</span>
+
+            <select value="@_causaSeleccionadaId"
+                    @onchange="CambiarCausaAsync">
+                @foreach (var causa in _causas)
+                {
+                    <option value="@causa.Id">
+                        @causa.Rit — @causa.Tribunal
+                    </option>
+                }
+            </select>
+        </label>
+    </section>
+
+    <AuthorizeView Roles="Administrador,Abogado,Procurador">
+        <Authorized>
+            <section class="upload-card">
+                <div class="upload-heading">
+                    <div>
+                        <span class="eyebrow">
+                            Nuevo documento
+                        </span>
+
+                        <h2>Cargar archivo</h2>
+                    </div>
+
+                    <span class="file-limit">
+                        PDF, DOC o DOCX · Máximo 10 MB
+                    </span>
+                </div>
+
+                <div class="upload-grid">
+                    <label>
+                        <span>Nombre del documento</span>
+
+                        <input type="text"
+                               maxlength="200"
+                               placeholder="Ej.: Informe del receptor"
+                               @bind="_nombreDocumento" />
+                    </label>
+
+                    <label>
+                        <span>Tipo</span>
+
+                        <select @bind="_tipoDocumento">
+                            <option value="1">Demanda</option>
+                            <option value="2">Contestación</option>
+                            <option value="3">Escrito</option>
+                            <option value="4">Resolución</option>
+                            <option value="5">Contrato</option>
+                            <option value="6">Informe</option>
+                            <option value="7">Poder</option>
+                            <option value="8">Anexo</option>
+                            <option value="99">Otro</option>
+                        </select>
+                    </label>
+
+                    <label class="file-field">
+                        <span>Archivo</span>
+
+                        <InputFile OnChange="SeleccionarArchivo"
+                                   accept=".pdf,.doc,.docx" />
+                    </label>
+
+                    <button class="upload-button"
+                            type="button"
+                            disabled="@(_subiendo ||
+                                _archivoSeleccionado is null ||
+                                _causaSeleccionadaId == Guid.Empty ||
+                                string.IsNullOrWhiteSpace(
+                                    _nombreDocumento))"
+                            @onclick="CargarArchivoAsync">
+                        @(_subiendo
+                            ? "Cargando…"
+                            : "Cargar documento")
+                    </button>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_mensajeCarga))
+                {
+                    <div class="upload-message success"
+                         role="status">
+                        @_mensajeCarga
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(_errorCarga))
+                {
+                    <div class="upload-message error"
+                         role="alert">
+                        @_errorCarga
+                    </div>
+                }
+            </section>
+        </Authorized>
+    </AuthorizeView>
+    @if (_cargando)
+    {
+        <div class="state-card">
+            <p>Cargando documentos…</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_mensajeError))
+    {
+        <div class="state-card error">
+            <strong>No fue posible cargar los documentos</strong>
+            <p>@_mensajeError</p>
+        </div>
+    }
+    else if (_causas.Count == 0)
+    {
+        <div class="state-card">
+            <strong>No existen causas registradas</strong>
+        </div>
+    }
+    else if (_documentos.Count == 0)
+    {
+        <div class="state-card">
+            <strong>La causa no tiene documentos</strong>
+            <p>
+                Selecciona otra causa para continuar.
+            </p>
+        </div>
+    }
+    else
+    {
+        <div class="table-card">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Documento</th>
+                        <th>Tipo</th>
+                        <th>Formato</th>
+                        <th>Tamaño</th>
+                        <th>Registro</th>
+                        <th></th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @foreach (var documento in _documentos)
+                    {
+                        <tr @key="documento.Id">
+                            <td>
+                                <strong>@documento.Nombre</strong>
+                            </td>
+
+                            <td>@ObtenerTipo(documento.Tipo)</td>
+
+                            <td>
+                                @ObtenerFormato(documento.ContentType)
+                            </td>
+
+                            <td>
+                                @FormatearTamano(documento.TamanoBytes)
+                            </td>
+
+                            <td>
+                                @documento.FechaRegistro.ToString(
+                                    "dd-MM-yyyy HH:mm")
+                            </td>
+
+                            <td class="actions">
+                                <a class="download-button"
+                                   href="/documentos/@documento.Id/archivo">
+                                    Descargar
+                                </a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    private readonly List<CausaResumen> _causas = [];
+    private readonly List<DocumentoResumen> _documentos = [];
+
+    private Guid _causaSeleccionadaId;
+    private string? _mensajeError;
+    private bool _cargando = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var causas =
+                await ApiClient.GetAsync<List<CausaResumen>>(
+                    "/api/Causas");
+
+            if (causas is null || causas.Count == 0)
+                return;
+
+            _causas.AddRange(causas);
+            _causaSeleccionadaId = _causas[0].Id;
+
+            await CargarDocumentosAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeError =
+                "El servicio no está disponible. " +
+                "Inténtalo nuevamente.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task CambiarCausaAsync(
+        ChangeEventArgs args)
+    {
+        if (!Guid.TryParse(
+                args.Value?.ToString(),
+                out var causaId))
+        {
+            return;
+        }
+
+        _causaSeleccionadaId = causaId;
+        _cargando = true;
+        _mensajeError = null;
+
+        try
+        {
+            await CargarDocumentosAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeError =
+                "No fue posible cargar los documentos.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task CargarDocumentosAsync()
+    {
+        _documentos.Clear();
+
+        var resultado =
+            await ApiClient.GetAsync<List<DocumentoResumen>>(
+                $"/api/Causas/{_causaSeleccionadaId}/documentos");
+
+        if (resultado is not null)
+            _documentos.AddRange(resultado);
+    }
+
+    private static string ObtenerTipo(int tipo) =>
+        tipo switch
+        {
+            1 => "Demanda",
+            2 => "Contestación",
+            3 => "Escrito",
+            4 => "Resolución",
+            5 => "Contrato",
+            6 => "Informe",
+            7 => "Poder",
+            8 => "Anexo",
+            99 => "Otro",
+            _ => "Sin tipo"
+        };
+
+    private static string ObtenerFormato(
+        string contentType) =>
+        contentType switch
+        {
+            "application/pdf" => "PDF",
+            "application/msword" => "DOC",
+            "application/vnd.openxmlformats-officedocument" +
+                ".wordprocessingml.document" => "DOCX",
+            _ => "Archivo"
+        };
+
+    private static string FormatearTamano(long bytes)
+    {
+        if (bytes < 1024)
+            return $"{bytes} B";
+
+        if (bytes < 1024 * 1024)
+            return $"{bytes / 1024d:0.0} KB";
+
+        return $"{bytes / 1024d / 1024d:0.0} MB";
+    }
+}

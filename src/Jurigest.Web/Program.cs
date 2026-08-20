@@ -69,6 +69,8 @@ app.MapStaticAssets();
 
 app.MapSeguridadWebEndpoints();
 
+app.MapDocumentosWebEndpoints();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

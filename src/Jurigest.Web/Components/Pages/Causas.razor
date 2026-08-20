@@ -25,6 +25,140 @@
         </span>
     </header>
 
+    <AuthorizeView Roles="Administrador,Abogado">
+    <Authorized Context="usuarioAutorizado">
+        <section class="management-card"
+                 aria-labelledby="titulo-nueva-gestion">
+            <div class="management-heading">
+                <div>
+                    <span class="eyebrow">Nuevo registro</span>
+
+                    <h2 id="titulo-nueva-gestion">
+                        Guardar gestión
+                    </h2>
+
+                    <p>
+                        Registra la causa y su primera diligencia
+                        en Jurigest Enterprise.
+                    </p>
+                </div>
+            </div>
+
+            <EditForm Model="_nuevaGestion"
+                      OnValidSubmit="GuardarGestionAsync"
+                      FormName="guardar-gestion">
+                <DataAnnotationsValidator />
+                <ValidationSummary class="validation-summary" />
+
+                <div class="form-grid">
+                    <label>
+                        <span>ROL</span>
+
+                        <InputText
+                            @bind-Value="_nuevaGestion.Rol"
+                            maxlength="30" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.Rol)" />
+                    </label>
+
+                    <label>
+                        <span>Tribunal</span>
+
+                        <InputText
+                            @bind-Value="_nuevaGestion.Tribunal"
+                            maxlength="200" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.Tribunal)" />
+                    </label>
+
+                    <label>
+                        <span>Abogado responsable</span>
+
+                        <InputText
+                            @bind-Value="_nuevaGestion.Abogado"
+                            maxlength="200" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.Abogado)" />
+                    </label>
+
+                    <label>
+                        <span>Demandante</span>
+
+                        <InputText
+                            @bind-Value="_nuevaGestion.Demandante"
+                            maxlength="200" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.Demandante)" />
+                    </label>
+
+                    <label>
+                        <span>Demandado</span>
+
+                        <InputText
+                            @bind-Value="_nuevaGestion.Demandado"
+                            maxlength="200" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.Demandado)" />
+                    </label>
+
+                    <label>
+                        <span>Fecha de encargo</span>
+
+                        <InputDate
+                            @bind-Value="_nuevaGestion.FechaEncargo" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.FechaEncargo)" />
+                    </label>
+
+                    <label>
+                        <span>Fecha de retiro</span>
+
+                        <InputDate
+                            @bind-Value="_nuevaGestion.FechaRetiro" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.FechaRetiro)" />
+                    </label>
+
+                    <label class="full-width">
+                        <span>Diligencia encargada</span>
+
+                        <InputTextArea
+                            @bind-Value="_nuevaGestion.Diligencia"
+                            maxlength="1000" />
+
+                        <ValidationMessage
+                            For="@(() => _nuevaGestion.Diligencia)" />
+                    </label>
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_mensajeGestion))
+                {
+                    <div class="form-message @(_gestionGuardada ? "success" : "error")"
+                         role="status">
+                        @_mensajeGestion
+                    </div>
+                }
+
+                <div class="form-actions">
+                    <button type="submit"
+                            disabled="@_guardandoGestion">
+                        @(_guardandoGestion
+                            ? "Guardando…"
+                            : "Guardar gestión")
+                    </button>
+                </div>
+            </EditForm>
+        </section>
+    </Authorized>
+</AuthorizeView>
+
     <section class="toolbar">
         <label class="search-box">
             <span>Buscar</span>
@@ -44,7 +178,7 @@
             <p>Cargando causas…</p>
         </div>
     }
-    else if (!string.IsNullOrWhiteSpace(_mensajeError))
+        else if (!string.IsNullOrWhiteSpace(_mensajeError))
     {
         <div class="state-card error">
             <strong>No fue posible cargar las causas</strong>
@@ -114,6 +248,10 @@
     private string _filtro = string.Empty;
     private string? _mensajeError;
     private bool _cargando = true;
+    private RegistrarGestionModel _nuevaGestion = NuevaGestion();
+    private string? _mensajeGestion;
+    private bool _guardandoGestion;
+    private bool _gestionGuardada;
 
     private IEnumerable<CausaResumen> CausasFiltradas
     {
@@ -142,12 +280,7 @@
     {
         try
         {
-            var resultado =
-                await ApiClient.GetAsync<List<CausaResumen>>(
-                    "/api/Causas");
-
-            if (resultado is not null)
-                _causas.AddRange(resultado);
+            await CargarCausasAsync();
         }
         catch (UnauthorizedAccessException)
         {
@@ -166,6 +299,108 @@
             _cargando = false;
         }
     }
+
+    private async Task GuardarGestionAsync()
+    {
+        _guardandoGestion = true;
+        _gestionGuardada = false;
+        _mensajeGestion = null;
+        Guid? causaId = null;
+
+        try
+        {
+            var caratula = $"{_nuevaGestion.Demandante.Trim()} / {_nuevaGestion.Demandado.Trim()}";
+            using var respuestaCausa = await ApiClient.PostAsync(
+                "/api/Causas",
+                JsonContent.Create(new
+                {
+                    id = Guid.Empty,
+                    rit = _nuevaGestion.Rol.Trim(),
+                    tribunal = _nuevaGestion.Tribunal.Trim(),
+                    descripcion = caratula
+                }));
+
+            await VerificarRespuestaAsync(respuestaCausa, "crear la causa");
+            var causaCreada = await respuestaCausa.Content.ReadFromJsonAsync<CausaCreadaResponse>();
+            causaId = causaCreada?.Id ?? throw new InvalidOperationException(
+                "La API no devolvió el identificador de la causa.");
+
+            using var respuestaDiligencia = await ApiClient.PostAsync(
+                $"/api/Causas/{causaId}/diligencias",
+                JsonContent.Create(new { descripcion = _nuevaGestion.Diligencia.Trim() }));
+
+            await VerificarRespuestaAsync(respuestaDiligencia, "crear la diligencia");
+            var diligenciaCreada = await respuestaDiligencia.Content
+                .ReadFromJsonAsync<DiligenciaCreadaResponse>();
+            var diligenciaId = diligenciaCreada?.Id ?? throw new InvalidOperationException(
+                "La API no devolvió el identificador de la diligencia.");
+
+            using var respuestaProgramacion = await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/programar",
+                JsonContent.Create(new { fechaProgramada = _nuevaGestion.FechaEncargo!.Value.Date }));
+            await VerificarRespuestaAsync(respuestaProgramacion, "programar la diligencia");
+
+            var retiro = _nuevaGestion.FechaRetiro.HasValue
+                ? _nuevaGestion.FechaRetiro.Value.ToString("dd-MM-yyyy")
+                : "No indicada";
+            using var respuestaObservacion = await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/observacion",
+                JsonContent.Create(new
+                {
+                    observacion = $"Abogado responsable: {_nuevaGestion.Abogado.Trim()}. Fecha de retiro: {retiro}."
+                }));
+            await VerificarRespuestaAsync(respuestaObservacion, "registrar los datos del encargo");
+
+            _gestionGuardada = true;
+            _mensajeGestion = "La gestión fue guardada correctamente en Jurigest Enterprise.";
+            _nuevaGestion = NuevaGestion();
+            await CargarCausasAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
+        {
+            _mensajeGestion = causaId.HasValue
+                ? $"La causa fue creada, pero la gestión quedó incompleta: {ex.Message}"
+                : $"No fue posible guardar la gestión: {ex.Message}";
+        }
+        finally
+        {
+            _guardandoGestion = false;
+        }
+    }
+
+    private async Task CargarCausasAsync()
+    {
+        var resultado = await ApiClient.GetAsync<List<CausaResumen>>("/api/Causas");
+        _causas.Clear();
+
+        if (resultado is not null)
+            _causas.AddRange(resultado);
+    }
+
+    private static async Task VerificarRespuestaAsync(
+        HttpResponseMessage respuesta,
+        string operacion)
+    {
+        if (respuesta.IsSuccessStatusCode)
+            return;
+
+        var detalle = await respuesta.Content.ReadAsStringAsync();
+        throw new HttpRequestException(
+            $"No se pudo {operacion} ({(int)respuesta.StatusCode}). {detalle}".Trim());
+    }
+
+    private static RegistrarGestionModel NuevaGestion() => new()
+    {
+        FechaEncargo = DateTime.Today
+    };
+
+    private sealed record CausaCreadaResponse(Guid Id);
+
+    private sealed record DiligenciaCreadaResponse(Guid Id);
 
     private static string ObtenerEstado(
         int estado)
