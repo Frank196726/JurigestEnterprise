@@ -9,6 +9,7 @@ namespace Jurigest.Web.Endpoints;
 
 public static class ReportesWebEndpoints
 {
+    private const int MaximoFilasExportacion = 5000;
     public static IEndpointRouteBuilder MapReportesWebEndpoints(this IEndpointRouteBuilder endpoints)
     {
         endpoints.MapGet("/reportes/causas.csv", ExportarCausasAsync)
@@ -36,7 +37,7 @@ public static class ReportesWebEndpoints
         var responsable = context.Request.Query["responsable"].ToString();
         var filas = new List<ReporteCausaResumen>();
 
-        foreach (var causa in causas.Where(c => (!desde.HasValue || c.FechaEncargo.Date >= desde.Value.Date) && (!hasta.HasValue || c.FechaEncargo.Date <= hasta.Value.Date) && (estado == 0 || c.Estado == estado) && (string.IsNullOrWhiteSpace(tribunal) || c.Tribunal.Equals(tribunal, StringComparison.OrdinalIgnoreCase))))
+        foreach (var causa in causas.Where(c => (!desde.HasValue || c.FechaEncargo.Date >= desde.Value.Date) && (!hasta.HasValue || c.FechaEncargo.Date <= hasta.Value.Date) && (estado == 0 || c.Estado == estado) && (string.IsNullOrWhiteSpace(tribunal) || c.Tribunal.Equals(tribunal, StringComparison.OrdinalIgnoreCase))).Take(MaximoFilasExportacion))
         {
             if (!string.IsNullOrWhiteSpace(responsable) && !causa.Responsables.Contains(responsable, StringComparison.OrdinalIgnoreCase)) continue;
             filas.Add(causa);
