@@ -1,0 +1,106 @@
+@page "/vencimientos"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Alertas y vencimientos | Jurigest Enterprise</PageTitle>
+
+<section class="deadlines-page">
+    <header class="page-heading">
+        <div>
+            <span class="eyebrow">Control de plazos</span>
+            <h1>Alertas y vencimientos</h1>
+            <p>Prioriza las diligencias activas según su fecha programada.</p>
+        </div>
+        <span class="count-badge">@DiligenciasFiltradas.Count() pendientes</span>
+    </header>
+
+    <section class="metrics">
+        <button class="metric critical" @onclick='() => CambiarFiltro("vencidas")'><strong>@Contar("vencidas")</strong><span>Vencidas</span></button>
+        <button class="metric urgent" @onclick='() => CambiarFiltro("hoy")'><strong>@Contar("hoy")</strong><span>Vencen hoy</span></button>
+        <button class="metric attention" @onclick='() => CambiarFiltro("proximos3")'><strong>@Contar("proximos3")</strong><span>Próximos 3 días</span></button>
+        <button class="metric normal" @onclick='() => CambiarFiltro("4a7")'><strong>@Contar("4a7")</strong><span>Entre 4 y 7 días</span></button>
+    </section>
+
+    <section class="toolbar">
+        <label><span>Plazo</span><select @bind="_filtro"><option value="todas">Todas las activas</option><option value="vencidas">Vencidas</option><option value="hoy">Vencen hoy</option><option value="proximos3">Próximos 3 días</option><option value="4a7">Entre 4 y 7 días</option><option value="posteriores">Después de 7 días</option></select></label>
+        <label class="search"><span>Buscar</span><input type="search" placeholder="RIT, tribunal o descripción" @bind="_busqueda" @bind:event="oninput" /></label>
+    </section>
+
+    @if (_cargando)
+    {
+        <div class="state-card">Cargando vencimientos…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="state-card error"><strong>No fue posible cargar los vencimientos</strong><p>@_error</p></div>
+    }
+    else if (!DiligenciasFiltradas.Any())
+    {
+        <div class="state-card"><strong>No hay diligencias para este filtro</strong><p>Los plazos activos aparecerán aquí automáticamente.</p></div>
+    }
+    else
+    {
+        <div class="table-card">
+            <table>
+                <thead><tr><th>Prioridad</th><th>Vencimiento</th><th>Causa</th><th>Diligencia</th><th>Responsable</th><th>Acciones</th></tr></thead>
+                <tbody>
+                    @foreach (var item in DiligenciasFiltradas)
+                    {
+                        <tr @key="item.Id">
+                            <td><span class="priority @ClasePrioridad(item.DiasParaVencimiento)">@TextoPlazo(item.DiasParaVencimiento)</span></td>
+                            <td><strong>@item.FechaProgramada.ToString("dd-MM-yyyy")</strong><small>@item.FechaProgramada.ToString("HH:mm")</small></td>
+                            <td><strong>@item.Rit</strong><small>@item.Tribunal</small></td>
+                            <td>@item.Descripcion</td>
+                            <td>@(item.ReceptorJudicial ?? "Sin asignar")</td>
+                            <td class="actions"><a href="/diligencias/@item.Id/editar">Gestionar</a><a href="/causas/@item.CausaId/diligencias/registrar">Registrar resultado</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+@code {
+    [SupplyParameterFromQuery(Name = "plazo")]
+    public string? PlazoInicial { get; set; }
+
+    private readonly List<DiligenciaPlazoResumen> _diligencias = [];
+    private string _filtro = "todas";
+    private string _busqueda = string.Empty;
+    private string? _error;
+    private bool _cargando = true;
+
+    private IEnumerable<DiligenciaPlazoResumen> DiligenciasFiltradas =>
+        _diligencias.Where(item => CumpleFiltro(item.DiasParaVencimiento, _filtro) &&
+            (string.IsNullOrWhiteSpace(_busqueda) ||
+             item.Rit.Contains(_busqueda, StringComparison.OrdinalIgnoreCase) ||
+             item.Tribunal.Contains(_busqueda, StringComparison.OrdinalIgnoreCase) ||
+             item.Descripcion.Contains(_busqueda, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        _filtro = NormalizarFiltro(PlazoInicial);
+        try
+        {
+            var resultado = await ApiClient.GetAsync<List<DiligenciaPlazoResumen>>("/api/Diligencias/plazos");
+            if (resultado is not null) _diligencias.AddRange(resultado);
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _error = "El servicio no está disponible. Inténtalo nuevamente."; }
+        finally { _cargando = false; }
+    }
+
+    private void CambiarFiltro(string filtro) => _filtro = filtro;
+    private int Contar(string filtro) => _diligencias.Count(item => CumpleFiltro(item.DiasParaVencimiento, filtro));
+    private static bool CumpleFiltro(int dias, string filtro) => filtro switch { "vencidas" => dias < 0, "hoy" => dias == 0, "proximos3" => dias is >= 1 and <= 3, "4a7" => dias is >= 4 and <= 7, "posteriores" => dias > 7, _ => true };
+    private static string NormalizarFiltro(string? filtro) => filtro is "vencidas" or "hoy" or "proximos3" or "4a7" or "posteriores" ? filtro : "todas";
+    private static string ClasePrioridad(int dias) => dias < 0 ? "critical" : dias == 0 ? "urgent" : dias <= 3 ? "attention" : "normal";
+    private static string TextoPlazo(int dias) => dias switch { < 0 => $"Vencida hace {Math.Abs(dias)} día(s)", 0 => "Vence hoy", 1 => "Vence mañana", _ => $"Vence en {dias} días" };
+}

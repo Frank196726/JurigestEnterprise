@@ -11,6 +11,7 @@ using Jurigest.Application.Judicial.Diligencias.Commands.ProgramarDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Commands.SuspenderDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligenciasPorCausa;
+using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligenciasPorPlazo;
 using Jurigest.Application.Judicial.Diligencias.Commands.RegistrarResultado;
 using Jurigest.Application.Judicial.Diligencias.Commands.ActualizarDiligencia;
 using Jurigest.Application.Abstractions.Persistence;
@@ -35,6 +36,17 @@ public sealed class DiligenciasController : ControllerBase
         _mediator = mediator;
         _diligenciaRepository = diligenciaRepository;
 }
+
+    [HttpGet("plazos")]
+    public async Task<IActionResult> ObtenerPorPlazo(
+        CancellationToken cancellationToken)
+    {
+        var resultado = await _mediator.Send(
+            new ObtenerDiligenciasPorPlazoQuery(),
+            cancellationToken);
+
+        return Ok(resultado);
+    }
 
     [HttpGet("{id:guid}")]
         public async Task<IActionResult> Obtener(
