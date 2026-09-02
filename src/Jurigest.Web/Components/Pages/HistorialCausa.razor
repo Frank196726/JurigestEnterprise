@@ -90,7 +90,7 @@
     private List<EventoHistorial> ConstruirEventos()
     {
         var eventos = new List<EventoHistorial>();
-        eventos.AddRange(_diligencias.Select(d => new EventoHistorial($"d-{d.Id}", d.FechaGestion ?? d.FechaRealizada ?? d.FechaProgramada ?? d.FechaCreacion, "Diligencia", d.Descripcion, d.ResultadoDetalle, $"Estado: {Estado(d.Estado)} · Responsable: {d.ReceptorJudicial ?? "Sin asignar"}", "diligence", "D")));
+        eventos.AddRange(_diligencias.Select(d => new EventoHistorial($"d-{d.Id}", d.FechaGestion ?? d.FechaRealizada ?? d.FechaProgramada ?? d.FechaCreacion, "Diligencia", d.Descripcion, d.ResultadoDetalle, $"Estado: {Estado(d.Estado)} · Receptor: {d.ReceptorJudicial ?? "Sin asignar"}", "diligence", "D")));
         eventos.AddRange(_resoluciones.Select(r => new EventoHistorial($"r-{r.Id}", r.Fecha, "Resolución", TipoResolucion(r.Tipo), r.Descripcion, null, "resolution", "R")));
         eventos.AddRange(_documentos.Select(d => new EventoHistorial($"a-{d.Id}", d.FechaRegistro, "Documento", d.Nombre, $"{Formato(d.ContentType)} · {Tamano(d.TamanoBytes)}", null, "document", "A")));
         return eventos;

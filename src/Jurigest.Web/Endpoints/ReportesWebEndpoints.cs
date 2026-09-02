@@ -34,16 +34,18 @@ public static class ReportesWebEndpoints
         var hasta = ParseDate(context.Request.Query["hasta"]);
         var estado = int.TryParse(context.Request.Query["estado"], out var estadoValor) ? estadoValor : 0;
         var tribunal = context.Request.Query["tribunal"].ToString();
-        var responsable = context.Request.Query["responsable"].ToString();
+        var receptor = context.Request.Query["receptor"].ToString();
         var filas = new List<ReporteCausaResumen>();
 
         foreach (var causa in causas.Where(c => (!desde.HasValue || c.FechaEncargo.Date >= desde.Value.Date) && (!hasta.HasValue || c.FechaEncargo.Date <= hasta.Value.Date) && (estado == 0 || c.Estado == estado) && (string.IsNullOrWhiteSpace(tribunal) || c.Tribunal.Equals(tribunal, StringComparison.OrdinalIgnoreCase))).Take(MaximoFilasExportacion))
         {
-            if (!string.IsNullOrWhiteSpace(responsable) && !causa.Responsables.Contains(responsable, StringComparison.OrdinalIgnoreCase)) continue;
+            if (!string.IsNullOrWhiteSpace(receptor) &&
+                !causa.Responsables.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                    .Contains(receptor, StringComparer.OrdinalIgnoreCase)) continue;
             filas.Add(causa);
         }
 
-        var csv = new StringBuilder("RIT;Tribunal;Descripción;Fecha encargo;Última gestión;Días sin gestionar;Estado;Responsables;Diligencias;Completadas\r\n");
+        var csv = new StringBuilder("RIT;Tribunal;Descripción;Fecha encargo;Última gestión;Días sin gestionar;Estado;Receptores;Diligencias;Completadas\r\n");
         foreach (var fila in filas)
             csv.AppendLine(string.Join(';', Q(fila.Rit), Q(fila.Tribunal), Q(fila.Descripcion), fila.FechaEncargo.ToString("dd-MM-yyyy"), fila.UltimaGestion?.ToString("dd-MM-yyyy HH:mm") ?? "", fila.DiasSinGestion, Q(Estado(fila.Estado)), Q(fila.Responsables), fila.TotalDiligencias, fila.DiligenciasCompletadas));
 

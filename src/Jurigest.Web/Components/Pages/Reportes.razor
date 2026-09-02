@@ -19,7 +19,16 @@
         <label><span>Desde</span><input type="date" @bind="_desde" /></label><label><span>Hasta</span><input type="date" @bind="_hasta" /></label>
         <label><span>Estado</span><select @bind="_estado"><option value="0">Todos</option><option value="1">Ingresada</option><option value="2">En tramitación</option><option value="3">Suspendida</option><option value="4">Terminada</option><option value="5">Archivada</option></select></label>
         <label><span>Tribunal</span><select @bind="_tribunal"><option value="">Todos</option>@foreach (var tribunal in _causas.Select(x => x.Tribunal).Distinct().Order()) { <option value="@tribunal">@tribunal</option> }</select></label>
-        <label><span>Responsable</span><input type="search" placeholder="Nombre del receptor" @bind="_responsable" @bind:event="oninput" /></label>
+        <label>
+            <span>Receptor</span>
+            <select @bind="_receptor">
+                <option value="">Todos</option>
+                @foreach (var receptor in _receptores)
+                {
+                    <option value="@receptor.Nombre">@receptor.Nombre</option>
+                }
+            </select>
+        </label>
     </section>
 
     <section class="metrics"><article><strong>@Filtradas.Count()</strong><span>Causas</span></article><article><strong>@Filtradas.Sum(x => x.TotalDiligencias)</strong><span>Diligencias</span></article><article><strong>@Filtradas.Sum(x => x.DiligenciasCompletadas)</strong><span>Completadas</span></article><article class="priority"><strong>@Filtradas.Count(x => x.DiasSinGestion > 15)</strong><span>Prioritarias</span></article></section>
@@ -29,27 +38,28 @@
     else if (!Filtradas.Any()) { <div class="state-card"><strong>No hay resultados para los filtros seleccionados</strong></div> }
     else
     {
-        <div class="table-card"><table><thead><tr><th>RIT</th><th>Tribunal</th><th>Encargo</th><th>Última gestión</th><th>Antigüedad</th><th>Responsables</th><th>Diligencias</th><th>Estado</th></tr></thead><tbody>@foreach (var fila in PaginaActual) { <tr><td><strong>@fila.Rit</strong></td><td>@fila.Tribunal</td><td>@fila.FechaEncargo.ToString("dd-MM-yyyy")</td><td>@(fila.UltimaGestion?.ToString("dd-MM-yyyy") ?? "Sin gestión")</td><td><span class="age @(fila.DiasSinGestion > 15 ? "critical" : "")">@fila.DiasSinGestion días</span></td><td>@(string.IsNullOrWhiteSpace(fila.Responsables) ? "Sin asignar" : fila.Responsables)</td><td>@fila.DiligenciasCompletadas / @fila.TotalDiligencias</td><td>@Estado(fila.Estado)</td></tr> }</tbody></table></div>
+        <div class="table-card"><table><thead><tr><th>RIT</th><th>Tribunal</th><th>Encargo</th><th>Última gestión</th><th>Antigüedad</th><th>Receptores</th><th>Diligencias</th><th>Estado</th></tr></thead><tbody>@foreach (var fila in PaginaActual) { <tr><td><strong>@fila.Rit</strong></td><td>@fila.Tribunal</td><td>@fila.FechaEncargo.ToString("dd-MM-yyyy")</td><td>@(fila.UltimaGestion?.ToString("dd-MM-yyyy") ?? "Sin gestión")</td><td><span class="age @(fila.DiasSinGestion > 15 ? "critical" : "")">@fila.DiasSinGestion días</span></td><td>@(string.IsNullOrWhiteSpace(fila.Responsables) ? "Sin asignar" : fila.Responsables)</td><td>@fila.DiligenciasCompletadas / @fila.TotalDiligencias</td><td>@Estado(fila.Estado)</td></tr> }</tbody></table></div>
         <nav class="pagination"><button disabled="@(PaginaSegura == 1)" @onclick="Anterior">Anterior</button><span>Página @PaginaSegura de @TotalPaginas · @Filtradas.Count() resultados</span><button disabled="@(PaginaSegura == TotalPaginas)" @onclick="Siguiente">Siguiente</button></nav>
     }
 </section>
 
 @code {
     private readonly List<ReporteCausaResumen> _causas = [];
+    private readonly List<ReceptorCatalogoResumen> _receptores = [];
     private DateTime? _desde;
     private DateTime? _hasta;
     private int _estado;
     private string _tribunal = string.Empty;
-    private string _responsable = string.Empty;
+    private string _receptor = string.Empty;
     private bool _cargando = true;
     private string? _error;
     private int _pagina = 1;
     private const int TamanoPagina = 25;
-    private IEnumerable<ReporteCausaResumen> Filtradas => _causas.Where(x => (!_desde.HasValue || x.FechaEncargo.Date >= _desde.Value.Date) && (!_hasta.HasValue || x.FechaEncargo.Date <= _hasta.Value.Date) && (_estado == 0 || x.Estado == _estado) && (string.IsNullOrWhiteSpace(_tribunal) || x.Tribunal == _tribunal) && (string.IsNullOrWhiteSpace(_responsable) || x.Responsables.Contains(_responsable, StringComparison.OrdinalIgnoreCase)));
+    private IEnumerable<ReporteCausaResumen> Filtradas => _causas.Where(x => (!_desde.HasValue || x.FechaEncargo.Date >= _desde.Value.Date) && (!_hasta.HasValue || x.FechaEncargo.Date <= _hasta.Value.Date) && (_estado == 0 || x.Estado == _estado) && (string.IsNullOrWhiteSpace(_tribunal) || x.Tribunal == _tribunal) && (string.IsNullOrWhiteSpace(_receptor) || x.Responsables.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).Contains(_receptor, StringComparer.OrdinalIgnoreCase)));
     private int TotalPaginas => Math.Max(1, (int)Math.Ceiling(Filtradas.Count() / (double)TamanoPagina));
     private int PaginaSegura => Math.Min(_pagina, TotalPaginas);
     private IEnumerable<ReporteCausaResumen> PaginaActual => Filtradas.Skip((PaginaSegura - 1) * TamanoPagina).Take(TamanoPagina);
-    private string UrlCsv => $"/reportes/causas.csv?desde={_desde:yyyy-MM-dd}&hasta={_hasta:yyyy-MM-dd}&estado={_estado}&tribunal={Uri.EscapeDataString(_tribunal)}&responsable={Uri.EscapeDataString(_responsable)}";
+    private string UrlCsv => $"/reportes/causas.csv?desde={_desde:yyyy-MM-dd}&hasta={_hasta:yyyy-MM-dd}&estado={_estado}&tribunal={Uri.EscapeDataString(_tribunal)}&receptor={Uri.EscapeDataString(_receptor)}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -57,6 +67,8 @@
         {
             var causas = await ApiClient.GetAsync<List<ReporteCausaResumen>>("/api/Causas/reporte") ?? [];
             _causas.AddRange(causas);
+            var receptores = await ApiClient.GetAsync<List<ReceptorCatalogoResumen>>("/api/Catalogos/receptores") ?? [];
+            _receptores.AddRange(receptores.OrderBy(x => x.Nombre));
         }
         catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
         catch (HttpRequestException) { _error = "No fue posible obtener los datos del reporte."; }
