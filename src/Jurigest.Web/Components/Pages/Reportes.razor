@@ -49,13 +49,8 @@
     {
         try
         {
-            var causas = await ApiClient.GetAsync<List<CausaResumen>>("/api/Causas") ?? [];
-            foreach (var causa in causas)
-            {
-                var diligencias = await ApiClient.GetAsync<List<DiligenciaResumen>>($"/api/Diligencias/causa/{causa.Id}") ?? [];
-                var responsables = string.Join(", ", diligencias.Select(x => x.ReceptorJudicial).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase));
-                _causas.Add(new(causa.Id, causa.Rit, causa.Tribunal, causa.Descripcion, causa.FechaEncargoCausa, causa.FechaGestionCausa, causa.DiasSinGestion, causa.Estado, responsables, diligencias.Count, diligencias.Count(x => x.Estado == 3)));
-            }
+            var causas = await ApiClient.GetAsync<List<ReporteCausaResumen>>("/api/Causas/reporte") ?? [];
+            _causas.AddRange(causas);
         }
         catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
         catch (HttpRequestException) { _error = "No fue posible obtener los datos del reporte."; }

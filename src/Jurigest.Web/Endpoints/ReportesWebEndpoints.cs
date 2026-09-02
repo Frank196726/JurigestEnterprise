@@ -28,7 +28,7 @@ public static class ReportesWebEndpoints
 
         var client = httpClientFactory.CreateClient("JurigestApi");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sesion.AccessToken);
-        var causas = await client.GetFromJsonAsync<List<CausaResumen>>("/api/Causas", cancellationToken) ?? [];
+        var causas = await client.GetFromJsonAsync<List<ReporteCausaResumen>>("/api/Causas/reporte", cancellationToken) ?? [];
         var desde = ParseDate(context.Request.Query["desde"]);
         var hasta = ParseDate(context.Request.Query["hasta"]);
         var estado = int.TryParse(context.Request.Query["estado"], out var estadoValor) ? estadoValor : 0;
@@ -36,12 +36,10 @@ public static class ReportesWebEndpoints
         var responsable = context.Request.Query["responsable"].ToString();
         var filas = new List<ReporteCausaResumen>();
 
-        foreach (var causa in causas.Where(c => (!desde.HasValue || c.FechaEncargoCausa.Date >= desde.Value.Date) && (!hasta.HasValue || c.FechaEncargoCausa.Date <= hasta.Value.Date) && (estado == 0 || c.Estado == estado) && (string.IsNullOrWhiteSpace(tribunal) || c.Tribunal.Equals(tribunal, StringComparison.OrdinalIgnoreCase))))
+        foreach (var causa in causas.Where(c => (!desde.HasValue || c.FechaEncargo.Date >= desde.Value.Date) && (!hasta.HasValue || c.FechaEncargo.Date <= hasta.Value.Date) && (estado == 0 || c.Estado == estado) && (string.IsNullOrWhiteSpace(tribunal) || c.Tribunal.Equals(tribunal, StringComparison.OrdinalIgnoreCase))))
         {
-            var diligencias = await client.GetFromJsonAsync<List<DiligenciaResumen>>($"/api/Diligencias/causa/{causa.Id}", cancellationToken) ?? [];
-            var responsables = string.Join("; ", diligencias.Select(d => d.ReceptorJudicial).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase));
-            if (!string.IsNullOrWhiteSpace(responsable) && !responsables.Contains(responsable, StringComparison.OrdinalIgnoreCase)) continue;
-            filas.Add(new(causa.Id, causa.Rit, causa.Tribunal, causa.Descripcion, causa.FechaEncargoCausa, causa.FechaGestionCausa, causa.DiasSinGestion, causa.Estado, responsables, diligencias.Count, diligencias.Count(d => d.Estado == 3)));
+            if (!string.IsNullOrWhiteSpace(responsable) && !causa.Responsables.Contains(responsable, StringComparison.OrdinalIgnoreCase)) continue;
+            filas.Add(causa);
         }
 
         var csv = new StringBuilder("RIT;Tribunal;Descripción;Fecha encargo;Última gestión;Días sin gestionar;Estado;Responsables;Diligencias;Completadas\r\n");

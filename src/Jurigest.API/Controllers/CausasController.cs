@@ -5,6 +5,7 @@ using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
 using Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
 using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
 using Jurigest.Application.Judicial.Panel.Queries.ObtenerPanelEjecutivo;
+using Jurigest.Application.Judicial.Reportes.Queries.ObtenerReporteCausas;
 using Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
 using Microsoft.AspNetCore.Authorization;
 using MediatR;
@@ -164,6 +165,13 @@ public sealed class CausasController : ControllerBase
             id,
             mensaje = "Diligencia creada correctamente."
         });
+    }
+
+    [HttpGet("reporte")]
+    [Authorize(Policy = "CausasLectura")]
+    public async Task<IActionResult> ObtenerReporte(CancellationToken cancellationToken)
+    {
+        return Ok(await _mediator.Send(new ObtenerReporteCausasQuery(), cancellationToken));
     }
 
     [HttpGet("panel-ejecutivo")]
