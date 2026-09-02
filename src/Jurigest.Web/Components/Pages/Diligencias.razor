@@ -27,17 +27,26 @@
 
     <section class="toolbar">
         <label>
-            <span>Seleccionar causa</span>
+            <span>Buscar o seleccionar causa</span>
 
-            <select value="@_causaSeleccionadaId"
-                    @onchange="CambiarCausaAsync">
+            <input type="search"
+                   list="causas-disponibles"
+                   value="@_busquedaCausa"
+                   placeholder="Escribe RIT, tribunal o descripción"
+                   autocomplete="off"
+                   @onchange="BuscarCausaAsync" />
+
+            <datalist id="causas-disponibles">
                 @foreach (var causa in _causas)
                 {
-                    <option value="@causa.Id">
-                        @causa.Rit — @causa.Tribunal
-                    </option>
+                    <option value="@TextoCausa(causa)"
+                            label="@causa.Descripcion"></option>
                 }
-            </select>
+            </datalist>
+
+            <small class="search-help">
+                Puedes buscar por RIT, tribunal o descripción.
+            </small>
         </label>
 
         @if (_causaSeleccionadaId != Guid.Empty)
@@ -168,6 +177,7 @@
     private readonly List<DiligenciaResumen> _diligencias = [];
 
     private Guid _causaSeleccionadaId;
+    private string _busquedaCausa = string.Empty;
     private string? _mensajeError;
     private bool _cargando = true;
 
@@ -210,6 +220,10 @@
                     ? CausaIdInicial.Value
                     : _causas[0].Id;
 
+            _busquedaCausa = TextoCausa(
+                _causas.Single(causa =>
+                    causa.Id == _causaSeleccionadaId));
+
             await CargarDiligenciasAsync();
         }
         catch (UnauthorizedAccessException)
@@ -230,17 +244,44 @@
         }
     }
 
-    private async Task CambiarCausaAsync(
+    private async Task BuscarCausaAsync(
         ChangeEventArgs args)
     {
-        if (!Guid.TryParse(
-                args.Value?.ToString(),
-                out var causaId))
+        var busqueda = args.Value?.ToString()?.Trim();
+
+        if (string.IsNullOrWhiteSpace(busqueda))
         {
             return;
         }
 
-        _causaSeleccionadaId = causaId;
+        var causa = _causas.FirstOrDefault(item =>
+                TextoCausa(item).Equals(
+                    busqueda,
+                    StringComparison.OrdinalIgnoreCase))
+            ?? _causas.FirstOrDefault(item =>
+                item.Rit.Equals(
+                    busqueda,
+                    StringComparison.OrdinalIgnoreCase))
+            ?? _causas.FirstOrDefault(item =>
+                item.Rit.Contains(
+                    busqueda,
+                    StringComparison.OrdinalIgnoreCase) ||
+                item.Tribunal.Contains(
+                    busqueda,
+                    StringComparison.OrdinalIgnoreCase) ||
+                item.Descripcion.Contains(
+                    busqueda,
+                    StringComparison.OrdinalIgnoreCase));
+
+        if (causa is null)
+        {
+            _mensajeError =
+                "No se encontró una causa con ese criterio.";
+            return;
+        }
+
+        _causaSeleccionadaId = causa.Id;
+        _busquedaCausa = TextoCausa(causa);
         _cargando = true;
         _mensajeError = null;
 
@@ -264,6 +305,10 @@
             _cargando = false;
         }
     }
+
+    private static string TextoCausa(
+        CausaResumen causa) =>
+        $"{causa.Rit} — {causa.Tribunal}";
 
     private async Task CargarDiligenciasAsync()
     {

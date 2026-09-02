@@ -64,7 +64,8 @@ h1 {
     font-weight: 700;
 }
 
-.toolbar select {
+.toolbar select,
+.toolbar input[type="search"] {
     min-height: 3.1rem;
     padding: 0.7rem 0.9rem;
     border: 1px solid #cbd5e1;
@@ -74,7 +75,8 @@ h1 {
     outline: none;
 }
 
-.toolbar select:focus {
+.toolbar select:focus,
+.toolbar input[type="search"]:focus {
     border-color: #2563eb;
     box-shadow: 0 0 0 0.2rem rgb(37 99 235 / 14%);
 }
@@ -180,4 +182,10 @@ tbody tr:last-child td {
         align-items: flex-start;
         flex-direction: column;
     }
+}
+
+.search-help {
+    color: #64748b;
+    font-size: 0.72rem;
+    font-weight: 500;
 }
