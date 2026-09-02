@@ -26,5 +26,20 @@ public sealed class DiligenciaConfiguration : IEntityTypeConfiguration<Diligenci
 
         builder.Property(x => x.Longitud)
             .HasPrecision(10, 6);
+
+        builder.Property(x => x.Resultado)
+            .HasConversion<int>()
+            .IsRequired();
+
+        builder.Property(x => x.ResultadoDetalle)
+            .HasMaxLength(500)
+            .IsRequired(false);
+
+        builder.Property(x => x.Estampe)
+            .HasMaxLength(8000)
+            .IsRequired(false);
+
+        builder.Property(x => x.FechaGestion)
+        .IsRequired(false);
     }
 }

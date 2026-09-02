@@ -27,6 +27,34 @@ public static class DependencyInjection
 
         services.AddScoped<IDiligenciaRepository, DiligenciaRepository>();
 
+        services.AddScoped<
+            ITipoDiligenciaCatalogoRepository,
+            TipoDiligenciaCatalogoRepository>();
+
+        services.AddScoped<
+            IReceptorJudicialCatalogoRepository,
+            ReceptorJudicialCatalogoRepository>();
+
+        services.AddScoped<
+            IComunaCatalogoRepository,
+            ComunaCatalogoRepository>();
+
+        services.AddScoped<
+            ITipoCausaCatalogoRepository,
+            TipoCausaCatalogoRepository>();
+
+        services.AddScoped<
+            ITribunalCatalogoRepository,
+            TribunalCatalogoRepository>();
+
+        services.AddScoped<
+            IAbogadoCatalogoRepository,
+            AbogadoCatalogoRepository>();
+
+        services.AddScoped<
+            IDiligenciaEncargadaCatalogoRepository,
+            DiligenciaEncargadaCatalogoRepository>();
+
         services.AddScoped<IDocumentoRepository, DocumentoRepository>();
 
         services.AddScoped<IResolucionRepository, ResolucionRepository>();

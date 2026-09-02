@@ -4,6 +4,7 @@ using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jurigest.Persistence.Migrations
 {
     [DbContext(typeof(JurigestDbContext))]
-    partial class JurigestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260825185355_CrearCatalogoTiposCausa")]
+    partial class CrearCatalogoTiposCausa
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -21,36 +24,6 @@ namespace Jurigest.Persistence.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.AbogadoCatalogo", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<Guid?>("UsuarioId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nombre")
-                        .IsUnique();
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("Abogados", (string)null);
-                });
 
             modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.ComunaCatalogo", b =>
                 {
@@ -75,36 +48,6 @@ namespace Jurigest.Persistence.Migrations
                         .IsUnique();
 
                     b.ToTable("Comunas", (string)null);
-                });
-
-            modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.DiligenciaEncargadaCatalogo", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<int?>("CodigoTipoDiligencia")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CodigoTipoDiligencia");
-
-                    b.HasIndex("Nombre")
-                        .IsUnique();
-
-                    b.ToTable("DiligenciasEncargadas", (string)null);
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.ReceptorJudicialCatalogo", b =>
@@ -289,31 +232,6 @@ namespace Jurigest.Persistence.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.TribunalCatalogo", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<bool>("Activo")
-                        .HasColumnType("bit");
-
-                    b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("Nombre")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Nombre")
-                        .IsUnique();
-
-                    b.ToTable("Tribunales", (string)null);
-                });
-
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Causa", b =>
                 {
                     b.Property<Guid>("Id")
@@ -331,23 +249,10 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("FechaEncargoCausa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaGestionCausa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<string>("NumeroRol")
-                        .HasMaxLength(30)
-                        .HasColumnType("nvarchar(30)");
-
                     b.Property<string>("Rit")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
-
-                    b.Property<Guid?>("TipoCausaId")
-                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Tribunal")
                         .IsRequired()
@@ -355,12 +260,6 @@ namespace Jurigest.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FechaGestionCausa");
-
-                    b.HasIndex("TipoCausaId");
-
-                    b.HasIndex("TipoCausaId", "NumeroRol");
 
                     b.ToTable("Causas", (string)null);
                 });
@@ -387,14 +286,7 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<int>("Estado")
                         .HasColumnType("int");
 
-                    b.Property<string>("Estampe")
-                        .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaGestion")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaProgramada")
@@ -416,13 +308,6 @@ namespace Jurigest.Persistence.Migrations
 
                     b.Property<string>("ReceptorJudicial")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Resultado")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ResultadoDetalle")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Tipo")
                         .HasColumnType("int");

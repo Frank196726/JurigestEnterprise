@@ -1,6 +1,7 @@
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Seguridad.Entities;
 using Microsoft.EntityFrameworkCore;
+using Jurigest.Domain.Judicial.Catalogos;
 
 namespace Jurigest.Persistence.Context;
 
@@ -14,6 +15,28 @@ public class JurigestDbContext : DbContext
     public DbSet<Causa> Causas => Set<Causa>();
 
     public DbSet<Diligencia> Diligencias => Set<Diligencia>();
+
+    public DbSet<TipoDiligenciaCatalogo> TiposDiligencia =>
+    Set<TipoDiligenciaCatalogo>();
+
+    public DbSet<TipoCausaCatalogo> TiposCausa =>
+    Set<TipoCausaCatalogo>();
+
+    public DbSet<ReceptorJudicialCatalogo> ReceptoresJudiciales =>
+    Set<ReceptorJudicialCatalogo>();
+
+    public DbSet<ComunaCatalogo> Comunas =>
+    Set<ComunaCatalogo>();
+
+    public DbSet<TribunalCatalogo> Tribunales =>
+    Set<TribunalCatalogo>();
+
+    public DbSet<AbogadoCatalogo> Abogados =>
+    Set<AbogadoCatalogo>();
+
+    public DbSet<DiligenciaEncargadaCatalogo>
+    DiligenciasEncargadas =>
+    Set<DiligenciaEncargadaCatalogo>();
 
     public DbSet<Documento> Documentos => Set<Documento>();
 

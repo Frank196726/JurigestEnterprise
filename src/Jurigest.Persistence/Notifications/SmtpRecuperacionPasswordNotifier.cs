@@ -2,6 +2,7 @@ using System.Net;
 using Jurigest.Application.Abstractions.Notifications;
 using MailKit.Net.Smtp;
 using MailKit.Security;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MimeKit;
 
@@ -11,11 +12,14 @@ public sealed class SmtpRecuperacionPasswordNotifier
     : IRecuperacionPasswordNotifier
 {
     private readonly SmtpOptions _options;
+    private readonly IHostEnvironment _environment;
 
     public SmtpRecuperacionPasswordNotifier(
-        IOptions<SmtpOptions> options)
+        IOptions<SmtpOptions> options,
+        IHostEnvironment environment)
     {
         _options = options.Value;
+        _environment = environment;
     }
 
     public async Task EnviarAsync(
@@ -24,8 +28,6 @@ public sealed class SmtpRecuperacionPasswordNotifier
         DateTime expiraUtc,
         CancellationToken cancellationToken)
     {
-        ValidarConfiguracion();
-
         var separador = _options.RecoveryUrl.Contains(
             '?',
             StringComparison.Ordinal)
@@ -35,6 +37,24 @@ public sealed class SmtpRecuperacionPasswordNotifier
         var enlace =
             $"{_options.RecoveryUrl}{separador}token=" +
             Uri.EscapeDataString(token);
+
+        // SOLO PARA DESARROLLO
+        if (_environment.IsDevelopment())
+        {
+            Console.WriteLine();
+            Console.WriteLine("========================================");
+            Console.WriteLine("RECUPERACION PASSWORD - DEVELOPMENT");
+            Console.WriteLine($"Email: {emailDestino}");
+            Console.WriteLine($"Token: {token}");
+            Console.WriteLine($"Enlace: {enlace}");
+            Console.WriteLine($"Expira UTC: {expiraUtc:O}");
+            Console.WriteLine("========================================");
+            Console.WriteLine();
+
+            return;
+        }
+
+        ValidarConfiguracion();
 
         var mensaje = new MimeMessage();
 
@@ -50,7 +70,8 @@ public sealed class SmtpRecuperacionPasswordNotifier
             "Recuperación de contraseña - Jurigest Enterprise";
 
         var enlaceSeguro = WebUtility.HtmlEncode(enlace);
-        var expiracion = expiraUtc.ToString("yyyy-MM-dd HH:mm 'UTC'");
+        var expiracion =
+            expiraUtc.ToString("yyyy-MM-dd HH:mm 'UTC'");
 
         mensaje.Body = new BodyBuilder
         {
@@ -128,9 +149,9 @@ public sealed class SmtpRecuperacionPasswordNotifier
                 "Falta la configuración Email:Smtp:FromEmail.");
 
         if (!Uri.TryCreate(
-            _options.RecoveryUrl,
-            UriKind.Absolute,
-            out var recoveryUri) ||
+                _options.RecoveryUrl,
+                UriKind.Absolute,
+                out var recoveryUri) ||
             recoveryUri.Scheme is not ("http" or "https"))
         {
             throw new InvalidOperationException(

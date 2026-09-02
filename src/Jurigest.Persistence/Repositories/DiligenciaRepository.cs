@@ -14,6 +14,15 @@ public sealed class DiligenciaRepository : IDiligenciaRepository
         _context = context;
     }
 
+    public async Task<List<Diligencia>> GetAllAsync(
+        CancellationToken cancellationToken)
+    {
+        return await _context.Diligencias
+            .AsNoTracking()
+            .OrderBy(d => d.FechaProgramada)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task AddAsync(
         Diligencia diligencia,
         CancellationToken cancellationToken)
@@ -70,9 +79,26 @@ public sealed class DiligenciaRepository : IDiligenciaRepository
         CancellationToken cancellationToken)
 {
     return await _context.Diligencias
+        .AsNoTracking()
         .Where(d => d.CausaId == causaId)
-        .OrderBy(d => d.FechaCreacion)
+        .OrderByDescending(d =>
+            d.FechaGestion
+            ?? d.FechaRealizada
+            ?? d.FechaProgramada
+            ?? d.FechaCreacion)
+        .ThenByDescending(d => d.FechaCreacion)
         .ToListAsync(cancellationToken);
+}
+
+    public async Task<Diligencia?> GetUltimaByCausaAsync(
+        Guid causaId,
+        CancellationToken cancellationToken)
+{
+    return await _context.Diligencias
+        .AsNoTracking()
+        .Where(d => d.CausaId == causaId)
+        .OrderByDescending(d => d.FechaCreacion)
+        .FirstOrDefaultAsync(cancellationToken);
 }
 
 }

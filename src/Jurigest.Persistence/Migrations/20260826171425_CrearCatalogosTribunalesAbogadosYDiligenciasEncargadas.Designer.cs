@@ -4,6 +4,7 @@ using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jurigest.Persistence.Migrations
 {
     [DbContext(typeof(JurigestDbContext))]
-    partial class JurigestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260826171425_CrearCatalogosTribunalesAbogadosYDiligenciasEncargadas")]
+    partial class CrearCatalogosTribunalesAbogadosYDiligenciasEncargadas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -331,12 +334,6 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("FechaEncargoCausa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaGestionCausa")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("NumeroRol")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -355,8 +352,6 @@ namespace Jurigest.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FechaGestionCausa");
 
                     b.HasIndex("TipoCausaId");
 
@@ -387,14 +382,7 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<int>("Estado")
                         .HasColumnType("int");
 
-                    b.Property<string>("Estampe")
-                        .HasMaxLength(8000)
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<DateTime>("FechaCreacion")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaGestion")
                         .HasColumnType("datetime2");
 
                     b.Property<DateTime?>("FechaProgramada")
@@ -416,13 +404,6 @@ namespace Jurigest.Persistence.Migrations
 
                     b.Property<string>("ReceptorJudicial")
                         .HasColumnType("nvarchar(max)");
-
-                    b.Property<int>("Resultado")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ResultadoDetalle")
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("Tipo")
                         .HasColumnType("int");

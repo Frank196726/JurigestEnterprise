@@ -4,6 +4,7 @@ using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jurigest.Persistence.Migrations
 {
     [DbContext(typeof(JurigestDbContext))]
-    partial class JurigestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260829143056_AgregarResultadoDetalleDiligencia")]
+    partial class AgregarResultadoDetalleDiligencia
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -331,12 +334,6 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<DateTime>("FechaCreacion")
                         .HasColumnType("datetime2");
 
-                    b.Property<DateTime>("FechaEncargoCausa")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaGestionCausa")
-                        .HasColumnType("datetime2");
-
                     b.Property<string>("NumeroRol")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -355,8 +352,6 @@ namespace Jurigest.Persistence.Migrations
                         .HasColumnType("nvarchar(200)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("FechaGestionCausa");
 
                     b.HasIndex("TipoCausaId");
 
