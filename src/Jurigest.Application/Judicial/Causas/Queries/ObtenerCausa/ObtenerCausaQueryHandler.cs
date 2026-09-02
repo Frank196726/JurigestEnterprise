@@ -24,12 +24,19 @@ public sealed class ObtenerCausaHandler
         if (causa is null)
             return null;
 
+        var diasSinGestion = causa.ObtenerDiasSinGestion(
+            DateTime.UtcNow.Date);
+
         return new ObtenerCausaResponse(
             causa.Id,
             causa.Rit,
             causa.Tribunal,
             causa.Descripcion,
             causa.FechaCreacion,
-            causa.Estado);
+            causa.FechaEncargoCausa,
+            causa.FechaGestionCausa,
+            diasSinGestion,
+            diasSinGestion > 10,
+            (int)causa.Estado);
     }
 }

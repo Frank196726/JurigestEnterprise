@@ -1,5 +1,3 @@
-using Jurigest.Domain.Judicial.Enums;
-
 namespace Jurigest.Application.Judicial.Causas.Queries.ObtenerCausa;
 
 public sealed record ObtenerCausaResponse(
@@ -8,4 +6,8 @@ public sealed record ObtenerCausaResponse(
     string Tribunal,
     string Descripcion,
     DateTime FechaCreacion,
-    EstadoCausa Estado);
+    DateTime FechaEncargoCausa,
+    DateTime? FechaGestionCausa,
+    int DiasSinGestion,
+    bool EsCritica,
+    int Estado);
