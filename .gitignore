@@ -28,6 +28,9 @@ build/
 # Logs
 # ==========================
 *.log
+*.env
+!deploy/production.env.example
+logs/
 
 # ==========================
 # Test

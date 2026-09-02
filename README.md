@@ -76,3 +76,7 @@ Causa → Diligencia → Registro de resultado → Actualización de última ges
 ## Seguridad
 
 La API aplica JWT, roles, revocación de sesiones, bloqueo temporal, auditoría y límites de solicitudes. Los permisos principales son Administrador, Abogado, Procurador y Consulta.
+
+## Producción
+
+La preparación, variables obligatorias, despliegue, monitoreo y recuperación están documentados en [`docs/PRODUCCION.md`](docs/PRODUCCION.md). Los secretos deben suministrarse mediante variables de entorno o un almacén seguro.

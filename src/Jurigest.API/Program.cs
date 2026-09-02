@@ -11,8 +11,34 @@ using MediatR;
 using Microsoft.AspNetCore.Routing;
 using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.HttpOverrides;
+using System.Net;
 
 var builder = WebApplication.CreateBuilder(args);
+
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Logging.ClearProviders();
+    builder.Logging.AddJsonConsole(options => options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ");
+}
+
+builder.WebHost.ConfigureKestrel(options =>
+    options.Limits.MaxRequestBodySize = 12 * 1024 * 1024);
+
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.ForwardLimit = 1;
+    var proxy = builder.Configuration["ReverseProxy:KnownProxy"];
+    if (IPAddress.TryParse(proxy, out var address)) options.KnownProxies.Add(address);
+});
+
+builder.Services.AddHsts(options =>
+{
+    options.MaxAge = TimeSpan.FromDays(365);
+    options.IncludeSubDomains = true;
+    options.Preload = true;
+});
 
 // MVC
 builder.Services
@@ -53,6 +79,14 @@ var jwtAudience = builder.Configuration["Jwt:Audience"]
 var jwtKey = builder.Configuration["Jwt:Key"]
     ?? throw new InvalidOperationException(
         "Falta la configuracion Jwt:Key.");
+
+if (!builder.Environment.IsDevelopment())
+{
+    if (jwtKey.Length < 64) throw new InvalidOperationException("Jwt:Key debe contener al menos 64 caracteres en producción.");
+    if (string.IsNullOrWhiteSpace(builder.Configuration.GetConnectionString("DefaultConnection"))) throw new InvalidOperationException("Falta ConnectionStrings:DefaultConnection.");
+    var recoveryUrl = builder.Configuration["Email:Smtp:RecoveryUrl"];
+    if (!Uri.TryCreate(recoveryUrl, UriKind.Absolute, out var recoveryUri) || recoveryUri.Scheme != Uri.UriSchemeHttps) throw new InvalidOperationException("Email:Smtp:RecoveryUrl debe usar HTTPS en producción.");
+}
 
 builder.Services
     .AddAuthentication(
@@ -221,12 +255,27 @@ app.Use(async (context, next) =>
     }
 });
 
+app.UseForwardedHeaders();
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
+else
+{
+    app.UseHsts();
+}
 
 app.UseHttpsRedirection();
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
+    context.Response.Headers["X-Frame-Options"] = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "no-referrer";
+    context.Response.Headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()";
+    await next(context);
+});
 
 app.UseRouting();
 app.UseRateLimiter();
@@ -245,13 +294,6 @@ app.MapGet("/health/ready", async (JurigestDbContext db, CancellationToken ct) =
         ? Results.Ok(new { estado = "saludable", baseDatos = "disponible", duracionMs = (DateTime.UtcNow - inicio).TotalMilliseconds, horaUtc = DateTime.UtcNow })
         : Results.Json(new { estado = "degradado", baseDatos = "no disponible", horaUtc = DateTime.UtcNow }, statusCode: 503);
 });
-
-foreach (var endpoint in app.Services
-    .GetRequiredService<EndpointDataSource>()
-    .Endpoints)
-{
-    Console.WriteLine(endpoint.DisplayName);
-}
 
 app.Run();
 
