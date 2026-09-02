@@ -30,12 +30,16 @@ public sealed class ObtenerDiligenciasPorCausaHandler
                 d.Descripcion,
                 d.Estado,
                 d.Tipo,
+                d.Resultado,
+                d.ResultadoDetalle,
                 d.FechaCreacion,
                 d.FechaProgramada,
                 d.FechaRealizada,
+                d.FechaGestion,
                 d.ReceptorJudicial,
                 d.Direccion,
-                d.Comuna))
+                d.Comuna,
+                d.Estampe))
             .ToList();
     }
 }

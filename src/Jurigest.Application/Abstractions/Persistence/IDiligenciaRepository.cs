@@ -4,6 +4,9 @@ namespace Jurigest.Application.Abstractions.Persistence;
 
 public interface IDiligenciaRepository
 {
+    Task<List<Diligencia>> GetAllAsync(
+        CancellationToken cancellationToken);
+
     Task AddAsync(
         Diligencia diligencia,
         CancellationToken cancellationToken);
@@ -25,6 +28,10 @@ public interface IDiligenciaRepository
         CancellationToken cancellationToken);
 
         Task<List<Diligencia>> GetByCausaIdAsync(
+    Guid causaId,
+    CancellationToken cancellationToken);
+
+    Task<Diligencia?> GetUltimaByCausaAsync(
     Guid causaId,
     CancellationToken cancellationToken);
 }
