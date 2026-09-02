@@ -1,0 +1,1648 @@
+@page "/causas/nueva"
+
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using System.Net.Http.Json
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Nueva gestión | Jurigest Enterprise</PageTitle>
+
+<section class="causes-page">
+
+    <header class="page-heading">
+        <div>
+            <span class="eyebrow">Gestión judicial</span>
+
+            <h1>Nueva gestión</h1>
+
+            <p>
+                Registra una causa y su primera diligencia.
+            </p>
+        </div>
+    </header>
+
+
+    <AuthorizeView Roles="Administrador,Abogado">
+        <Authorized Context="usuarioAutorizado">
+
+            <section class="management-card"
+                     aria-labelledby="titulo-nueva-gestion">
+
+                <div class="management-heading">
+                    <div>
+                        <span class="eyebrow">
+                            Nuevo registro
+                        </span>
+
+                        <h2 id="titulo-nueva-gestion">
+                            Guardar gestión
+                        </h2>
+
+                        <p>
+                            Registra la causa y su primera diligencia
+                            en Jurigest Enterprise.
+                        </p>
+                    </div>
+                </div>
+
+                <EditForm Model="_nuevaGestion"
+                          OnValidSubmit="GuardarGestionAsync"
+                          FormName="guardar-gestion">
+
+                    <DataAnnotationsValidator />
+
+                    <ValidationSummary
+                        class="validation-summary" />
+
+                    <div class="form-grid">
+
+                        @* ==================================================
+                           TIPO DE CAUSA
+                           ================================================== *@
+
+                        <div>
+                            <label>
+                                <span>Tipo de causa *</span>
+
+                                <InputSelect
+                                    @bind-Value="_nuevaGestion.TipoCausaId">
+
+                                    <option value="">
+                                        Seleccione...
+                                    </option>
+
+                                    @foreach (var tipo in _tiposCausa)
+                                    {
+                                        <option value="@tipo.Id">
+                                            @tipo.Nombre - @tipo.Codigo
+                                        </option>
+                                    }
+
+                                </InputSelect>
+                            </label>
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.TipoCausaId)" />
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    style="margin-top:.5rem;"
+                                    disabled="@_guardandoCatalogo"
+                                    @onclick="AlternarAgregarTipoCausa">
+
+                                @(_mostrarAgregarTipoCausa
+                                    ? "Cancelar nuevo tipo"
+                                    : "+ Agregar tipo de causa")
+
+                            </button>
+                        </div>
+
+                        @* ==================================================
+                           NÚMERO DE ROL
+                           ================================================== *@
+
+                        <div>
+                            <label>
+                                <span>Número ROL *</span>
+
+                                <InputText
+                                    @bind-Value="_nuevaGestion.NumeroRol"
+                                    maxlength="30"
+                                    placeholder="Ej.: 1188-26" />
+                            </label>
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.NumeroRol)" />
+                        </div>
+
+                        @if (_mostrarAgregarTipoCausa)
+                        {
+                            <div class="full-width catalog-editor">
+
+                                <label>
+                                    <span>Nombre del tipo de causa</span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="150"
+                                           autocomplete="off"
+                                           @bind="_nuevoTipoCausaNombre"
+                                           placeholder="Ej.: Laboral" />
+                                </label>
+
+                                <label>
+                                    <span>Código</span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="10"
+                                           autocomplete="off"
+                                           @bind="_nuevoTipoCausaCodigo"
+                                           placeholder="Ej.: O" />
+                                </label>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarTipoCausaAsync">
+                                    Agregar
+                                </button>
+
+                            </div>
+                        }
+
+                        @* ==================================================
+                           ROL RESULTANTE
+                           ================================================== *@
+
+                        @if (_nuevaGestion.TipoCausaId.HasValue &&
+                             !string.IsNullOrWhiteSpace(
+                                 _nuevaGestion.NumeroRol))
+                        {
+                            <div class="full-width rol-preview">
+
+                                <span class="eyebrow">
+                                    ROL resultante
+                                </span>
+
+                                <strong>
+                                    @ObtenerRitResultante()
+                                </strong>
+
+                            </div>
+                        }
+
+                        @* ==================================================
+                           TRIBUNAL
+                           ================================================== *@
+
+                        <div>
+                            <label>
+                                <span>Tribunal *</span>
+
+                                <InputSelect
+                                    @bind-Value="_nuevaGestion.TribunalId">
+
+                                    <option value="">
+                                        Seleccione...
+                                    </option>
+
+                                    @foreach (var tribunal in _tribunales)
+                                    {
+                                        <option value="@tribunal.Id">
+                                            @tribunal.Nombre
+                                        </option>
+                                    }
+
+                                </InputSelect>
+                            </label>
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.TribunalId)" />
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    style="margin-top:.5rem;"
+                                    disabled="@_guardandoCatalogo"
+                                    @onclick="AlternarAgregarTribunal">
+
+                                @(_mostrarAgregarTribunal
+                                    ? "Cancelar nuevo tribunal"
+                                    : "+ Agregar tribunal")
+
+                            </button>
+                        </div>
+
+                        @* ==================================================
+                           ABOGADO
+                           ================================================== *@
+
+                        <div>
+                            <label>
+                                <span>Abogado responsable *</span>
+
+                                <InputSelect
+                                    @bind-Value="_nuevaGestion.AbogadoId">
+
+                                    <option value="">
+                                        Seleccione...
+                                    </option>
+
+                                    @foreach (var abogado in _abogados)
+                                    {
+                                        <option value="@abogado.Id">
+                                            @abogado.Nombre
+                                        </option>
+                                    }
+
+                                </InputSelect>
+                            </label>
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.AbogadoId)" />
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    style="margin-top:.5rem;"
+                                    disabled="@_guardandoCatalogo"
+                                    @onclick="AlternarAgregarAbogado">
+
+                                @(_mostrarAgregarAbogado
+                                    ? "Cancelar nuevo abogado"
+                                    : "+ Agregar abogado")
+
+                            </button>
+                        </div>
+
+                        @if (_mostrarAgregarTribunal)
+                        {
+                            <div class="full-width catalog-editor single">
+
+                                <label>
+                                    <span>Nombre del tribunal</span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="200"
+                                           autocomplete="off"
+                                           @bind="_nuevoTribunal"
+                                           placeholder="Ej.: 10° Juzgado Civil de Santiago" />
+                                </label>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarTribunalAsync">
+                                    Agregar tribunal
+                                </button>
+
+                            </div>
+                        }
+
+                        @if (_mostrarAgregarAbogado)
+                        {
+                            <div class="full-width catalog-editor single">
+
+                                <label>
+                                    <span>Nombre del abogado</span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="200"
+                                           autocomplete="off"
+                                           @bind="_nuevoAbogado"
+                                           placeholder="Nombre completo" />
+                                </label>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarAbogadoAsync">
+                                    Agregar abogado
+                                </button>
+
+                            </div>
+                        }
+
+                        @* ==================================================
+                           PARTES
+                           ================================================== *@
+
+                        <label>
+                            <span>Demandante</span>
+
+                            <InputText
+                                @bind-Value="_nuevaGestion.Demandante"
+                                maxlength="200" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.Demandante)" />
+                        </label>
+
+                        <label>
+                            <span>Demandado</span>
+
+                            <InputText
+                                @bind-Value="_nuevaGestion.Demandado"
+                                maxlength="200" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.Demandado)" />
+                        </label>
+
+                        @* ==================================================
+                           FECHAS
+                           ================================================== *@
+
+                        <label>
+                            <span>Fecha de encargo de la causa *</span>
+
+                            <InputDate
+                                @bind-Value="_nuevaGestion.FechaEncargoCausa" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.FechaEncargoCausa)" />
+                        </label>
+
+                        <label>
+                            <span>Fecha de retiro</span>
+
+                            <InputDate
+                                @bind-Value="_nuevaGestion.FechaRetiro" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.FechaRetiro)" />
+                        </label>
+
+                        @* ==================================================
+                           DILIGENCIA ENCARGADA
+                           ================================================== *@
+
+                        <label>
+                            <span>Fecha programada *</span>
+
+                            <InputDate
+                                 @bind-Value="_nuevaGestion.FechaProgramada" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.FechaProgramada)" />
+                        </label>
+
+                        <div class="full-width">
+
+                            <label>
+                                <span>Diligencia encargada *</span>
+
+                                <InputSelect
+                                    @bind-Value="_nuevaGestion.DiligenciaEncargadaId">
+
+                                    <option value="">
+                                        Seleccione...
+                                    </option>
+
+                                    @foreach (var diligencia in
+                                        _diligenciasEncargadas)
+                                    {
+                                        <option value="@diligencia.Id">
+                                            @diligencia.Nombre
+                                        </option>
+                                    }
+
+                                </InputSelect>
+                            </label>
+
+                            <ValidationMessage
+                                For="@(() =>
+                                    _nuevaGestion.DiligenciaEncargadaId)" />
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    style="margin-top:.5rem;"
+                                    disabled="@_guardandoCatalogo"
+                                    @onclick="AlternarAgregarDiligencia">
+
+                                @(_mostrarAgregarDiligencia
+                                    ? "Cancelar nueva diligencia"
+                                    : "+ Agregar diligencia")
+
+                            </button>
+
+                        </div>
+
+                        @if (_mostrarAgregarDiligencia)
+                        {
+                            <div class="full-width catalog-editor">
+
+                                <label>
+                                    <span>
+                                        Nombre de la diligencia encargada
+                                    </span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="200"
+                                           autocomplete="off"
+                                           @bind="_nuevaDiligencia"
+                                           placeholder="Ej.: Notificación de demanda" />
+                                </label>
+
+                                <label>
+                                    <span>Tipo de diligencia</span>
+
+                                    <select class="form-control"
+                                            @bind="_nuevoCodigoTipoDiligencia">
+
+                                        <option value="">
+                                            Sin asociar
+                                        </option>
+
+                                        @foreach (var tipo in
+                                            _tiposDiligencia)
+                                        {
+                                            if (tipo.CodigoSistema.HasValue)
+                                            {
+                                                <option
+                                                    value="@tipo.CodigoSistema.Value">
+
+                                                    @tipo.Nombre
+
+                                                </option>
+                                            }
+                                        }
+
+                                    </select>
+                                </label>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarDiligenciaAsync">
+                                    Agregar diligencia
+                                </button>
+
+                            </div>
+                        }
+
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(
+                        _mensajeGestion))
+                    {
+                        <div class="form-message @(
+                            _gestionGuardada
+                                ? "success"
+                                : "error")"
+                             role="status">
+
+                            @_mensajeGestion
+
+                        </div>
+                    }
+
+                    <div class="form-actions">
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                disabled="@(
+                                    _guardandoGestion ||
+                                    _guardandoCatalogo)"
+                                @onclick="Volver">
+                            ← Volver
+                        </button>
+
+                        <button type="submit"
+                                disabled="@(
+                                    _guardandoGestion ||
+                                    _guardandoCatalogo)">
+
+                            @(_guardandoGestion
+                                ? "Guardando..."
+                                : "Guardar gestión")
+
+                        </button>
+
+                    </div>
+
+                </EditForm>
+
+            </section>
+
+        </Authorized>
+    </AuthorizeView>
+
+</section>
+
+@code {
+
+    [SupplyParameterFromQuery(Name = "rit")]
+    public string? RitInicial { get; set; }
+
+    // =========================================================
+    // DATOS
+    // =========================================================
+
+    private readonly List<TipoCausaItem>
+        _tiposCausa = [];
+
+    private readonly List<CatalogoItem>
+        _tribunales = [];
+
+    private readonly List<AbogadoItem>
+        _abogados = [];
+
+    private readonly List<DiligenciaEncargadaItem>
+        _diligenciasEncargadas = [];
+
+    private readonly List<TipoDiligenciaItem>
+        _tiposDiligencia = [];
+
+    private RegistrarGestionModel _nuevaGestion =
+        CrearModeloGestion();
+
+    // =========================================================
+    // ESTADO GENERAL
+    // =========================================================
+
+    private string? _mensajeGestion;
+
+    private bool _guardandoGestion;
+
+    private bool _gestionGuardada;
+
+    private bool _guardandoCatalogo;
+
+    // =========================================================
+    // FORMULARIOS DE CATÁLOGO
+    // =========================================================
+
+    private bool _mostrarAgregarTipoCausa;
+
+    private bool _mostrarAgregarTribunal;
+
+    private bool _mostrarAgregarAbogado;
+
+    private bool _mostrarAgregarDiligencia;
+
+    private string _nuevoTipoCausaNombre =
+        string.Empty;
+
+    private string _nuevoTipoCausaCodigo =
+        string.Empty;
+
+    private string _nuevoTribunal =
+        string.Empty;
+
+    private string _nuevoAbogado =
+        string.Empty;
+
+    private string _nuevaDiligencia =
+        string.Empty;
+
+    private int? _nuevoCodigoTipoDiligencia;
+
+    // =========================================================
+    // INICIALIZACIÓN
+    // =========================================================
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CargarCatalogosAsync();
+
+            if (!string.IsNullOrWhiteSpace(
+                    RitInicial))
+            {
+                AplicarRitInicial(
+                    RitInicial);
+            }
+
+            SeleccionarValoresIniciales();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeGestion =
+                "El servicio no está disponible. " +
+                "Inténtalo nuevamente.";
+        }
+    }
+
+    private async Task CargarCatalogosAsync()
+    {
+        await CargarTiposCausaAsync();
+        await CargarTribunalesAsync();
+        await CargarAbogadosAsync();
+        await CargarDiligenciasEncargadasAsync();
+        await CargarTiposDiligenciaAsync();
+    }
+
+    // =========================================================
+    // NAVEGACIÓN
+    // =========================================================
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/causas");
+    }
+
+    // =========================================================
+    // GUARDAR GESTIÓN
+    // =========================================================
+
+    private async Task GuardarGestionAsync()
+    {
+        _guardandoGestion =
+            true;
+
+        _gestionGuardada =
+            false;
+
+        _mensajeGestion =
+            null;
+
+        Guid? causaId =
+            null;
+
+        try
+        {
+            if (!ResolverCatalogosSeleccionados())
+            {
+                return;
+            }
+
+            var ritResultante =
+                ObtenerRitResultante();
+
+            if (string.IsNullOrWhiteSpace(
+                    ritResultante))
+            {
+                _mensajeGestion =
+                    "No fue posible construir el ROL.";
+
+                return;
+            }
+
+            if (ritResultante.Length > 30)
+            {
+                _mensajeGestion =
+                    "El ROL completo no puede superar 30 caracteres.";
+
+                return;
+            }
+
+            var caratula =
+                $"{_nuevaGestion.Demandante.Trim()} / " +
+                $"{_nuevaGestion.Demandado.Trim()}";
+
+            using var respuestaCausa =
+                await ApiClient.PostAsync(
+                    "/api/Causas",
+                    JsonContent.Create(
+                        new
+                        {
+                            id =
+                                Guid.Empty,
+
+                            tipoCausaId =
+                                _nuevaGestion.TipoCausaId,
+
+                            numeroRol =
+                                _nuevaGestion.NumeroRol
+                                    .Trim(),
+
+                            tribunal =
+                                _nuevaGestion.Tribunal,
+
+                            descripcion =
+                                caratula,
+
+                            fechaEncargoCausa =
+                                _nuevaGestion
+                                    .FechaEncargoCausa!
+                                    .Value
+                                    .Date
+                        }));
+
+            await VerificarRespuestaAsync(
+                respuestaCausa,
+                "crear la causa");
+
+            var causaCreada =
+                await respuestaCausa.Content
+                    .ReadFromJsonAsync<
+                        CausaCreadaResponse>();
+
+            causaId =
+                causaCreada?.Id
+                ?? throw new InvalidOperationException(
+                    "La API no devolvió el identificador de la causa.");
+
+            using var respuestaDiligencia =
+                await ApiClient.PostAsync(
+                    $"/api/Causas/{causaId}/diligencias",
+                    JsonContent.Create(
+                        new
+                        {
+                            descripcion =
+                                _nuevaGestion.Diligencia
+                        }));
+
+            await VerificarRespuestaAsync(
+                respuestaDiligencia,
+                "crear la diligencia");
+
+            var diligenciaCreada =
+                await respuestaDiligencia.Content
+                    .ReadFromJsonAsync<
+                        DiligenciaCreadaResponse>();
+
+            var diligenciaId =
+                diligenciaCreada?.Id
+                ?? throw new InvalidOperationException(
+                    "La API no devolvió el identificador de la diligencia.");
+
+            var diligenciaCatalogo =
+                ObtenerDiligenciaEncargadaSeleccionada();
+
+            if (diligenciaCatalogo?.CodigoTipoDiligencia
+                is int codigoTipo)
+            {
+                using var respuestaTipo =
+                    await ApiClient.PutAsync(
+                        $"/api/Diligencias/{diligenciaId}/tipo",
+                        JsonContent.Create(
+                            new
+                            {
+                                tipo =
+                                    codigoTipo
+                            }));
+
+                await VerificarRespuestaAsync(
+                    respuestaTipo,
+                    "asignar el tipo de diligencia");
+            }
+
+            using var respuestaProgramacion =
+                await ApiClient.PutAsync(
+                    $"/api/Diligencias/{diligenciaId}/programar",
+                    JsonContent.Create(
+                        new
+                        {
+                            fechaProgramada =
+                                _nuevaGestion
+                                    .FechaProgramada!
+                                    .Value
+                                    .Date
+                        }));
+
+            await VerificarRespuestaAsync(
+                respuestaProgramacion,
+                "programar la diligencia");
+
+            var retiro =
+                _nuevaGestion.FechaRetiro.HasValue
+                    ? _nuevaGestion.FechaRetiro
+                        .Value
+                        .ToString("dd-MM-yyyy")
+                    : "No indicada";
+
+            using var respuestaObservacion =
+                await ApiClient.PutAsync(
+                    $"/api/Diligencias/{diligenciaId}/observacion",
+                    JsonContent.Create(
+                        new
+                        {
+                            observacion =
+                                $"Abogado responsable: " +
+                                $"{_nuevaGestion.Abogado}. " +
+                                $"Fecha de retiro: {retiro}."
+                        }));
+
+            await VerificarRespuestaAsync(
+                respuestaObservacion,
+                "registrar los datos del encargo");
+
+            _gestionGuardada =
+                true;
+
+            _mensajeGestion =
+                $"La gestión {ritResultante} fue guardada " +
+                "correctamente en Jurigest Enterprise.";
+
+            _nuevaGestion =
+                CrearModeloGestion();
+
+            SeleccionarValoresIniciales();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException
+                  or ArgumentException)
+        {
+            _mensajeGestion =
+                causaId.HasValue
+                    ? "La causa fue creada, pero la gestión " +
+                      $"quedó incompleta: {ex.Message}"
+                    : "No fue posible guardar la gestión: " +
+                      ex.Message;
+        }
+        finally
+        {
+            _guardandoGestion =
+                false;
+        }
+    }
+
+    private bool ResolverCatalogosSeleccionados()
+    {
+        if (!_nuevaGestion.TipoCausaId.HasValue)
+        {
+            _mensajeGestion =
+                "Debe seleccionar un tipo de causa.";
+
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+                _nuevaGestion.NumeroRol))
+        {
+            _mensajeGestion =
+                "Debe indicar el número de ROL.";
+
+            return false;
+        }
+
+        if (!_nuevaGestion.TribunalId.HasValue)
+        {
+            _mensajeGestion =
+                "Debe seleccionar un tribunal.";
+
+            return false;
+        }
+
+        if (!_nuevaGestion.AbogadoId.HasValue)
+        {
+            _mensajeGestion =
+                "Debe seleccionar un abogado responsable.";
+
+            return false;
+        }
+
+        if (!_nuevaGestion.DiligenciaEncargadaId.HasValue)
+        {
+            _mensajeGestion =
+                "Debe seleccionar la diligencia encargada.";
+
+            return false;
+        }
+
+        var tribunal =
+            _tribunales.FirstOrDefault(
+                x =>
+                    x.Id ==
+                    _nuevaGestion.TribunalId.Value);
+
+        var abogado =
+            _abogados.FirstOrDefault(
+                x =>
+                    x.Id ==
+                    _nuevaGestion.AbogadoId.Value);
+
+        var diligencia =
+            _diligenciasEncargadas.FirstOrDefault(
+                x =>
+                    x.Id ==
+                    _nuevaGestion.DiligenciaEncargadaId.Value);
+
+        if (tribunal is null)
+        {
+            _mensajeGestion =
+                "El tribunal seleccionado no está disponible.";
+
+            return false;
+        }
+
+        if (abogado is null)
+        {
+            _mensajeGestion =
+                "El abogado seleccionado no está disponible.";
+
+            return false;
+        }
+
+        if (diligencia is null)
+        {
+            _mensajeGestion =
+                "La diligencia seleccionada no está disponible.";
+
+            return false;
+        }
+
+        _nuevaGestion.Tribunal =
+            tribunal.Nombre.Trim();
+
+        _nuevaGestion.Abogado =
+            abogado.Nombre.Trim();
+
+        _nuevaGestion.Diligencia =
+            diligencia.Nombre.Trim();
+
+        return true;
+    }
+
+    // =========================================================
+    // CATÁLOGO: TIPO CAUSA
+    // =========================================================
+
+    private async Task CargarTiposCausaAsync()
+    {
+        var resultado =
+            await ApiClient.GetAsync<
+                List<TipoCausaItem>>(
+                "/api/Catalogos/tipos-causa");
+
+        _tiposCausa.Clear();
+
+        if (resultado is not null)
+        {
+            _tiposCausa.AddRange(
+                resultado);
+        }
+    }
+
+    private void AlternarAgregarTipoCausa()
+    {
+        _mostrarAgregarTipoCausa =
+            !_mostrarAgregarTipoCausa;
+
+        _mensajeGestion =
+            null;
+
+        if (!_mostrarAgregarTipoCausa)
+        {
+            _nuevoTipoCausaNombre =
+                string.Empty;
+
+            _nuevoTipoCausaCodigo =
+                string.Empty;
+        }
+    }
+
+    private async Task AgregarTipoCausaAsync()
+    {
+        var nombre =
+            _nuevoTipoCausaNombre.Trim();
+
+        var codigo =
+            _nuevoTipoCausaCodigo
+                .Trim()
+                .ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(nombre) ||
+            string.IsNullOrWhiteSpace(codigo))
+        {
+            _mensajeGestion =
+                "Debe indicar nombre y código del tipo de causa.";
+
+            return;
+        }
+
+        await EjecutarCreacionCatalogoAsync(
+            async () =>
+            {
+                using var response =
+                    await ApiClient.PostAsync(
+                        "/api/Catalogos/tipos-causa",
+                        JsonContent.Create(
+                            new
+                            {
+                                nombre,
+                                codigo
+                            }));
+
+                await VerificarRespuestaAsync(
+                    response,
+                    "agregar el tipo de causa");
+
+                var creado =
+                    await response.Content
+                        .ReadFromJsonAsync<
+                            TipoCausaItem>();
+
+                await CargarTiposCausaAsync();
+
+                if (creado is not null)
+                {
+                    _nuevaGestion.TipoCausaId =
+                        creado.Id;
+                }
+
+                _nuevoTipoCausaNombre =
+                    string.Empty;
+
+                _nuevoTipoCausaCodigo =
+                    string.Empty;
+
+                _mostrarAgregarTipoCausa =
+                    false;
+
+                _mensajeGestion =
+                    $"Tipo de causa {nombre} - {codigo} " +
+                    "agregado correctamente.";
+            });
+    }
+
+    // =========================================================
+    // CATÁLOGO: TRIBUNALES
+    // =========================================================
+
+    private async Task CargarTribunalesAsync()
+    {
+        var resultado =
+            await ApiClient.GetAsync<
+                List<CatalogoItem>>(
+                "/api/Catalogos/tribunales");
+
+        _tribunales.Clear();
+
+        if (resultado is not null)
+        {
+            _tribunales.AddRange(
+                resultado);
+        }
+    }
+
+    private void AlternarAgregarTribunal()
+    {
+        _mostrarAgregarTribunal =
+            !_mostrarAgregarTribunal;
+
+        _mensajeGestion =
+            null;
+
+        if (!_mostrarAgregarTribunal)
+        {
+            _nuevoTribunal =
+                string.Empty;
+        }
+    }
+
+    private async Task AgregarTribunalAsync()
+    {
+        var nombre =
+            _nuevoTribunal.Trim();
+
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            _mensajeGestion =
+                "Debe indicar el nombre del tribunal.";
+
+            return;
+        }
+
+        await EjecutarCreacionCatalogoAsync(
+            async () =>
+            {
+                using var response =
+                    await ApiClient.PostAsync(
+                        "/api/Catalogos/tribunales",
+                        JsonContent.Create(
+                            new
+                            {
+                                nombre
+                            }));
+
+                await VerificarRespuestaAsync(
+                    response,
+                    "agregar el tribunal");
+
+                var creado =
+                    await response.Content
+                        .ReadFromJsonAsync<
+                            CatalogoItem>();
+
+                await CargarTribunalesAsync();
+
+                if (creado is not null)
+                {
+                    _nuevaGestion.TribunalId =
+                        creado.Id;
+                }
+
+                _nuevoTribunal =
+                    string.Empty;
+
+                _mostrarAgregarTribunal =
+                    false;
+
+                _mensajeGestion =
+                    $"Tribunal {nombre} agregado correctamente.";
+            });
+    }
+
+    // =========================================================
+    // CATÁLOGO: ABOGADOS
+    // =========================================================
+
+    private async Task CargarAbogadosAsync()
+    {
+        var resultado =
+            await ApiClient.GetAsync<
+                List<AbogadoItem>>(
+                "/api/Catalogos/abogados");
+
+        _abogados.Clear();
+
+        if (resultado is not null)
+        {
+            _abogados.AddRange(
+                resultado);
+        }
+    }
+
+    private void AlternarAgregarAbogado()
+    {
+        _mostrarAgregarAbogado =
+            !_mostrarAgregarAbogado;
+
+        _mensajeGestion =
+            null;
+
+        if (!_mostrarAgregarAbogado)
+        {
+            _nuevoAbogado =
+                string.Empty;
+        }
+    }
+
+    private async Task AgregarAbogadoAsync()
+    {
+        var nombre =
+            _nuevoAbogado.Trim();
+
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            _mensajeGestion =
+                "Debe indicar el nombre del abogado.";
+
+            return;
+        }
+
+        await EjecutarCreacionCatalogoAsync(
+            async () =>
+            {
+                using var response =
+                    await ApiClient.PostAsync(
+                        "/api/Catalogos/abogados",
+                        JsonContent.Create(
+                            new
+                            {
+                                nombre
+                            }));
+
+                await VerificarRespuestaAsync(
+                    response,
+                    "agregar el abogado");
+
+                var creado =
+                    await response.Content
+                        .ReadFromJsonAsync<
+                            AbogadoItem>();
+
+                await CargarAbogadosAsync();
+
+                if (creado is not null)
+                {
+                    _nuevaGestion.AbogadoId =
+                        creado.Id;
+                }
+
+                _nuevoAbogado =
+                    string.Empty;
+
+                _mostrarAgregarAbogado =
+                    false;
+
+                _mensajeGestion =
+                    $"Abogado {nombre} agregado correctamente.";
+            });
+    }
+
+    // =========================================================
+    // CATÁLOGO: DILIGENCIAS ENCARGADAS
+    // =========================================================
+
+    private async Task CargarDiligenciasEncargadasAsync()
+    {
+        var resultado =
+            await ApiClient.GetAsync<
+                List<DiligenciaEncargadaItem>>(
+                "/api/Catalogos/diligencias-encargadas");
+
+        _diligenciasEncargadas.Clear();
+
+        if (resultado is not null)
+        {
+            _diligenciasEncargadas.AddRange(
+                resultado);
+        }
+    }
+
+    private async Task CargarTiposDiligenciaAsync()
+    {
+        var resultado =
+            await ApiClient.GetAsync<
+                List<TipoDiligenciaItem>>(
+                "/api/Catalogos/tipos-diligencia");
+
+        _tiposDiligencia.Clear();
+
+        if (resultado is not null)
+        {
+            _tiposDiligencia.AddRange(
+                resultado);
+        }
+    }
+
+    private void AlternarAgregarDiligencia()
+    {
+        _mostrarAgregarDiligencia =
+            !_mostrarAgregarDiligencia;
+
+        _mensajeGestion =
+            null;
+
+        if (!_mostrarAgregarDiligencia)
+        {
+            _nuevaDiligencia =
+                string.Empty;
+
+            _nuevoCodigoTipoDiligencia =
+                null;
+        }
+    }
+
+    private async Task AgregarDiligenciaAsync()
+    {
+        var nombre =
+            _nuevaDiligencia.Trim();
+
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            _mensajeGestion =
+                "Debe indicar el nombre de la diligencia.";
+
+            return;
+        }
+
+        await EjecutarCreacionCatalogoAsync(
+            async () =>
+            {
+                using var response =
+                    await ApiClient.PostAsync(
+                        "/api/Catalogos/diligencias-encargadas",
+                        JsonContent.Create(
+                            new
+                            {
+                                nombre,
+
+                                codigoTipoDiligencia =
+                                    _nuevoCodigoTipoDiligencia
+                            }));
+
+                await VerificarRespuestaAsync(
+                    response,
+                    "agregar la diligencia");
+
+                var creado =
+                    await response.Content
+                        .ReadFromJsonAsync<
+                            DiligenciaEncargadaItem>();
+
+                await CargarDiligenciasEncargadasAsync();
+
+                if (creado is not null)
+                {
+                    _nuevaGestion.DiligenciaEncargadaId =
+                        creado.Id;
+                }
+
+                _nuevaDiligencia =
+                    string.Empty;
+
+                _nuevoCodigoTipoDiligencia =
+                    null;
+
+                _mostrarAgregarDiligencia =
+                    false;
+
+                _mensajeGestion =
+                    $"Diligencia {nombre} agregada correctamente.";
+            });
+    }
+
+    private DiligenciaEncargadaItem?
+        ObtenerDiligenciaEncargadaSeleccionada()
+    {
+        if (!_nuevaGestion
+            .DiligenciaEncargadaId
+            .HasValue)
+        {
+            return null;
+        }
+
+        return _diligenciasEncargadas
+            .FirstOrDefault(
+                x =>
+                    x.Id ==
+                    _nuevaGestion
+                        .DiligenciaEncargadaId
+                        .Value);
+    }
+
+    // =========================================================
+    // CREACIÓN GENÉRICA DE CATÁLOGOS
+    // =========================================================
+
+    private async Task EjecutarCreacionCatalogoAsync(
+        Func<Task> accion)
+    {
+        _guardandoCatalogo =
+            true;
+
+        _gestionGuardada =
+            false;
+
+        _mensajeGestion =
+            null;
+
+        try
+        {
+            await accion();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException)
+        {
+            _mensajeGestion =
+                ex.Message;
+        }
+        finally
+        {
+            _guardandoCatalogo =
+                false;
+        }
+    }
+
+    // =========================================================
+    // VALORES INICIALES
+    // =========================================================
+
+    private void SeleccionarValoresIniciales()
+    {
+        if (!_nuevaGestion.TipoCausaId.HasValue &&
+            _tiposCausa.Count > 0)
+        {
+            _nuevaGestion.TipoCausaId =
+                _tiposCausa[0].Id;
+        }
+
+        if (!_nuevaGestion.TribunalId.HasValue &&
+            _tribunales.Count > 0)
+        {
+            _nuevaGestion.TribunalId =
+                _tribunales[0].Id;
+        }
+
+        if (!_nuevaGestion.AbogadoId.HasValue &&
+            _abogados.Count > 0)
+        {
+            _nuevaGestion.AbogadoId =
+                _abogados[0].Id;
+        }
+
+        if (!_nuevaGestion
+                .DiligenciaEncargadaId
+                .HasValue &&
+            _diligenciasEncargadas.Count > 0)
+        {
+            _nuevaGestion.DiligenciaEncargadaId =
+                _diligenciasEncargadas[0].Id;
+        }
+    }
+
+    // =========================================================
+    // ROL
+    // =========================================================
+
+    private string ObtenerRitResultante()
+    {
+        if (!_nuevaGestion.TipoCausaId.HasValue ||
+            string.IsNullOrWhiteSpace(
+                _nuevaGestion.NumeroRol))
+        {
+            return string.Empty;
+        }
+
+        var tipo =
+            _tiposCausa.FirstOrDefault(
+                x =>
+                    x.Id ==
+                    _nuevaGestion
+                        .TipoCausaId
+                        .Value);
+
+        if (tipo is null)
+        {
+            return string.Empty;
+        }
+
+        return
+            $"{tipo.Codigo.Trim().ToUpperInvariant()}-" +
+            $"{_nuevaGestion.NumeroRol.Trim()}";
+    }
+
+    private void AplicarRitInicial(
+        string ritInicial)
+    {
+        var rit =
+            ritInicial.Trim();
+
+        if (string.IsNullOrWhiteSpace(
+                rit))
+        {
+            return;
+        }
+
+        foreach (var tipo in
+                 _tiposCausa
+                     .OrderByDescending(
+                         x => x.Codigo.Length))
+        {
+            var prefijo =
+                $"{tipo.Codigo.Trim()}-";
+
+            if (!rit.StartsWith(
+                    prefijo,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            _nuevaGestion.TipoCausaId =
+                tipo.Id;
+
+            _nuevaGestion.NumeroRol =
+                rit[prefijo.Length..]
+                    .Trim();
+
+            return;
+        }
+
+        _nuevaGestion.TipoCausaId =
+            null;
+
+        _nuevaGestion.NumeroRol =
+            rit;
+    }
+
+    // =========================================================
+    // RESPUESTAS HTTP
+    // =========================================================
+
+    private static async Task VerificarRespuestaAsync(
+        HttpResponseMessage respuesta,
+        string operacion)
+    {
+        if (respuesta.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var detalle =
+            await respuesta.Content
+                .ReadAsStringAsync();
+
+        throw new HttpRequestException(
+            $"No se pudo {operacion} " +
+            $"({(int)respuesta.StatusCode}). " +
+            detalle);
+    }
+
+    // =========================================================
+    // AUXILIARES
+    // =========================================================
+
+    private static RegistrarGestionModel CrearModeloGestion()
+    {
+        return new RegistrarGestionModel
+        {
+            FechaEncargoCausa =
+                DateTime.Today,
+
+            FechaProgramada =
+                DateTime.Today
+        };
+    }
+
+    private static string ObtenerEstado(
+        int estado)
+    {
+        return estado switch
+        {
+            1 => "Ingresada",
+            2 => "En tramitación",
+            3 => "Suspendida",
+            4 => "Terminada",
+            5 => "Archivada",
+            _ => "Sin estado"
+        };
+    }
+
+    private static string ObtenerTextoPrioridad(
+        int diasSinGestion)
+{
+        return diasSinGestion switch
+    {
+            <= 10 => "Normal",
+            <= 15 => "Requiere revisión",
+            _ => "Atención prioritaria"
+    };
+}
+
+    private static string ObtenerClasePrioridad(
+        int diasSinGestion)
+{
+    return diasSinGestion switch
+    {
+            <= 10 => "priority-badge priority-normal",
+            <= 15 => "priority-badge priority-review",
+                _ => "priority-badge priority-critical"
+    };
+}
+
+    // =========================================================
+    // DTO INTERNOS
+    // =========================================================
+
+    private sealed record CausaCreadaResponse(
+        Guid Id);
+
+    private sealed record DiligenciaCreadaResponse(
+        Guid Id);
+
+    private sealed class CatalogoItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+    }
+
+    private sealed class AbogadoItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+
+        public Guid? UsuarioId { get; set; }
+    }
+
+    private sealed class TipoCausaItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+
+        public string Codigo { get; set; } =
+            string.Empty;
+    }
+
+    private sealed class DiligenciaEncargadaItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+
+        public int? CodigoTipoDiligencia { get; set; }
+    }
+
+    private sealed class TipoDiligenciaItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+
+        public int? CodigoSistema { get; set; }
+    }
+}
+
+
+

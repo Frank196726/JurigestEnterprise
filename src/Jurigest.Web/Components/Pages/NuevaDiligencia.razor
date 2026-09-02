@@ -1,0 +1,950 @@
+@page "/causas/{CausaId:guid}/diligencias/nueva"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using System.Net.Http.Json
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Nueva diligencia | Jurigest Enterprise</PageTitle>
+
+<section class="diligencias-page">
+
+    <header class="page-heading">
+        <div>
+            <span class="eyebrow">Gestión judicial</span>
+            <h1>Registrar diligencia</h1>
+
+            @if (_causa is not null)
+            {
+                <p>
+                    @_causa.Rit — @_causa.Tribunal
+                </p>
+            }
+        </div>
+    </header>
+
+    @if (_cargando)
+    {
+        <div class="state-card">
+            <p>Cargando causa...</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_mensajeError))
+    {
+        <div class="state-card error">
+            <strong>No fue posible continuar</strong>
+            <p>@_mensajeError</p>
+
+            <button type="button"
+                    class="btn btn-secondary"
+                    @onclick="Volver">
+                ← Volver
+            </button>
+        </div>
+    }
+    else if (_causa is not null)
+    {
+        <div class="table-card">
+            <div style="padding:1.5rem;">
+
+                <div style="margin-bottom:1.75rem;">
+                    <span class="eyebrow">Causa seleccionada</span>
+
+                    <h2 style="margin-top:.4rem;">
+                        @_causa.Rit
+                    </h2>
+
+                    <p>
+                        <strong>Tribunal:</strong>
+                        @_causa.Tribunal
+                    </p>
+
+                    <p>
+                        <strong>Carátula / descripción:</strong>
+                        @_causa.Descripcion
+                    </p>
+                </div>
+
+                <div style="
+                    display:grid;
+                    grid-template-columns:repeat(2,minmax(0,1fr));
+                    gap:1rem;
+                    margin-bottom:1rem;">
+
+                    <label style="grid-column:1 / -1;">
+                        <span>Diligencia encargada *</span>
+
+                        <textarea class="form-control"
+                                  rows="4"
+                                  @bind="_descripcion"
+                                  placeholder="Ej.: Notificar demanda y resolución">
+                        </textarea>
+                    </label>
+
+                    <div>
+                        <span>Tipo de diligencia *</span>
+
+                        <div style="
+                            display:flex;
+                            gap:.5rem;
+                            align-items:end;">
+
+                            <select class="form-control"
+                                    style="flex:1;"
+                                    @bind="_tipo">
+
+                                <option value="">
+                                    Seleccionar tipo...
+                                </option>
+
+                                @foreach (var tipo in _tiposDiligencia)
+                                {
+                                    if (tipo.CodigoSistema.HasValue)
+                                    {
+                                        <option value="@tipo.CodigoSistema.Value">
+                                            @tipo.Nombre
+                                        </option>
+                                    }
+                                }
+                            </select>
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    @onclick="AlternarAgregarTipo">
+                                + Agregar diligencia
+                            </button>
+                        </div>
+
+                        @if (_mostrarAgregarTipo)
+                        {
+                            <div style="
+                                display:flex;
+                                gap:.5rem;
+                                margin-top:.5rem;">
+
+                                <input type="text"
+                                       class="form-control"
+                                       @bind="_nuevoTipo"
+                                       placeholder="Nombre del nuevo tipo" />
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarTipoAsync">
+                                    Agregar
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <label>
+                        <span>Fecha programada</span>
+
+                        <input type="datetime-local"
+                               class="form-control"
+                               @bind="_fechaProgramada" />
+                    </label>
+
+                    <div>
+                        <span>Receptor judicial</span>
+
+                        <div style="
+                            display:flex;
+                            gap:.5rem;
+                            align-items:end;">
+
+                            <select class="form-control"
+                                    style="flex:1;"
+                                    @bind="_receptorJudicial">
+
+                                <option value="">
+                                    Seleccionar receptor...
+                                </option>
+
+                                @foreach (var receptor in _receptores)
+                                {
+                                    <option value="@receptor.Nombre">
+                                        @receptor.Nombre
+                                    </option>
+                                }
+                            </select>
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    @onclick="AlternarAgregarReceptor">
+                                + Agregar receptor
+                            </button>
+                        </div>
+
+                        @if (_mostrarAgregarReceptor)
+                        {
+                            <div style="
+                                display:flex;
+                                gap:.5rem;
+                                margin-top:.5rem;">
+
+                                <input type="text"
+                                       class="form-control"
+                                       @bind="_nuevoReceptor"
+                                       placeholder="Nombre del receptor judicial" />
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarReceptorAsync">
+                                    Agregar
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <div>
+                        <span>Comuna</span>
+
+                        <div style="
+                            display:flex;
+                            gap:.5rem;
+                            align-items:end;">
+
+                            <select class="form-control"
+                                    style="flex:1;"
+                                    @bind="_comuna">
+
+                                <option value="">
+                                    Seleccionar comuna...
+                                </option>
+
+                                @foreach (var comuna in _comunas)
+                                {
+                                    <option value="@comuna.Nombre">
+                                        @comuna.Nombre
+                                    </option>
+                                }
+                            </select>
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    @onclick="AlternarAgregarComuna">
+                                + Agregar comuna
+                            </button>
+                        </div>
+
+                        @if (_mostrarAgregarComuna)
+                        {
+                            <div style="
+                                display:flex;
+                                gap:.5rem;
+                                margin-top:.5rem;">
+
+                                <input type="text"
+                                       class="form-control"
+                                       @bind="_nuevaComuna"
+                                       placeholder="Nombre de la comuna" />
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarComunaAsync">
+                                    Agregar
+                                </button>
+                            </div>
+                        }
+                    </div>
+
+                    <label style="grid-column:1 / -1;">
+                        <span>Dirección</span>
+
+                        <input type="text"
+                               class="form-control"
+                               @bind="_direccion"
+                               placeholder="Dirección donde se practicará la diligencia" />
+                    </label>
+
+                    <label style="grid-column:1 / -1;">
+                        <span>Observaciones</span>
+
+                        <textarea class="form-control"
+                                  rows="4"
+                                  @bind="_observacion"
+                                  placeholder="Información adicional de la diligencia">
+                        </textarea>
+                    </label>
+
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(_mensaje))
+                {
+                    <div class="alert alert-danger"
+                         style="margin-bottom:1rem;">
+                        @_mensaje
+                    </div>
+                }
+
+                <div style="
+                    display:flex;
+                    gap:.75rem;
+                    flex-wrap:wrap;">
+
+                    <button type="button"
+                            class="btn btn-primary"
+                            disabled="@_guardando"
+                            @onclick="GuardarAsync">
+                        @(_guardando
+                            ? "Guardando..."
+                            : "Guardar diligencia")
+                    </button>
+
+                    <button type="button"
+                            class="btn btn-secondary"
+                            disabled="@_guardando"
+                            @onclick="Volver">
+                        Cancelar
+                    </button>
+
+                </div>
+
+            </div>
+        </div>
+    }
+
+</section>
+
+@code {
+
+    [Parameter]
+    public Guid CausaId { get; set; }
+
+    private CausaResumen? _causa;
+
+    private string _descripcion = string.Empty;
+    private int? _tipo;
+    private DateTime? _fechaProgramada;
+
+    private string _receptorJudicial = string.Empty;
+    private string _direccion = string.Empty;
+    private string _comuna = string.Empty;
+    private string _observacion = string.Empty;
+
+    private readonly List<TipoCatalogoItem> _tiposDiligencia = [];
+    private readonly List<CatalogoItem> _receptores = [];
+    private readonly List<CatalogoItem> _comunas = [];
+
+    private bool _mostrarAgregarTipo;
+    private bool _mostrarAgregarReceptor;
+    private bool _mostrarAgregarComuna;
+
+    private bool _guardandoCatalogo;
+
+    private string _nuevoTipo = string.Empty;
+    private string _nuevoReceptor = string.Empty;
+    private string _nuevaComuna = string.Empty;
+
+    private string? _mensaje;
+    private string? _mensajeError;
+
+    private bool _cargando = true;
+    private bool _guardando;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var causas =
+                await ApiClient.GetAsync<List<CausaResumen>>(
+                    "/api/Causas");
+
+            _causa =
+                causas?.FirstOrDefault(
+                    c => c.Id == CausaId);
+
+            if (_causa is null)
+            {
+                _mensajeError =
+                    "La causa indicada no existe o ya no está disponible.";
+
+                return;
+            }
+
+            await CargarCatalogosAsync();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeError =
+                "No fue posible comunicarse con Jurigest.API.";
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task CargarCatalogosAsync()
+    {
+        var tipos =
+            await ApiClient.GetAsync<List<TipoCatalogoItem>>(
+                "/api/Catalogos/tipos-diligencia");
+
+        var receptores =
+            await ApiClient.GetAsync<List<CatalogoItem>>(
+                "/api/Catalogos/receptores");
+
+        var comunas =
+            await ApiClient.GetAsync<List<CatalogoItem>>(
+                "/api/Catalogos/comunas");
+
+        _tiposDiligencia.Clear();
+        _receptores.Clear();
+        _comunas.Clear();
+
+        if (tipos is not null)
+            _tiposDiligencia.AddRange(tipos);
+
+        if (receptores is not null)
+            _receptores.AddRange(receptores);
+
+        if (comunas is not null)
+            _comunas.AddRange(comunas);
+    }
+
+    private async Task CargarTiposDiligenciaAsync()
+    {
+        var tipos =
+            await ApiClient.GetAsync<List<TipoCatalogoItem>>(
+                "/api/Catalogos/tipos-diligencia");
+
+        _tiposDiligencia.Clear();
+
+        if (tipos is not null)
+            _tiposDiligencia.AddRange(tipos);
+    }
+
+    private async Task CargarReceptoresAsync()
+    {
+        var receptores =
+            await ApiClient.GetAsync<List<CatalogoItem>>(
+                "/api/Catalogos/receptores");
+
+        _receptores.Clear();
+
+        if (receptores is not null)
+            _receptores.AddRange(receptores);
+    }
+
+    private async Task CargarComunasAsync()
+    {
+        var comunas =
+            await ApiClient.GetAsync<List<CatalogoItem>>(
+                "/api/Catalogos/comunas");
+
+        _comunas.Clear();
+
+        if (comunas is not null)
+            _comunas.AddRange(comunas);
+    }
+
+    private void Volver()
+{
+        Navigation.NavigateTo(
+            $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}");
+}
+
+    private void AlternarAgregarTipo()
+    {
+        _mostrarAgregarTipo =
+            !_mostrarAgregarTipo;
+
+        _mensaje = null;
+    }
+
+    private void AlternarAgregarReceptor()
+    {
+        _mostrarAgregarReceptor =
+            !_mostrarAgregarReceptor;
+
+        _mensaje = null;
+    }
+
+    private void AlternarAgregarComuna()
+    {
+        _mostrarAgregarComuna =
+            !_mostrarAgregarComuna;
+
+        _mensaje = null;
+    }
+
+    private async Task AgregarTipoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoTipo))
+        {
+            _mensaje =
+                "Debe indicar el nombre del nuevo tipo de diligencia.";
+
+            return;
+        }
+
+        _guardandoCatalogo = true;
+        _mensaje = null;
+
+        try
+        {
+            using var response =
+                await ApiClient.PostAsync(
+                    "/api/Catalogos/tipos-diligencia",
+                    JsonContent.Create(
+                        new
+                        {
+                            nombre = _nuevoTipo.Trim()
+                        }));
+
+            await VerificarRespuestaAsync(
+                response,
+                "agregar el tipo de diligencia");
+
+            var creado =
+                await response.Content
+                    .ReadFromJsonAsync<TipoCatalogoItem>();
+
+            if (creado is null ||
+                !creado.CodigoSistema.HasValue)
+            {
+                throw new InvalidOperationException(
+                    "La API no devolvió el tipo creado.");
+            }
+
+            await CargarTiposDiligenciaAsync();
+
+            _tipo =
+                creado.CodigoSistema.Value;
+
+            _nuevoTipo =
+                string.Empty;
+
+            _mostrarAgregarTipo =
+                false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException)
+        {
+            _mensaje = ex.Message;
+        }
+        finally
+        {
+            _guardandoCatalogo = false;
+        }
+    }
+
+    private async Task AgregarReceptorAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoReceptor))
+        {
+            _mensaje =
+                "Debe indicar el nombre del receptor judicial.";
+
+            return;
+        }
+
+        _guardandoCatalogo = true;
+        _mensaje = null;
+
+        try
+        {
+            using var response =
+                await ApiClient.PostAsync(
+                    "/api/Catalogos/receptores",
+                    JsonContent.Create(
+                        new
+                        {
+                            nombre = _nuevoReceptor.Trim()
+                        }));
+
+            await VerificarRespuestaAsync(
+                response,
+                "agregar el receptor judicial");
+
+            var creado =
+                await response.Content
+                    .ReadFromJsonAsync<CatalogoItem>();
+
+            if (creado is null)
+            {
+                throw new InvalidOperationException(
+                    "La API no devolvió el receptor creado.");
+            }
+
+            await CargarReceptoresAsync();
+
+            _receptorJudicial =
+                creado.Nombre;
+
+            _nuevoReceptor =
+                string.Empty;
+
+            _mostrarAgregarReceptor =
+                false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException)
+        {
+            _mensaje = ex.Message;
+        }
+        finally
+        {
+            _guardandoCatalogo = false;
+        }
+    }
+
+    private async Task AgregarComunaAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevaComuna))
+        {
+            _mensaje =
+                "Debe indicar el nombre de la comuna.";
+
+            return;
+        }
+
+        _guardandoCatalogo = true;
+        _mensaje = null;
+
+        try
+        {
+            using var response =
+                await ApiClient.PostAsync(
+                    "/api/Catalogos/comunas",
+                    JsonContent.Create(
+                        new
+                        {
+                            nombre = _nuevaComuna.Trim()
+                        }));
+
+            await VerificarRespuestaAsync(
+                response,
+                "agregar la comuna");
+
+            var creada =
+                await response.Content
+                    .ReadFromJsonAsync<CatalogoItem>();
+
+            if (creada is null)
+            {
+                throw new InvalidOperationException(
+                    "La API no devolvió la comuna creada.");
+            }
+
+            await CargarComunasAsync();
+
+            _comuna =
+                creada.Nombre;
+
+            _nuevaComuna =
+                string.Empty;
+
+            _mostrarAgregarComuna =
+                false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException)
+        {
+            _mensaje = ex.Message;
+        }
+        finally
+        {
+            _guardandoCatalogo = false;
+        }
+    }
+
+    private async Task GuardarAsync()
+    {
+        _mensaje = null;
+
+        if (_causa is null)
+        {
+            _mensaje =
+                "No se encontró la causa seleccionada.";
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_descripcion))
+        {
+            _mensaje =
+                "Debe indicar la diligencia encargada.";
+
+            return;
+        }
+
+        if (!_tipo.HasValue)
+        {
+            _mensaje =
+                "Debe seleccionar un tipo de diligencia.";
+
+            return;
+        }
+
+        if (TieneUbicacionIncompleta())
+        {
+            _mensaje =
+                "Para registrar la ubicación debe indicar dirección y comuna.";
+
+            return;
+        }
+
+        _guardando = true;
+
+        try
+        {
+            var diligenciaId =
+                await CrearDiligenciaAsync();
+
+            await ConfigurarTipoAsync(
+                diligenciaId);
+
+            if (_fechaProgramada.HasValue)
+            {
+                await ProgramarAsync(
+                    diligenciaId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    _receptorJudicial))
+            {
+                await AsignarReceptorAsync(
+                    diligenciaId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(_direccion) &&
+                !string.IsNullOrWhiteSpace(_comuna))
+            {
+                await AsignarUbicacionAsync(
+                    diligenciaId);
+            }
+
+            if (!string.IsNullOrWhiteSpace(
+                    _observacion))
+            {
+                await AgregarObservacionAsync(
+                    diligenciaId);
+            }
+
+            Navigation.NavigateTo(
+                $"/diligencias?causaId={CausaId}");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException)
+        {
+            _mensaje = ex.Message;
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private async Task<Guid> CrearDiligenciaAsync()
+    {
+        using var response =
+            await ApiClient.PostAsync(
+                $"/api/Causas/{CausaId}/diligencias",
+                JsonContent.Create(
+                    new
+                    {
+                        descripcion =
+                            _descripcion.Trim()
+                    }));
+
+        await VerificarRespuestaAsync(
+            response,
+            "crear la diligencia");
+
+        var resultado =
+            await response.Content
+                .ReadFromJsonAsync<DiligenciaCreadaResponse>();
+
+        return resultado?.Id
+            ?? throw new InvalidOperationException(
+                "La API no devolvió el identificador de la diligencia.");
+    }
+
+    private async Task ConfigurarTipoAsync(
+        Guid diligenciaId)
+    {
+        using var response =
+            await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/tipo",
+                JsonContent.Create(
+                    new
+                    {
+                        tipo = _tipo!.Value
+                    }));
+
+        await VerificarRespuestaAsync(
+            response,
+            "asignar el tipo de diligencia");
+    }
+
+    private async Task ProgramarAsync(
+        Guid diligenciaId)
+    {
+        using var response =
+            await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/programar",
+                JsonContent.Create(
+                    new
+                    {
+                        fechaProgramada =
+                            _fechaProgramada!.Value
+                    }));
+
+        await VerificarRespuestaAsync(
+            response,
+            "programar la diligencia");
+    }
+
+    private async Task AsignarReceptorAsync(
+        Guid diligenciaId)
+    {
+        using var response =
+            await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/asignar-receptor",
+                JsonContent.Create(
+                    new
+                    {
+                        receptorJudicial =
+                            _receptorJudicial.Trim()
+                    }));
+
+        await VerificarRespuestaAsync(
+            response,
+            "asignar el receptor");
+    }
+
+    private async Task AsignarUbicacionAsync(
+        Guid diligenciaId)
+    {
+        using var response =
+            await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/ubicacion",
+                JsonContent.Create(
+                    new
+                    {
+                        direccion =
+                            _direccion.Trim(),
+
+                        comuna =
+                            _comuna.Trim()
+                    }));
+
+        await VerificarRespuestaAsync(
+            response,
+            "asignar la ubicación");
+    }
+
+    private async Task AgregarObservacionAsync(
+        Guid diligenciaId)
+    {
+        using var response =
+            await ApiClient.PutAsync(
+                $"/api/Diligencias/{diligenciaId}/observacion",
+                JsonContent.Create(
+                    new
+                    {
+                        observacion =
+                            _observacion.Trim()
+                    }));
+
+        await VerificarRespuestaAsync(
+            response,
+            "registrar la observación");
+    }
+
+    private static async Task VerificarRespuestaAsync(
+        HttpResponseMessage response,
+        string operacion)
+    {
+        if (response.IsSuccessStatusCode)
+            return;
+
+        var detalle =
+            await response.Content
+                .ReadAsStringAsync();
+
+        throw new InvalidOperationException(
+            $"No fue posible {operacion}. " +
+            $"HTTP {(int)response.StatusCode}. " +
+            detalle);
+    }
+
+    private bool TieneUbicacionIncompleta()
+    {
+        var tieneDireccion =
+            !string.IsNullOrWhiteSpace(
+                _direccion);
+
+        var tieneComuna =
+            !string.IsNullOrWhiteSpace(
+                _comuna);
+
+        return tieneDireccion != tieneComuna;
+    }
+
+    private sealed class DiligenciaCreadaResponse
+    {
+        public Guid Id { get; set; }
+    }
+
+    private sealed class CatalogoItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+    }
+
+    private sealed class TipoCatalogoItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+            string.Empty;
+
+        public int? CodigoSistema { get; set; }
+    }
+}

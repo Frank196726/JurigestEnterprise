@@ -324,30 +324,3 @@ tbody tr:hover {
         grid-column: auto;
     }
 }
-
-.actions-cell {
-    white-space: nowrap;
-}
-
-.manage-action {
-    display: inline-flex;
-    min-height: 2.4rem;
-    align-items: center;
-    padding: 0.55rem 0.8rem;
-    border-radius: 0.65rem;
-    background: #2554df;
-    color: #fff;
-    font-size: 0.76rem;
-    font-weight: 700;
-    text-decoration: none;
-}
-
-.manage-action:hover {
-    background: #1d46c7;
-    color: #fff;
-}
-
-.manage-action:focus-visible {
-    outline: 0.2rem solid rgb(37 84 223 / 25%);
-    outline-offset: 0.15rem;
-}

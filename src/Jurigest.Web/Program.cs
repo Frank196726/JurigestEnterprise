@@ -4,6 +4,7 @@ using Jurigest.Web.Endpoints;
 using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.Authentication;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.

@@ -1,4 +1,5 @@
 @page "/causas"
+
 @rendermode InteractiveServer
 @attribute [Authorize]
 
@@ -11,156 +12,41 @@
 <PageTitle>Causas | Jurigest Enterprise</PageTitle>
 
 <section class="causes-page">
+
     <header class="page-heading">
         <div>
             <span class="eyebrow">Gestión judicial</span>
-            <h1>Causas</h1>
+
+            <h1>Revisión de causas</h1>
+
             <p>
                 Consulta los expedientes registrados y su estado actual.
             </p>
         </div>
 
-        <span class="count-badge">
-            @_causas.Count causas
-        </span>
+        <div class="heading-actions">
+            <span class="count-badge">
+                @_causas.Count causas
+            </span>
+
+            <AuthorizeView Roles="Administrador,Abogado">
+                <Authorized>
+                    <a class="btn btn-primary" href="/causas/nueva">
+                        Nueva gestión
+                    </a>
+                </Authorized>
+            </AuthorizeView>
+        </div>
     </header>
 
-    <AuthorizeView Roles="Administrador,Abogado">
-    <Authorized Context="usuarioAutorizado">
-        <section class="management-card"
-                 aria-labelledby="titulo-nueva-gestion">
-            <div class="management-heading">
-                <div>
-                    <span class="eyebrow">Nuevo registro</span>
-
-                    <h2 id="titulo-nueva-gestion">
-                        Guardar gestión
-                    </h2>
-
-                    <p>
-                        Registra la causa y su primera diligencia
-                        en Jurigest Enterprise.
-                    </p>
-                </div>
-            </div>
-
-            <EditForm Model="_nuevaGestion"
-                      OnValidSubmit="GuardarGestionAsync"
-                      FormName="guardar-gestion">
-                <DataAnnotationsValidator />
-                <ValidationSummary class="validation-summary" />
-
-                <div class="form-grid">
-                    <label>
-                        <span>ROL</span>
-
-                        <InputText
-                            @bind-Value="_nuevaGestion.Rol"
-                            maxlength="30" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.Rol)" />
-                    </label>
-
-                    <label>
-                        <span>Tribunal</span>
-
-                        <InputText
-                            @bind-Value="_nuevaGestion.Tribunal"
-                            maxlength="200" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.Tribunal)" />
-                    </label>
-
-                    <label>
-                        <span>Abogado responsable</span>
-
-                        <InputText
-                            @bind-Value="_nuevaGestion.Abogado"
-                            maxlength="200" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.Abogado)" />
-                    </label>
-
-                    <label>
-                        <span>Demandante</span>
-
-                        <InputText
-                            @bind-Value="_nuevaGestion.Demandante"
-                            maxlength="200" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.Demandante)" />
-                    </label>
-
-                    <label>
-                        <span>Demandado</span>
-
-                        <InputText
-                            @bind-Value="_nuevaGestion.Demandado"
-                            maxlength="200" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.Demandado)" />
-                    </label>
-
-                    <label>
-                        <span>Fecha de encargo</span>
-
-                        <InputDate
-                            @bind-Value="_nuevaGestion.FechaEncargo" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.FechaEncargo)" />
-                    </label>
-
-                    <label>
-                        <span>Fecha de retiro</span>
-
-                        <InputDate
-                            @bind-Value="_nuevaGestion.FechaRetiro" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.FechaRetiro)" />
-                    </label>
-
-                    <label class="full-width">
-                        <span>Diligencia encargada</span>
-
-                        <InputTextArea
-                            @bind-Value="_nuevaGestion.Diligencia"
-                            maxlength="1000" />
-
-                        <ValidationMessage
-                            For="@(() => _nuevaGestion.Diligencia)" />
-                    </label>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(_mensajeGestion))
-                {
-                    <div class="form-message @(_gestionGuardada ? "success" : "error")"
-                         role="status">
-                        @_mensajeGestion
-                    </div>
-                }
-
-                <div class="form-actions">
-                    <button type="submit"
-                            disabled="@_guardandoGestion">
-                        @(_guardandoGestion
-                            ? "Guardando…"
-                            : "Guardar gestión")
-                    </button>
-                </div>
-            </EditForm>
-        </section>
-    </Authorized>
-</AuthorizeView>
+    @* =========================================================
+       BUSCADOR
+       ========================================================= *@
 
     <section class="toolbar">
+
         <label class="search-box">
+
             <span>Buscar</span>
 
             <input type="search"
@@ -168,111 +54,183 @@
                    autocomplete="off"
                    @bind="_filtro"
                    @bind:event="oninput" />
+
         </label>
+
     </section>
 
     @if (_cargando)
     {
         <div class="state-card">
+
             <span class="spinner"></span>
-            <p>Cargando causas…</p>
+
+            <p>Cargando causas...</p>
+
         </div>
     }
-        else if (!string.IsNullOrWhiteSpace(_mensajeError))
+    else if (!string.IsNullOrWhiteSpace(
+        _mensajeError))
     {
         <div class="state-card error">
-            <strong>No fue posible cargar las causas</strong>
+
+            <strong>
+                No fue posible cargar las causas
+            </strong>
+
             <p>@_mensajeError</p>
+
         </div>
     }
     else if (!CausasFiltradas.Any())
     {
         <div class="state-card">
-            <strong>No se encontraron resultados</strong>
+
+            <strong>
+                No se encontraron resultados
+            </strong>
+
             <p>
-                Intenta utilizar otro RIT, tribunal o descripción.
+                Intenta utilizar otro RIT,
+                tribunal o descripción.
             </p>
+
         </div>
     }
     else
     {
         <div class="table-card">
+
             <table>
+
                 <thead>
                     <tr>
                         <th>RIT</th>
                         <th>Tribunal</th>
                         <th>Descripción</th>
+                        <th>Encargo</th>
+                        <th>Última gestión</th>
+                        <th>Días sin gestionar</th>
+                        <th>Prioridad</th>
                         <th>Estado</th>
-                        <th>Registro</th>
-                    </tr>
-                </thead>
+                        <AuthorizeView Roles="Administrador,Abogado,Procurador">
+                            <th>Acciones</th>
+                        </AuthorizeView>
+                  </tr>
+            </thead>
 
-                <tbody>
-                    @foreach (var causa in CausasFiltradas)
-                    {
-                        <tr @key="causa.Id">
-                            <td>
-                                <strong class="rit">@causa.Rit</strong>
-                            </td>
+          <tbody>
+            @foreach (var causa in CausasFiltradas)
+            {
+                <tr @key="causa.Id">
 
-                            <td>@causa.Tribunal</td>
+                    <td>
+                        <strong class="rit">
+                            @causa.Rit
+                        </strong>
+                    </td>
 
-                            <td>
-                                <span class="description">
-                                    @causa.Descripcion
-                                </span>
-                            </td>
+                    <td>
+                        @causa.Tribunal
+                    </td>
 
-                            <td>
-                                <span class="status status-@causa.Estado">
-                                    @ObtenerEstado(causa.Estado)
-                                </span>
-                            </td>
+                    <td>
+                        <span>
+                            @causa.Descripcion
+                        </span>
+                    </td>
 
-                            <td>
-                                @causa.FechaCreacion.ToString(
-                                    "dd-MM-yyyy")
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
-        </div>
+                    <td>
+                        @causa.FechaEncargoCausa.ToString(
+                            "dd-MM-yyyy")
+                    </td>
+
+                    <td>
+                        @if (causa.FechaGestionCausa.HasValue)
+                        {
+                            @causa.FechaGestionCausa.Value.ToString(
+                                "dd-MM-yyyy HH:mm")
+                        }
+                        else
+                        {
+                            <span class="text-muted">
+                                Sin gestión realizada
+                            </span>
+                        }
+                    </td>
+
+                    <td>
+                        <strong>
+                            @causa.DiasSinGestion
+                        </strong>
+
+                        <span>
+                            día@(causa.DiasSinGestion == 1 ? "" : "s")
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="@ObtenerClasePrioridad(
+                                        causa.DiasSinGestion)">
+                                    @ObtenerTextoPrioridad(
+                                        causa.DiasSinGestion)
+                            </span>
+                        </td>
+
+                    <td>
+                        <span class="@(
+                            $"status status-{causa.Estado}")">
+
+                            @ObtenerEstado(
+                                causa.Estado)
+
+                </span>
+            </td>
+
+            <AuthorizeView Roles="Administrador,Abogado,Procurador">
+                <td class="actions-cell">
+                    <a class="manage-action"
+                       href="@($"/causas/{causa.Id}/diligencias/registrar")">
+                        Gestionar diligencia
+                    </a>
+                </td>
+            </AuthorizeView>
+
+        </tr>
     }
+</tbody>
+
+</table>
+
+</div>
+}
+
 </section>
 
 @code {
-    private readonly List<CausaResumen> _causas = [];
+    [SupplyParameterFromQuery(Name = "rit")]
+    public string? RitInicial { get; set; }
 
+    private readonly List<CausaResumen> _causas = [];
     private string _filtro = string.Empty;
     private string? _mensajeError;
     private bool _cargando = true;
-    private RegistrarGestionModel _nuevaGestion = NuevaGestion();
-    private string? _mensajeGestion;
-    private bool _guardandoGestion;
-    private bool _gestionGuardada;
 
     private IEnumerable<CausaResumen> CausasFiltradas
     {
         get
         {
             if (string.IsNullOrWhiteSpace(_filtro))
+            {
                 return _causas;
+            }
 
             var filtro = _filtro.Trim();
 
-            return _causas.Where(
-                causa =>
-                    causa.Rit.Contains(
-                        filtro,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    causa.Tribunal.Contains(
-                        filtro,
-                        StringComparison.OrdinalIgnoreCase) ||
-                    causa.Descripcion.Contains(
-                        filtro,
-                        StringComparison.OrdinalIgnoreCase));
+            return _causas.Where(causa =>
+                causa.Rit.Contains(filtro, StringComparison.OrdinalIgnoreCase) ||
+                causa.Tribunal.Contains(filtro, StringComparison.OrdinalIgnoreCase) ||
+                causa.Descripcion.Contains(filtro, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -281,18 +239,20 @@
         try
         {
             await CargarCausasAsync();
+
+            if (!string.IsNullOrWhiteSpace(RitInicial))
+            {
+                _filtro = RitInicial.Trim();
+            }
         }
         catch (UnauthorizedAccessException)
         {
-            Navigation.NavigateTo(
-                "/login",
-                forceLoad: true);
+            Navigation.NavigateTo("/login", forceLoad: true);
         }
         catch (HttpRequestException)
         {
             _mensajeError =
-                "El servicio no está disponible. " +
-                "Inténtalo nuevamente.";
+                "El servicio no está disponible. Inténtalo nuevamente.";
         }
         finally
         {
@@ -300,119 +260,42 @@
         }
     }
 
-    private async Task GuardarGestionAsync()
-    {
-        _guardandoGestion = true;
-        _gestionGuardada = false;
-        _mensajeGestion = null;
-        Guid? causaId = null;
-
-        try
-        {
-            var caratula = $"{_nuevaGestion.Demandante.Trim()} / {_nuevaGestion.Demandado.Trim()}";
-            using var respuestaCausa = await ApiClient.PostAsync(
-                "/api/Causas",
-                JsonContent.Create(new
-                {
-                    id = Guid.Empty,
-                    rit = _nuevaGestion.Rol.Trim(),
-                    tribunal = _nuevaGestion.Tribunal.Trim(),
-                    descripcion = caratula
-                }));
-
-            await VerificarRespuestaAsync(respuestaCausa, "crear la causa");
-            var causaCreada = await respuestaCausa.Content.ReadFromJsonAsync<CausaCreadaResponse>();
-            causaId = causaCreada?.Id ?? throw new InvalidOperationException(
-                "La API no devolvió el identificador de la causa.");
-
-            using var respuestaDiligencia = await ApiClient.PostAsync(
-                $"/api/Causas/{causaId}/diligencias",
-                JsonContent.Create(new { descripcion = _nuevaGestion.Diligencia.Trim() }));
-
-            await VerificarRespuestaAsync(respuestaDiligencia, "crear la diligencia");
-            var diligenciaCreada = await respuestaDiligencia.Content
-                .ReadFromJsonAsync<DiligenciaCreadaResponse>();
-            var diligenciaId = diligenciaCreada?.Id ?? throw new InvalidOperationException(
-                "La API no devolvió el identificador de la diligencia.");
-
-            using var respuestaProgramacion = await ApiClient.PutAsync(
-                $"/api/Diligencias/{diligenciaId}/programar",
-                JsonContent.Create(new { fechaProgramada = _nuevaGestion.FechaEncargo!.Value.Date }));
-            await VerificarRespuestaAsync(respuestaProgramacion, "programar la diligencia");
-
-            var retiro = _nuevaGestion.FechaRetiro.HasValue
-                ? _nuevaGestion.FechaRetiro.Value.ToString("dd-MM-yyyy")
-                : "No indicada";
-            using var respuestaObservacion = await ApiClient.PutAsync(
-                $"/api/Diligencias/{diligenciaId}/observacion",
-                JsonContent.Create(new
-                {
-                    observacion = $"Abogado responsable: {_nuevaGestion.Abogado.Trim()}. Fecha de retiro: {retiro}."
-                }));
-            await VerificarRespuestaAsync(respuestaObservacion, "registrar los datos del encargo");
-
-            _gestionGuardada = true;
-            _mensajeGestion = "La gestión fue guardada correctamente en Jurigest Enterprise.";
-            _nuevaGestion = NuevaGestion();
-            await CargarCausasAsync();
-        }
-        catch (UnauthorizedAccessException)
-        {
-            Navigation.NavigateTo("/login", forceLoad: true);
-        }
-        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException)
-        {
-            _mensajeGestion = causaId.HasValue
-                ? $"La causa fue creada, pero la gestión quedó incompleta: {ex.Message}"
-                : $"No fue posible guardar la gestión: {ex.Message}";
-        }
-        finally
-        {
-            _guardandoGestion = false;
-        }
-    }
-
     private async Task CargarCausasAsync()
     {
-        var resultado = await ApiClient.GetAsync<List<CausaResumen>>("/api/Causas");
+        var resultado =
+            await ApiClient.GetAsync<List<CausaResumen>>("/api/Causas");
+
         _causas.Clear();
 
         if (resultado is not null)
+        {
             _causas.AddRange(resultado);
+        }
     }
 
-    private static async Task VerificarRespuestaAsync(
-        HttpResponseMessage respuesta,
-        string operacion)
+    private static string ObtenerEstado(int estado) => estado switch
     {
-        if (respuesta.IsSuccessStatusCode)
-            return;
-
-        var detalle = await respuesta.Content.ReadAsStringAsync();
-        throw new HttpRequestException(
-            $"No se pudo {operacion} ({(int)respuesta.StatusCode}). {detalle}".Trim());
-    }
-
-    private static RegistrarGestionModel NuevaGestion() => new()
-    {
-        FechaEncargo = DateTime.Today
+        1 => "Ingresada",
+        2 => "En tramitación",
+        3 => "Suspendida",
+        4 => "Terminada",
+        5 => "Archivada",
+        _ => "Sin estado"
     };
 
-    private sealed record CausaCreadaResponse(Guid Id);
-
-    private sealed record DiligenciaCreadaResponse(Guid Id);
-
-    private static string ObtenerEstado(
-        int estado)
-    {
-        return estado switch
+    private static string ObtenerTextoPrioridad(int diasSinGestion) =>
+        diasSinGestion switch
         {
-            1 => "Ingresada",
-            2 => "En tramitación",
-            3 => "Suspendida",
-            4 => "Terminada",
-            5 => "Archivada",
-            _ => "Sin estado"
+            <= 10 => "Normal",
+            <= 15 => "Requiere revisión",
+            _ => "Atención prioritaria"
         };
-    }
+
+    private static string ObtenerClasePrioridad(int diasSinGestion) =>
+        diasSinGestion switch
+        {
+            <= 10 => "priority-badge priority-normal",
+            <= 15 => "priority-badge priority-review",
+            _ => "priority-badge priority-critical"
+        };
 }

@@ -6,4 +6,8 @@ public sealed record CausaResumen(
     string Tribunal,
     string Descripcion,
     DateTime FechaCreacion,
+    DateTime FechaEncargoCausa,
+    DateTime? FechaGestionCausa,
+    int DiasSinGestion,
+    bool EsCritica,
     int Estado);

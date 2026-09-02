@@ -39,6 +39,23 @@
                 }
             </select>
         </label>
+
+        @if (_causaSeleccionadaId != Guid.Empty)
+        {
+            <div class="diligencias-actions">
+                <button type="button"
+                        class="btn-volver"
+                        @onclick="Volver">
+                    ← Volver
+                </button>
+
+                <button type="button"
+                        class="btn-nueva-diligencia"
+                        @onclick="NuevaDiligencia">
+                    + Nueva diligencia
+                </button>
+            </div>
+        }
     </section>
 
     @if (_cargando)
@@ -63,10 +80,17 @@
     else if (_diligencias.Count == 0)
     {
         <div class="state-card">
-            <strong>La causa no tiene diligencias</strong>
+            <strong>La causa aún no tiene diligencias</strong>
+
             <p>
-                Selecciona otra causa para continuar.
+                Registra la primera diligencia asociada a esta causa.
             </p>
+
+            <button type="button"
+                    class="btn btn-primary"
+                    @onclick="NuevaDiligencia">
+                + Registrar primera diligencia
+            </button>
         </div>
     }
     else
@@ -81,6 +105,7 @@
                         <th>Programada</th>
                         <th>Receptor</th>
                         <th>Ubicación</th>
+                        <th></th>
                     </tr>
                 </thead>
 
@@ -94,7 +119,9 @@
                                 </strong>
                             </td>
 
-                            <td>@ObtenerTipo(diligencia.Tipo)</td>
+                            <td>
+                                @ObtenerTipo(diligencia.Tipo)
+                            </td>
 
                             <td>
                                 <span class="status status-@diligencia.Estado">
@@ -114,6 +141,17 @@
                             <td>
                                 @ObtenerUbicacion(diligencia)
                             </td>
+
+                            <td>
+                                @if (diligencia.Estado == 1)
+                                {
+                                    <button type="button"
+                                            class="btn btn-secondary"
+                                            @onclick="() => ModificarDiligencia(diligencia.Id)">
+                                        Modificar diligencia
+                                    </button>
+                                }
+                            </td>
                         </tr>
                     }
                 </tbody>
@@ -123,12 +161,35 @@
 </section>
 
 @code {
+    [SupplyParameterFromQuery(Name = "causaId")]
+    public Guid? CausaIdInicial { get; set; }
+
     private readonly List<CausaResumen> _causas = [];
     private readonly List<DiligenciaResumen> _diligencias = [];
 
     private Guid _causaSeleccionadaId;
     private string? _mensajeError;
     private bool _cargando = true;
+
+    private void NuevaDiligencia()
+    {
+        if (_causaSeleccionadaId == Guid.Empty)
+            return;
+
+        Navigation.NavigateTo(
+            $"/causas/{_causaSeleccionadaId}/diligencias/nueva");
+    }
+
+    private void Volver()
+    {
+        Navigation.NavigateTo("/causas");
+    }
+
+    private void ModificarDiligencia(Guid diligenciaId)
+    {
+        Navigation.NavigateTo(
+            $"/diligencias/{diligenciaId}/editar");
+    }
 
     protected override async Task OnInitializedAsync()
     {
@@ -142,7 +203,12 @@
                 return;
 
             _causas.AddRange(causas);
-            _causaSeleccionadaId = _causas[0].Id;
+
+            _causaSeleccionadaId =
+                CausaIdInicial.HasValue &&
+                _causas.Any(c => c.Id == CausaIdInicial.Value)
+                    ? CausaIdInicial.Value
+                    : _causas[0].Id;
 
             await CargarDiligenciasAsync();
         }
@@ -203,6 +269,9 @@
     {
         _diligencias.Clear();
 
+        if (_causaSeleccionadaId == Guid.Empty)
+            return;
+
         var resultado =
             await ApiClient.GetAsync<List<DiligenciaResumen>>(
                 $"/api/Diligencias/causa/{_causaSeleccionadaId}");
@@ -249,10 +318,12 @@
             diligencia.Comuna
         };
 
-        var ubicacion = string.Join(
-            ", ",
-            partes.Where(
-                parte => !string.IsNullOrWhiteSpace(parte)));
+        var ubicacion =
+            string.Join(
+                ", ",
+                partes.Where(
+                    parte =>
+                        !string.IsNullOrWhiteSpace(parte)));
 
         return string.IsNullOrWhiteSpace(ubicacion)
             ? "—"

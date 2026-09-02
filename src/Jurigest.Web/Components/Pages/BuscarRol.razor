@@ -1,0 +1,448 @@
+@page "/causas/buscar"
+@rendermode InteractiveServer
+@using Jurigest.Web.Security
+@inject IJurigestApiClient Api
+@using Microsoft.AspNetCore.Components
+
+<PageTitle>Buscar ROL - Jurigest Enterprise</PageTitle>
+
+<h1>Buscar ROL</h1>
+
+<div class="mb-3">
+    <label class="form-label">
+        Número de ROL
+    </label>
+
+    <input class="form-control"
+           @bind="rit"
+           placeholder="Ej: C-2000-2026" />
+</div>
+
+<button class="btn btn-primary"
+        @onclick="BuscarAsync"
+        disabled="@buscando">
+    @(buscando ? "Buscando..." : "Buscar")
+</button>
+
+@if (!string.IsNullOrWhiteSpace(mensaje))
+{
+    <div class="alert alert-info mt-3">
+        @mensaje
+    </div>
+}
+
+@if (causa is not null)
+{
+    <div class="card mt-4">
+        <div class="card-body">
+
+            <h5 class="card-title">
+                @causa.Rit
+            </h5>
+
+            <p>
+                <strong>Tribunal:</strong>
+                @causa.Tribunal
+            </p>
+
+            <p>
+                <strong>Descripción:</strong>
+                @causa.Descripcion
+            </p>
+
+            <div class="d-flex flex-wrap gap-2">
+
+                <a class="btn btn-warning"
+                   href="@($"/causas/{causa.Id}/editar")">
+                    Modificar ROL
+                </a>
+
+                <a class="btn btn-success"
+                   href="@($"/causas/{causa.Id}/diligencias/nueva")">
+                    Nueva diligencia
+                </a>
+
+                <a class="btn btn-primary"
+                   href="@($"/causas/{causa.Id}/diligencias/registrar")">
+                    Registrar resultado
+                </a>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="card mt-4">
+        <div class="card-header">
+            <strong>Historial de diligencias</strong>
+        </div>
+
+        <div class="card-body">
+
+            @if (cargandoDiligencias)
+            {
+                <p class="text-muted mb-0">
+                    Cargando diligencias...
+                </p>
+            }
+            else if (diligencias.Count == 0)
+            {
+                <div class="alert alert-secondary mb-0">
+                    Esta causa no tiene diligencias registradas.
+                </div>
+            }
+            else
+            {
+                <div class="table-responsive">
+
+                    <table class="table table-striped table-hover align-middle">
+
+                        <thead>
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Diligencia</th>
+                                <th>Receptor</th>
+                                <th>Estado</th>
+                                <th>Clasificación</th>
+                                <th>Resultado</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            @foreach (var diligencia in diligencias)
+                            {
+                                <tr>
+                                    <td style="white-space: nowrap;">
+                                        @ObtenerFechaHistorial(diligencia)
+                                    </td>
+
+                                    <td>
+                                        <strong>
+                                            @diligencia.Descripcion
+                                        </strong>
+
+                                        @if (!string.IsNullOrWhiteSpace(diligencia.Direccion))
+                                        {
+                                            <div class="small text-muted">
+                                                @diligencia.Direccion
+                                                @if (!string.IsNullOrWhiteSpace(diligencia.Comuna))
+                                                {
+                                                    <span>
+                                                        - @diligencia.Comuna
+                                                    </span>
+                                                }
+                                            </div>
+                                        }
+                                    </td>
+
+                                    <td>
+                                        @(string.IsNullOrWhiteSpace(
+                                            diligencia.ReceptorJudicial)
+                                            ? "-"
+                                            : diligencia.ReceptorJudicial)
+                                    </td>
+
+                                    <td>
+                                        @ObtenerNombreEstado(
+                                            diligencia.Estado)
+                                    </td>
+
+                                    <td>
+                                        @ObtenerNombreResultado(
+                                            diligencia.Resultado)
+                                    </td>
+
+                                    <td>
+                                        @(string.IsNullOrWhiteSpace(
+                                            diligencia.ResultadoDetalle)
+                                            ? "-"
+                                            : diligencia.ResultadoDetalle)
+                                    </td>
+
+                                    <td style="white-space: nowrap;">
+
+                                        @if (!string.IsNullOrWhiteSpace(
+                                            diligencia.Estampe))
+                                        {
+                                            <button type="button"
+                                                    class="btn btn-sm btn-outline-primary"
+                                                    @onclick="() => VerEstampe(diligencia)">
+                                                Ver estampe
+                                            </button>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted small">
+                                                Sin estampe
+                                            </span>
+                                        }
+
+                                    </td>
+                                </tr>
+
+                                @if (diligenciaMostrarEstampe == diligencia.Id)
+                                {
+                                    <tr>
+                                        <td colspan="7">
+                                            <div class="border rounded p-3 bg-light">
+
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+
+                                                    <strong>
+                                                        Estampe
+                                                    </strong>
+
+                                                    <button type="button"
+                                                            class="btn btn-sm btn-outline-secondary"
+                                                            @onclick="CerrarEstampe">
+                                                        Cerrar
+                                                    </button>
+
+                                                </div>
+
+                                                <div style="white-space: pre-wrap;">
+                                                    @diligencia.Estampe
+                                                </div>
+
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            }
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+            }
+
+        </div>
+    </div>
+}
+else if (busquedaRealizada && !buscando)
+{
+    <div class="mt-4">
+        <a class="btn btn-success"
+           href="@($"/causas/nueva?rit={Uri.EscapeDataString(rit)}")">
+            Crear ROL
+        </a>
+    </div>
+}
+
+@code {
+
+    private string rit = string.Empty;
+    [SupplyParameterFromQuery(Name = "rit")]
+public string? RitQuery { get; set; }
+
+private bool busquedaInicialEjecutada;
+
+    private bool buscando;
+    private bool busquedaRealizada;
+    private bool cargandoDiligencias;
+
+    private string? mensaje;
+
+    private CausaResponse? causa;
+
+    private List<DiligenciaResponse> diligencias = new();
+
+    private Guid? diligenciaMostrarEstampe;
+
+    protected override async Task OnParametersSetAsync()
+{
+    if (busquedaInicialEjecutada)
+    {
+        return;
+    }
+
+    if (string.IsNullOrWhiteSpace(RitQuery))
+    {
+        return;
+    }
+
+    busquedaInicialEjecutada = true;
+
+    rit = RitQuery.Trim();
+
+    await BuscarAsync();
+}
+
+    private async Task BuscarAsync()
+    {
+        mensaje = null;
+        causa = null;
+
+        diligencias.Clear();
+
+        diligenciaMostrarEstampe = null;
+
+        busquedaRealizada = false;
+
+        if (string.IsNullOrWhiteSpace(rit))
+        {
+            mensaje =
+                "Debe indicar un número de ROL.";
+
+            return;
+        }
+
+        try
+        {
+            buscando = true;
+
+            causa = await Api.GetAsync<CausaResponse>(
+                $"api/Causas/rit/{Uri.EscapeDataString(rit.Trim())}");
+
+            busquedaRealizada = true;
+
+            if (causa is null)
+            {
+                mensaje =
+                    $"El ROL {rit.Trim()} no se encuentra registrado.";
+
+                return;
+            }
+
+            await CargarDiligenciasAsync(causa.Id);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            mensaje =
+                "La sesión expiró. Debe iniciar sesión nuevamente.";
+        }
+        catch (HttpRequestException)
+        {
+            mensaje =
+                "No fue posible comunicarse con Jurigest.API.";
+        }
+        finally
+        {
+            buscando = false;
+        }
+    }
+
+    private async Task CargarDiligenciasAsync(
+        Guid causaId)
+    {
+        try
+        {
+            cargandoDiligencias = true;
+
+            var resultado =
+                await Api.GetAsync<List<DiligenciaResponse>>(
+                    $"api/Diligencias/causa/{causaId}");
+
+            diligencias =
+                resultado ?? new List<DiligenciaResponse>();
+        }
+        finally
+        {
+            cargandoDiligencias = false;
+        }
+    }
+
+    private static string ObtenerFechaHistorial(
+        DiligenciaResponse diligencia)
+    {
+        var fecha =
+            diligencia.FechaGestion
+            ?? diligencia.FechaRealizada
+            ?? diligencia.FechaProgramada
+            ?? diligencia.FechaCreacion;
+
+        return fecha.ToString("dd-MM-yyyy HH:mm");
+    }
+
+    private static string ObtenerNombreResultado(
+        int resultado)
+    {
+        return resultado switch
+        {
+            1 => "Positiva",
+            2 => "Negativa",
+            _ => "Pendiente"
+        };
+    }
+
+    private static string ObtenerNombreEstado(
+        int estado)
+    {
+        return estado switch
+        {
+            1 => "Pendiente",
+            2 => "En proceso",
+            3 => "Completada",
+            4 => "Reprogramada",
+            5 => "Cancelada",
+            6 => "Suspendida",
+            7 => "Rechazada",
+            _ => $"Estado {estado}"
+        };
+    }
+
+    private void VerEstampe(
+        DiligenciaResponse diligencia)
+    {
+        diligenciaMostrarEstampe =
+            diligenciaMostrarEstampe == diligencia.Id
+                ? null
+                : diligencia.Id;
+    }
+
+    private void CerrarEstampe()
+    {
+        diligenciaMostrarEstampe = null;
+    }
+
+    private sealed class CausaResponse
+    {
+        public Guid Id { get; set; }
+
+        public string Rit { get; set; } =
+            string.Empty;
+
+        public string Tribunal { get; set; } =
+            string.Empty;
+
+        public string Descripcion { get; set; } =
+            string.Empty;
+
+        public DateTime FechaCreacion { get; set; }
+    }
+
+    private sealed class DiligenciaResponse
+    {
+        public Guid Id { get; set; }
+
+        public string Descripcion { get; set; } =
+            string.Empty;
+
+        public int Estado { get; set; }
+
+        public int Tipo { get; set; }
+
+        public int Resultado { get; set; }
+
+        public string? ResultadoDetalle { get; set; }
+
+        public DateTime FechaCreacion { get; set; }
+
+        public DateTime? FechaProgramada { get; set; }
+
+        public DateTime? FechaRealizada { get; set; }
+
+        public DateTime? FechaGestion { get; set; }
+
+        public string? ReceptorJudicial { get; set; }
+
+        public string? Direccion { get; set; }
+
+        public string? Comuna { get; set; }
+
+        public string? Estampe { get; set; }
+    }
+}

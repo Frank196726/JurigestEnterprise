@@ -1,0 +1,653 @@
+@page "/causas/{CausaId:guid}/diligencias/registrar"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using System.Net.Http.Json
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Registrar resultado | Jurigest Enterprise</PageTitle>
+
+<section class="diligencias-page">
+
+    <header class="page-heading">
+        <div>
+
+        <button type="button"
+            class="btn btn-outline-secondary mb-3"
+                @onclick="Volver">
+            ← Volver
+        </button>
+
+            <span class="eyebrow">Gestión judicial</span>
+
+            <h1>Registrar resultado de diligencia</h1>
+
+            @if (_causa is not null)
+            {
+                <p>
+                    @_causa.Rit — @_causa.Tribunal
+                </p>
+            }
+        </div>
+    </header>
+
+    @if (_cargando)
+    {
+        <div class="state-card">
+            <p>Cargando diligencia...</p>
+        </div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_mensajeError))
+    {
+        <div class="state-card error">
+
+            <strong>No fue posible continuar</strong>
+
+            <p>@_mensajeError</p>
+
+            <button type="button"
+                    class="btn btn-secondary"
+                    @onclick="Volver">
+                Volver
+            </button>
+
+        </div>
+    }
+    else if (_causa is not null &&
+             _diligencia is not null)
+    {
+        <div class="table-card">
+
+            <div style="padding:1.5rem;">
+
+                <div style="margin-bottom:1.5rem;">
+
+                    <span class="eyebrow">
+                        Causa seleccionada
+                    </span>
+
+                    <h2 style="margin-top:.4rem;">
+                        @_causa.Rit
+                    </h2>
+
+                    <p>
+                        <strong>Tribunal:</strong>
+                        @_causa.Tribunal
+                    </p>
+
+                    <p>
+                        <strong>Carátula / descripción:</strong>
+                        @_causa.Descripcion
+                    </p>
+
+                </div>
+
+                <hr />
+
+                <div style="margin:1.5rem 0;">
+
+                    <span class="eyebrow">
+                        Última diligencia encargada
+                    </span>
+
+                    <h3 style="margin-top:.4rem;">
+                        @_diligencia.Descripcion
+                    </h3>
+
+                    <p>
+                        <strong>Fecha de encargo:</strong>
+
+                        @(_diligencia.FechaProgramada.HasValue
+                            ? _diligencia.FechaProgramada.Value
+                                .ToString("dd-MM-yyyy HH:mm")
+                            : "No registrada")
+                    </p>
+
+                    <p>
+                        <strong>Receptor judicial:</strong>
+
+                        @(string.IsNullOrWhiteSpace(
+                            _diligencia.ReceptorJudicial)
+                                ? "No asignado"
+                                : _diligencia.ReceptorJudicial)
+                    </p>
+
+                    <p>
+                        <strong>Dirección:</strong>
+
+                        @(string.IsNullOrWhiteSpace(
+                            _diligencia.Direccion)
+                                ? "No registrada"
+                                : _diligencia.Direccion)
+                    </p>
+
+                    <p>
+                        <strong>Comuna:</strong>
+
+                        @(string.IsNullOrWhiteSpace(
+                            _diligencia.Comuna)
+                                ? "No registrada"
+                                : _diligencia.Comuna)
+                    </p>
+
+                </div>
+
+                @if (_diligencia.Resultado != 0)
+                {
+                    <div class="alert alert-info">
+
+                        <strong>
+                            Esta diligencia ya tiene un resultado registrado.
+                        </strong>
+
+                        <p style="margin-top:.75rem;">
+                            <strong>Clasificación:</strong>
+                            @ObtenerNombreResultado(_diligencia.Resultado)
+                        </p>
+
+                        <p>
+                            <strong>Resultado de la diligencia:</strong>
+
+                            @(string.IsNullOrWhiteSpace(
+                                _diligencia.ResultadoDetalle)
+                                    ? "Sin detalle registrado"
+                                    : _diligencia.ResultadoDetalle)
+                        </p>
+
+                        <p>
+                            <strong>Fecha de gestión:</strong>
+
+                            @(_diligencia.FechaGestion.HasValue
+                                ? _diligencia.FechaGestion.Value
+                                    .ToString("dd-MM-yyyy HH:mm")
+                                : "No registrada")
+                        </p>
+
+                        @if (!string.IsNullOrWhiteSpace(
+                            _diligencia.Estampe))
+                        {
+                            <p>
+                                <strong>Estampe registrado:</strong>
+                            </p>
+
+                            <div style="
+                                white-space:pre-wrap;
+                                border:1px solid #ddd;
+                                border-radius:.5rem;
+                                padding:1rem;
+                                background:#fff;">
+
+                                @_diligencia.Estampe
+
+                            </div>
+                        }
+
+                    </div>
+                }
+
+                @if (_diligencia.Resultado != 0 &&
+                     !_editandoResultado)
+                {
+                    <div style="
+                        display:flex;
+                        gap:.75rem;
+                        margin-top:1.5rem;
+                        flex-wrap:wrap;">
+
+                        <button type="button"
+                                class="btn btn-warning"
+                                @onclick="HabilitarEdicionResultado">
+
+                            Editar resultado
+
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                @onclick="Volver">
+
+                            Volver
+
+                        </button>
+
+                    </div>
+                }
+                else
+                {
+                    <div style="
+                        display:grid;
+                        grid-template-columns:
+                            repeat(2,minmax(0,1fr));
+                        gap:1rem;
+                        margin-top:1.5rem;">
+
+                        <label>
+
+                            <span>Clasificación *</span>
+
+                            <select class="form-control"
+                                    @bind="_resultado">
+
+                                <option value="">
+                                    Seleccionar clasificación...
+                                </option>
+
+                                <option value="1">
+                                    Positiva
+                                </option>
+
+                                <option value="2">
+                                    Negativa
+                                </option>
+
+                            </select>
+
+                        </label>
+
+                        <label>
+
+                            <span>Fecha de gestión *</span>
+
+                            <input type="datetime-local"
+                                   class="form-control"
+                                   @bind="_fechaGestion" />
+
+                        </label>
+
+                        <label style="grid-column:1 / -1;">
+
+                            <span>Resultado de la diligencia *</span>
+
+                            <input type="text"
+                                   class="form-control"
+                                   maxlength="500"
+                                   @bind="_resultadoDetalle"
+                                   placeholder="Ej.: Frustrada, oposición, no habido, domicilio inexistente..." />
+
+                        </label>
+
+                        <label style="grid-column:1 / -1;">
+
+                            <span>Estampe *</span>
+
+                            <textarea class="form-control"
+                                      rows="10"
+                                      maxlength="8000"
+                                      @bind="_estampe"
+                                      placeholder="Ingrese el texto del estampe de la diligencia">
+                            </textarea>
+
+                        </label>
+
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(_mensaje))
+                    {
+                        <div class="@(
+                                _guardado
+                                    ? "alert alert-success"
+                                    : "alert alert-danger")"
+                             style="margin-top:1rem;">
+
+                            @_mensaje
+
+                        </div>
+                    }
+
+                    <div style="
+                        display:flex;
+                        gap:.75rem;
+                        flex-wrap:wrap;
+                        margin-top:1.5rem;">
+
+                        <button type="button"
+                                class="btn btn-primary"
+                                disabled="@_guardando"
+                                @onclick="GuardarResultadoAsync">
+
+                            @(_guardando
+                                ? "Guardando..."
+                                : "Guardar resultado")
+
+                        </button>
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                disabled="@_guardando"
+                                @onclick="CancelarEdicion">
+
+                            Cancelar
+
+                        </button>
+
+                    </div>
+                }
+
+            </div>
+
+        </div>
+    }
+
+</section>
+
+@code {
+
+    [Parameter]
+    public Guid CausaId { get; set; }
+
+    private CausaResumen? _causa;
+
+    private DiligenciaResponse? _diligencia;
+
+    private int? _resultado;
+
+    private string _resultadoDetalle =
+        string.Empty;
+
+    private DateTime? _fechaGestion =
+        DateTime.Now;
+
+    private string _estampe =
+        string.Empty;
+
+    private string? _mensaje;
+
+    private string? _mensajeError;
+
+    private bool _cargando = true;
+
+    private bool _guardando;
+
+    private bool _guardado;
+
+    private bool _editandoResultado;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await CargarCausaAsync();
+
+            if (_causa is null)
+            {
+                _mensajeError =
+                    "La causa indicada no existe o ya no está disponible.";
+
+                return;
+            }
+
+            await CargarUltimaDiligenciaAsync();
+
+            if (_diligencia is null)
+            {
+                _mensajeError =
+                    "La causa no tiene diligencias registradas.";
+
+                return;
+            }
+
+            CargarResultadoExistente();
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (HttpRequestException ex)
+        {
+            _mensajeError =
+                "No fue posible comunicarse con Jurigest.API. " +
+                ex.Message;
+        }
+        finally
+        {
+            _cargando = false;
+        }
+    }
+
+    private async Task CargarCausaAsync()
+    {
+        var causas =
+            await ApiClient.GetAsync<List<CausaResumen>>(
+                "/api/Causas");
+
+        _causa =
+            causas?.FirstOrDefault(
+                c => c.Id == CausaId);
+    }
+
+    private async Task CargarUltimaDiligenciaAsync()
+    {
+        _diligencia =
+            await ApiClient.GetAsync<DiligenciaResponse>(
+                $"/api/Diligencias/causa/{CausaId}/ultima");
+    }
+
+    private void CargarResultadoExistente()
+    {
+        if (_diligencia is null ||
+            _diligencia.Resultado == 0)
+        {
+            return;
+        }
+
+        _resultado =
+            _diligencia.Resultado;
+
+        _resultadoDetalle =
+            _diligencia.ResultadoDetalle
+            ?? string.Empty;
+
+        _fechaGestion =
+            _diligencia.FechaGestion
+            ?? DateTime.Now;
+
+        _estampe =
+            _diligencia.Estampe
+            ?? string.Empty;
+    }
+
+    private void HabilitarEdicionResultado()
+    {
+        _editandoResultado = true;
+
+        _mensaje = null;
+
+        _guardado = false;
+    }
+
+    private void CancelarEdicion()
+    {
+        _editandoResultado = false;
+
+        _mensaje = null;
+
+        _guardado = false;
+
+        CargarResultadoExistente();
+    }
+
+    private void Volver()
+{
+        Navigation.NavigateTo(
+            $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}");
+}
+
+    private async Task GuardarResultadoAsync()
+    {
+        _mensaje = null;
+        _guardado = false;
+
+        if (_diligencia is null)
+        {
+            _mensaje =
+                "No existe una diligencia disponible para registrar.";
+
+            return;
+        }
+
+        if (!_resultado.HasValue ||
+            _resultado.Value <= 0)
+        {
+            _mensaje =
+                "Debe indicar la clasificación del resultado.";
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_resultadoDetalle))
+        {
+            _mensaje =
+                "Debe indicar el resultado de la diligencia.";
+
+            return;
+        }
+
+        if (_resultadoDetalle.Trim().Length > 500)
+        {
+            _mensaje =
+                "El resultado de la diligencia no puede superar 500 caracteres.";
+
+            return;
+        }
+
+        if (!_fechaGestion.HasValue)
+        {
+            _mensaje =
+                "Debe indicar la fecha de gestión.";
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(_estampe))
+        {
+            _mensaje =
+                "Debe ingresar el estampe de la diligencia.";
+
+            return;
+        }
+
+        _guardando = true;
+
+        try
+        {
+            using var response =
+                await ApiClient.PutAsync(
+                    $"/api/Diligencias/{_diligencia.Id}/resultado",
+                    JsonContent.Create(
+                        new
+                        {
+                            resultado =
+                                _resultado.Value,
+
+                            resultadoDetalle =
+                                _resultadoDetalle.Trim(),
+
+                            fechaGestion =
+                                _fechaGestion.Value,
+
+                            estampe =
+                                _estampe.Trim()
+                        }));
+
+            await VerificarRespuestaAsync(
+                response,
+                "registrar el resultado de la diligencia");
+
+            _guardado = true;
+
+            _mensaje =
+                "Resultado de diligencia registrado correctamente.";
+
+            await CargarUltimaDiligenciaAsync();
+
+            CargarResultadoExistente();
+
+            _editandoResultado = false;
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo(
+                "/login",
+                forceLoad: true);
+        }
+        catch (Exception ex)
+            when (ex is HttpRequestException
+                  or InvalidOperationException)
+        {
+            _mensaje =
+                ex.Message;
+        }
+        finally
+        {
+            _guardando = false;
+        }
+    }
+
+    private static async Task VerificarRespuestaAsync(
+        HttpResponseMessage response,
+        string operacion)
+    {
+        if (response.IsSuccessStatusCode)
+        {
+            return;
+        }
+
+        var detalle =
+            await response.Content
+                .ReadAsStringAsync();
+
+        throw new InvalidOperationException(
+            $"No fue posible {operacion}. " +
+            $"HTTP {(int)response.StatusCode}. " +
+            detalle);
+    }
+
+    private static string ObtenerNombreResultado(
+        int resultado)
+    {
+        return resultado switch
+        {
+            1 => "Positiva",
+            2 => "Negativa",
+            _ => "Sin resultado"
+        };
+    }
+
+    private sealed class DiligenciaResponse
+    {
+        public Guid Id { get; set; }
+
+        public Guid CausaId { get; set; }
+
+        public string Descripcion { get; set; } =
+            string.Empty;
+
+        public int Tipo { get; set; }
+
+        public int Estado { get; set; }
+
+        public int Resultado { get; set; }
+
+        public string? ResultadoDetalle { get; set; }
+
+        public DateTime? FechaProgramada { get; set; }
+
+        public DateTime? FechaGestion { get; set; }
+
+        public string? ReceptorJudicial { get; set; }
+
+        public string? Direccion { get; set; }
+
+        public string? Comuna { get; set; }
+
+        public string? Estampe { get; set; }
+
+        public DateTime FechaCreacion { get; set; }
+    }
+}
