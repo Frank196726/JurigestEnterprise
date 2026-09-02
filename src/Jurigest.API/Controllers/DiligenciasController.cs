@@ -11,6 +11,9 @@ using Jurigest.Application.Judicial.Diligencias.Commands.ProgramarDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Commands.SuspenderDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Queries.ObtenerDiligenciasPorCausa;
+using Jurigest.Application.Judicial.Diligencias.Commands.RegistrarResultado;
+using Jurigest.Application.Judicial.Diligencias.Commands.ActualizarDiligencia;
+using Jurigest.Application.Abstractions.Persistence;
 using Microsoft.AspNetCore.Authorization;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
@@ -23,11 +26,15 @@ namespace Jurigest.API.Controllers;
 public sealed class DiligenciasController : ControllerBase
 {
     private readonly IMediator _mediator;
+    private readonly IDiligenciaRepository _diligenciaRepository;
 
-    public DiligenciasController(IMediator mediator)
-    {
+    public DiligenciasController(
+        IMediator mediator,
+        IDiligenciaRepository diligenciaRepository)
+{
         _mediator = mediator;
-    }
+        _diligenciaRepository = diligenciaRepository;
+}
 
     [HttpGet("{id:guid}")]
         public async Task<IActionResult> Obtener(
@@ -59,6 +66,45 @@ public sealed class DiligenciasController : ControllerBase
             cancellationToken);
 
         return Ok(resultado);
+    }
+
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "DiligenciasGestion")]
+    public async Task<IActionResult> Actualizar(
+        Guid id,
+        [FromBody] ActualizarDiligenciaRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Descripcion))
+            return BadRequest(new { mensaje = "La descripción de la diligencia es obligatoria." });
+
+        try
+        {
+            var resultado = await _mediator.Send(
+                new ActualizarDiligenciaCommand(
+                    id,
+                    request.Descripcion,
+                    request.Tipo,
+                    request.FechaProgramada,
+                    request.ReceptorJudicial,
+                    request.Direccion,
+                    request.Comuna,
+                    request.Observaciones),
+                cancellationToken);
+
+            if (!resultado)
+                return NotFound(new { mensaje = "La diligencia no existe." });
+
+            return Ok(new { mensaje = "Diligencia actualizada correctamente." });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
     }
 
     [HttpPut("{id:guid}/iniciar")]
@@ -94,6 +140,45 @@ public sealed class DiligenciasController : ControllerBase
             });
         }
     }
+
+    [HttpGet("causa/{causaId:guid}/ultima")]
+    [Authorize(Policy = "DiligenciasLectura")]
+    public async Task<IActionResult> ObtenerUltima(
+    Guid causaId,
+    CancellationToken cancellationToken)
+{
+    var diligencia =
+        await _diligenciaRepository.GetUltimaByCausaAsync(
+            causaId,
+            cancellationToken);
+
+    if (diligencia is null)
+    {
+        return NotFound(new
+        {
+            mensaje =
+                "La causa no tiene diligencias registradas."
+        });
+    }
+
+    return Ok(new
+    {
+        diligencia.Id,
+        diligencia.CausaId,
+        diligencia.Descripcion,
+        diligencia.Tipo,
+        diligencia.Estado,
+        diligencia.Resultado,
+        diligencia.ResultadoDetalle,
+        diligencia.FechaProgramada,
+        diligencia.FechaGestion,
+        diligencia.ReceptorJudicial,
+        diligencia.Direccion,
+        diligencia.Comuna,
+        diligencia.Estampe,
+        diligencia.FechaCreacion
+    });
+}
 
     [HttpPut("{id:guid}/completar")]
     [Authorize(Policy = "DiligenciasGestion")]
@@ -461,7 +546,7 @@ public sealed class DiligenciasController : ControllerBase
             new AgregarObservacionCommand(
                 id,
                 request.Observacion),
-            cancellationToken);
+                cancellationToken);
 
         if (!resultado)
         {
@@ -476,4 +561,92 @@ public sealed class DiligenciasController : ControllerBase
             mensaje = "Observación registrada correctamente."
         });
     }
+
+        [HttpPut("{id:guid}/resultado")]
+        [Authorize(Policy = "DiligenciasGestion")]
+        public async Task<IActionResult> RegistrarResultado(
+        Guid id,
+        [FromBody] RegistrarResultadoDiligenciaRequest request,
+        CancellationToken cancellationToken)
+{
+    if (request is null)
+    {
+        return BadRequest(new
+        {
+            mensaje = "La solicitud no contiene datos."
+        });
+    }
+
+    if (request.Resultado == 0)
+    {
+        return BadRequest(new
+        {
+            mensaje = "Debe indicar el resultado de la diligencia."
+        });
+    }
+
+    if (string.IsNullOrWhiteSpace(request.ResultadoDetalle))
+{
+    return BadRequest(new
+    {
+        mensaje = "Debe indicar el detalle del resultado de la diligencia."
+    });
+}
+
+    if (request.ResultadoDetalle.Trim().Length > 500)
+{
+    return BadRequest(new
+    {
+        mensaje = "El detalle del resultado no puede superar 500 caracteres."
+    });
+}
+
+    if (string.IsNullOrWhiteSpace(request.Estampe))
+    {
+        return BadRequest(new
+        {
+            mensaje = "Debe indicar el estampe de la diligencia."
+        });
+    }
+
+    if (request.FechaGestion == default)
+    {
+        return BadRequest(new
+        {
+            mensaje = "Debe indicar la fecha de gestión."
+        });
+    }
+
+    try
+    {
+        await _mediator.Send(
+            new RegistrarResultadoDiligenciaCommand(
+                id,
+                request.Resultado,
+                request.ResultadoDetalle,
+                request.Estampe,
+                request.FechaGestion),
+            cancellationToken);
+
+        return Ok(new
+        {
+            mensaje = "Resultado de diligencia registrado correctamente."
+        });
+    }
+    catch (InvalidOperationException ex)
+    {
+        return NotFound(new
+        {
+            mensaje = ex.Message
+        });
+    }
+    catch (ArgumentException ex)
+    {
+        return BadRequest(new
+        {
+            mensaje = ex.Message
+        });
+    }
+}
+
 }

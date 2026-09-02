@@ -4,6 +4,7 @@ using Jurigest.Application.Judicial.Causas.Commands.CrearCausa;
 using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
 using Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
 using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
+using Jurigest.Application.Judicial.Panel.Queries.ObtenerPanelEjecutivo;
 using Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
 using Microsoft.AspNetCore.Authorization;
 using MediatR;
@@ -40,8 +41,11 @@ public sealed class CausasController : ControllerBase
         {
             Id = request.Id,
             Rit = request.Rit,
+            TipoCausaId = request.TipoCausaId,
+            NumeroRol = request.NumeroRol,
             Tribunal = request.Tribunal,
-            Descripcion = request.Descripcion
+            Descripcion = request.Descripcion,
+            FechaEncargoCausa = request.FechaEncargoCausa
         };
 
         var resultado = await _mediator.Send(
@@ -85,7 +89,7 @@ public sealed class CausasController : ControllerBase
     }
 
         [HttpPut("{id:guid}")]
-    [Authorize(Policy = "CausasEscritura")]
+        [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> Actualizar(
         Guid id,
         [FromBody] ActualizarCausaRequest request,
@@ -161,4 +165,16 @@ public sealed class CausasController : ControllerBase
             mensaje = "Diligencia creada correctamente."
         });
     }
+
+    [HttpGet("panel-ejecutivo")]
+    [Authorize(Policy = "CausasLectura")]
+    public async Task<IActionResult> ObtenerPanelEjecutivo(
+        CancellationToken cancellationToken)
+    {
+        var resultado = await _mediator.Send(
+            new ObtenerPanelEjecutivoQuery(),
+            cancellationToken);
+
+        return Ok(resultado);
     }
+}
