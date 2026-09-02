@@ -1,0 +1,48 @@
+@page "/usuarios"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Administrador")]
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Usuarios | Jurigest Enterprise</PageTitle>
+<section class="admin-page">
+    <header class="page-heading"><div><span class="eyebrow">Administración</span><h1>Usuarios</h1><p>Administra accesos, roles y estado de las cuentas.</p></div><span class="count-badge">@_usuarios.Count usuarios</span></header>
+    <section class="form-card">
+        <h2>Crear usuario</h2>
+        <EditForm Model="_nuevo" OnValidSubmit="CrearAsync" FormName="crear-usuario">
+            <DataAnnotationsValidator />
+            <div class="form-grid">
+                <label><span>Nombre</span><InputText @bind-Value="_nuevo.Nombre" /></label>
+                <label><span>Correo</span><InputText type="email" @bind-Value="_nuevo.Email" /></label>
+                <label><span>Contraseña temporal</span><InputText type="password" @bind-Value="_nuevo.Password" /></label>
+                <label><span>Rol</span><InputSelect @bind-Value="_nuevo.Rol"><option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="4">Consulta</option></InputSelect></label>
+            </div>
+            <ValidationSummary class="error-text" />
+            <div class="form-actions"><button disabled="@_guardando">@(_guardando ? "Creando…" : "Crear usuario")</button></div>
+        </EditForm>
+    </section>
+    @if (_mensaje is not null) { <div class="message @(_exito ? "success" : "error")">@_mensaje</div> }
+    @if (_cargando) { <div class="state-card">Cargando usuarios…</div> }
+    else { <div class="table-card"><table><thead><tr><th>Usuario</th><th>Rol</th><th>Creación</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+        @foreach (var usuario in _usuarios) { <tr @key="usuario.Id"><td><strong>@usuario.Nombre</strong><small>@usuario.Email</small></td><td>@usuario.Rol</td><td>@usuario.FechaCreacion.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td><td><span class="status @(usuario.Activo ? "active" : "inactive")">@(usuario.Activo ? "Activo" : "Inactivo")</span></td><td><button class="state-action" disabled="@(_procesando == usuario.Id)" @onclick="() => CambiarEstadoAsync(usuario)">@(usuario.Activo ? "Desactivar" : "Activar")</button></td></tr> }
+    </tbody></table></div> }
+</section>
+
+@code {
+    private readonly List<UsuarioResumen> _usuarios = [];
+    private CrearUsuarioModel _nuevo = new();
+    private bool _cargando = true, _guardando, _exito;
+    private Guid? _procesando;
+    private string? _mensaje;
+
+    protected override async Task OnInitializedAsync() => await SeguroAsync(CargarAsync);
+    private async Task CargarAsync() { var r = await ApiClient.GetAsync<UsuariosResponse>("/api/seguridad/usuarios"); _usuarios.Clear(); if (r?.Value is not null) _usuarios.AddRange(r.Value.OrderBy(x => x.Nombre)); _cargando = false; }
+    private async Task CrearAsync() { _guardando = true; await SeguroAsync(async () => { using var r = await ApiClient.PostAsync("/api/seguridad/usuarios", JsonContent.Create(_nuevo)); await ValidarAsync(r); _nuevo = new(); await CargarAsync(); Mostrar("Usuario creado correctamente.", true); }); _guardando = false; }
+    private async Task CambiarEstadoAsync(UsuarioResumen u) { _procesando = u.Id; await SeguroAsync(async () => { using var r = await ApiClient.PutAsync($"/api/seguridad/usuarios/{u.Id}/estado", JsonContent.Create(new { activo = !u.Activo })); await ValidarAsync(r); await CargarAsync(); Mostrar(u.Activo ? "Usuario desactivado correctamente." : "Usuario activado correctamente.", true); }); _procesando = null; }
+    private async Task SeguroAsync(Func<Task> accion) { _mensaje = null; try { await accion(); } catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); } catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException) { Mostrar(ex.Message, false); _cargando = false; } }
+    private void Mostrar(string texto, bool exito) { _mensaje = texto; _exito = exito; }
+    private static async Task ValidarAsync(HttpResponseMessage r) { if (r.IsSuccessStatusCode) return; var e = await r.Content.ReadFromJsonAsync<ErrorResponse>(); throw new InvalidOperationException(e?.Mensaje ?? "No fue posible completar la operación."); }
+    private sealed record ErrorResponse(string Mensaje);
+}

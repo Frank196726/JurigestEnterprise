@@ -1,0 +1,32 @@
+@page "/auditoria"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Administrador")]
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Auditoría | Jurigest Enterprise</PageTitle>
+<section class="audit-page">
+    <header><div><span class="eyebrow">Administración</span><h1>Auditoría</h1><p>Consulta los eventos de seguridad y administración.</p></div><span class="count-badge">@EventosFiltrados.Count() eventos</span></header>
+    <section class="toolbar"><label><span>Buscar</span><input type="search" placeholder="Acción, detalle o dirección IP" @bind="_filtro" @bind:event="oninput" /></label><label><span>Cantidad</span><select @bind="_cantidad" @bind:after="CargarAsync"><option value="50">50</option><option value="100">100</option><option value="250">250</option><option value="500">500</option></select></label></section>
+    @if (_mensaje is not null) { <div class="state-card error">@_mensaje</div> }
+    else if (_cargando) { <div class="state-card">Cargando auditoría…</div> }
+    else if (!EventosFiltrados.Any()) { <div class="state-card">No se encontraron eventos.</div> }
+    else { <div class="table-card"><table><thead><tr><th>Fecha</th><th>Acción</th><th>Detalle</th><th>Actor</th><th>Afectado</th><th>IP</th></tr></thead><tbody>
+        @foreach (var evento in EventosFiltrados) { <tr @key="evento.Id"><td class="date">@evento.FechaUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")</td><td><strong>@TextoAccion(evento.Accion)</strong></td><td>@(evento.Detalle ?? "—")</td><td class="identifier">@IdCorto(evento.UsuarioActorId)</td><td class="identifier">@IdCorto(evento.UsuarioAfectadoId)</td><td>@(evento.DireccionIp ?? "—")</td></tr> }
+    </tbody></table></div> }
+</section>
+
+@code {
+    private readonly List<AuditoriaResumen> _eventos = [];
+    private string _filtro = string.Empty;
+    private int _cantidad = 100;
+    private bool _cargando = true;
+    private string? _mensaje;
+    private IEnumerable<AuditoriaResumen> EventosFiltrados => string.IsNullOrWhiteSpace(_filtro) ? _eventos : _eventos.Where(x => $"{x.Accion} {x.Detalle} {x.DireccionIp}".Contains(_filtro.Trim(), StringComparison.OrdinalIgnoreCase));
+    protected override async Task OnInitializedAsync() => await CargarAsync();
+    private async Task CargarAsync() { _cargando = true; _mensaje = null; try { var r = await ApiClient.GetAsync<AuditoriasResponse>($"/api/seguridad/auditorias?cantidad={_cantidad}"); _eventos.Clear(); if (r?.Value is not null) _eventos.AddRange(r.Value.OrderByDescending(x => x.FechaUtc)); } catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); } catch (HttpRequestException) { _mensaje = "No fue posible cargar la auditoría."; } finally { _cargando = false; } }
+    private static string IdCorto(Guid? id) => id.HasValue ? id.Value.ToString()[..8] : "Sistema";
+    private static string TextoAccion(string accion) => accion.Replace('_', ' ');
+}
