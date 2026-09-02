@@ -1,0 +1,104 @@
+@page "/causas/{CausaId:guid}/historial"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+
+<PageTitle>Historial de causa | Jurigest Enterprise</PageTitle>
+
+<section class="history-page">
+    <header class="page-heading">
+        <div><span class="eyebrow">Trazabilidad judicial</span><h1>Historial de la causa</h1><p>Registro cronológico de actuaciones, resultados, resoluciones y documentos.</p></div>
+        <a class="back-link" href="/causas">← Volver a causas</a>
+    </header>
+
+    @if (_cargando)
+    {
+        <div class="state-card">Cargando historial…</div>
+    }
+    else if (!string.IsNullOrWhiteSpace(_error))
+    {
+        <div class="state-card error"><strong>No fue posible cargar el historial</strong><p>@_error</p></div>
+    }
+    else if (_causa is not null)
+    {
+        <section class="case-card">
+            <div><span>RIT</span><strong>@_causa.Rit</strong></div><div><span>Tribunal</span><strong>@_causa.Tribunal</strong></div><div class="description"><span>Descripción</span><strong>@_causa.Descripcion</strong></div>
+        </section>
+
+        <section class="summary">
+            <div><strong>@_diligencias.Count</strong><span>Diligencias</span></div><div><strong>@_diligencias.Count(x => x.Resultado != 0)</strong><span>Resultados</span></div><div><strong>@_resoluciones.Count</strong><span>Resoluciones</span></div><div><strong>@_documentos.Count</strong><span>Documentos</span></div>
+        </section>
+
+        @if (!Eventos.Any())
+        {
+            <div class="state-card"><strong>La causa aún no tiene actividad registrada</strong></div>
+        }
+        else
+        {
+            <div class="timeline">
+                @foreach (var evento in Eventos)
+                {
+                    <article class="event @evento.Clase" @key="evento.Id">
+                        <div class="marker">@evento.Icono</div>
+                        <div class="event-card">
+                            <header><div><span class="event-type">@evento.Tipo</span><h2>@evento.Titulo</h2></div><time>@evento.Fecha.ToString("dd-MM-yyyy HH:mm")</time></header>
+                            @if (!string.IsNullOrWhiteSpace(evento.Detalle)) { <p>@evento.Detalle</p> }
+                            @if (!string.IsNullOrWhiteSpace(evento.Meta)) { <small>@evento.Meta</small> }
+                        </div>
+                    </article>
+                }
+            </div>
+        }
+    }
+</section>
+
+@code {
+    [Parameter] public Guid CausaId { get; set; }
+    private CausaResumen? _causa;
+    private readonly List<DiligenciaHistorialResumen> _diligencias = [];
+    private readonly List<ResolucionResumen> _resoluciones = [];
+    private readonly List<DocumentoResumen> _documentos = [];
+    private bool _cargando = true;
+    private string? _error;
+
+    private IEnumerable<EventoHistorial> Eventos =>
+        ConstruirEventos().OrderByDescending(x => x.Fecha);
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{CausaId}");
+            if (_causa is null) { _error = "La causa solicitada no existe."; return; }
+            var diligencias = await ApiClient.GetAsync<List<DiligenciaHistorialResumen>>($"/api/Diligencias/causa/{CausaId}");
+            var resoluciones = await ApiClient.GetAsync<List<ResolucionResumen>>($"/api/Causas/{CausaId}/resoluciones");
+            var documentos = await ApiClient.GetAsync<List<DocumentoResumen>>($"/api/Causas/{CausaId}/documentos");
+            if (diligencias is not null) _diligencias.AddRange(diligencias);
+            if (resoluciones is not null) _resoluciones.AddRange(resoluciones);
+            if (documentos is not null) _documentos.AddRange(documentos);
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _error = "El servicio no está disponible. Inténtalo nuevamente."; }
+        finally { _cargando = false; }
+    }
+
+    private List<EventoHistorial> ConstruirEventos()
+    {
+        var eventos = new List<EventoHistorial>();
+        eventos.AddRange(_diligencias.Select(d => new EventoHistorial($"d-{d.Id}", d.FechaGestion ?? d.FechaRealizada ?? d.FechaProgramada ?? d.FechaCreacion, "Diligencia", d.Descripcion, d.ResultadoDetalle, $"Estado: {Estado(d.Estado)} · Responsable: {d.ReceptorJudicial ?? "Sin asignar"}", "diligence", "D")));
+        eventos.AddRange(_resoluciones.Select(r => new EventoHistorial($"r-{r.Id}", r.Fecha, "Resolución", TipoResolucion(r.Tipo), r.Descripcion, null, "resolution", "R")));
+        eventos.AddRange(_documentos.Select(d => new EventoHistorial($"a-{d.Id}", d.FechaRegistro, "Documento", d.Nombre, $"{Formato(d.ContentType)} · {Tamano(d.TamanoBytes)}", null, "document", "A")));
+        return eventos;
+    }
+
+    private static string Estado(int valor) => valor switch { 1 => "Pendiente", 2 => "En proceso", 3 => "Completada", 4 => "Reprogramada", 5 => "Cancelada", 6 => "Suspendida", 7 => "Rechazada", _ => "Sin estado" };
+    private static string TipoResolucion(int valor) => valor switch { 1 => "Decreto", 2 => "Auto", 3 => "Sentencia interlocutoria", 4 => "Sentencia definitiva", 5 => "Oficio", _ => "Otra resolución" };
+    private static string Formato(string tipo) => tipo.Contains("pdf", StringComparison.OrdinalIgnoreCase) ? "PDF" : tipo.Contains("word", StringComparison.OrdinalIgnoreCase) ? "Word" : "Archivo";
+    private static string Tamano(long bytes) => bytes < 1024 * 1024 ? $"{bytes / 1024d:0.0} KB" : $"{bytes / 1024d / 1024d:0.0} MB";
+    private sealed record EventoHistorial(string Id, DateTime Fecha, string Tipo, string Titulo, string? Detalle, string? Meta, string Clase, string Icono);
+}

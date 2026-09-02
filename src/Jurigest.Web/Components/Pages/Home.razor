@@ -154,7 +154,7 @@ else if (_causaEncontrada is not null)
 
         private void VerHistorial() =>
             Navigation.NavigateTo(
-               $"/causas/buscar?rit={Uri.EscapeDataString(_causaEncontrada!.Rit)}");
+               $"/causas/{_causaEncontrada!.Id}/historial");
 
         private static string FechaActual =>
             DateTime.Today.ToString(
