@@ -17,7 +17,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(descripcion))
             throw new ArgumentException(
-                "La descripción es obligatoria.",
+                "La descripciï¿½n es obligatoria.",
                 nameof(descripcion));
 
         CausaId = causaId;
@@ -37,6 +37,15 @@ public sealed class Diligencia : Entity<Guid>
 
     public EstadoDiligencia Estado { get; private set; }
 
+    public ResultadoDiligencia Resultado { get; private set; }
+            = ResultadoDiligencia.SinResultado;
+
+    public string? ResultadoDetalle { get; private set; }
+
+    public string? Estampe { get; private set; }
+
+    public DateTime? FechaGestion { get; private set; }
+
     public DateTime FechaCreacion { get; private set; }
 
     public DateTime? FechaProgramada { get; private set; }
@@ -54,6 +63,49 @@ public sealed class Diligencia : Entity<Guid>
     public decimal? Latitud { get; private set; }
 
     public decimal? Longitud { get; private set; }
+
+    public void ActualizarDatos(
+        string descripcion,
+        TipoDiligencia tipo,
+        DateTime? fechaProgramada,
+        string? receptorJudicial,
+        string? direccion,
+        string? comuna,
+        string? observaciones)
+    {
+        if (Estado != EstadoDiligencia.Pendiente)
+            throw new InvalidOperationException(
+                "Solo se puede modificar una diligencia pendiente.");
+
+        if (string.IsNullOrWhiteSpace(descripcion))
+            throw new ArgumentException(
+                "La descripciÃ³n es obligatoria.",
+                nameof(descripcion));
+
+        if (descripcion.Trim().Length > 500)
+            throw new ArgumentException(
+                "La descripciÃ³n no puede superar 500 caracteres.",
+                nameof(descripcion));
+
+        var tieneDireccion = !string.IsNullOrWhiteSpace(direccion);
+        var tieneComuna = !string.IsNullOrWhiteSpace(comuna);
+
+        if (tieneDireccion != tieneComuna)
+            throw new ArgumentException(
+                "Debe indicar direcciÃ³n y comuna, o dejar ambos campos vacÃ­os.");
+
+        Descripcion = descripcion.Trim();
+        Tipo = tipo;
+        FechaProgramada = fechaProgramada;
+        ReceptorJudicial = string.IsNullOrWhiteSpace(receptorJudicial)
+            ? null
+            : receptorJudicial.Trim();
+        Direccion = tieneDireccion ? direccion!.Trim() : null;
+        Comuna = tieneComuna ? comuna!.Trim() : null;
+        Observaciones = string.IsNullOrWhiteSpace(observaciones)
+            ? null
+            : observaciones.Trim();
+    }
 
     public void Programar(DateTime fecha)
     {
@@ -102,7 +154,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(direccion))
             throw new ArgumentException(
-                "La dirección es obligatoria.",
+                "La direcciï¿½n es obligatoria.",
                 nameof(direccion));
 
         if (string.IsNullOrWhiteSpace(comuna))
@@ -136,7 +188,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(observacion))
             throw new ArgumentException(
-                "La observación es obligatoria.",
+                "La observaciï¿½n es obligatoria.",
                 nameof(observacion));
 
         Observaciones = observacion.Trim();
@@ -147,7 +199,7 @@ public sealed class Diligencia : Entity<Guid>
         if (Estado != EstadoDiligencia.EnProceso)
         {
             throw new InvalidOperationException(
-                "Solo se puede completar una diligencia que está en proceso.");
+                "Solo se puede completar una diligencia que estï¿½ en proceso.");
         }
 
         Estado = EstadoDiligencia.Completada;
@@ -170,7 +222,7 @@ public sealed class Diligencia : Entity<Guid>
         if (Estado != EstadoDiligencia.EnProceso)
         {
             throw new InvalidOperationException(
-                "Solo se puede suspender una diligencia que está en proceso.");
+                "Solo se puede suspender una diligencia que estï¿½ en proceso.");
         }
 
         Estado = EstadoDiligencia.Suspendida;
@@ -186,5 +238,63 @@ public sealed class Diligencia : Entity<Guid>
         }
 
         Estado = EstadoDiligencia.Rechazada;
+    }
+
+    public void RegistrarResultado(
+        ResultadoDiligencia resultado,
+        string resultadoDetalle,
+        string estampe,
+        DateTime fechaGestion)
+    {
+        if (resultado == ResultadoDiligencia.SinResultado)
+        {
+            throw new ArgumentException(
+                "Debe indicar la clasificaciÃ³n del resultado de la diligencia.",
+                nameof(resultado));
+        }
+
+        if (string.IsNullOrWhiteSpace(resultadoDetalle))
+        {
+            throw new ArgumentException(
+                "Debe indicar el resultado de la diligencia.",
+                nameof(resultadoDetalle));
+        }
+
+        if (resultadoDetalle.Trim().Length > 500)
+        {
+            throw new ArgumentException(
+                "El resultado de la diligencia no puede superar 500 caracteres.",
+                nameof(resultadoDetalle));
+        }
+
+        if (string.IsNullOrWhiteSpace(estampe))
+        {
+            throw new ArgumentException(
+                "El estampe de la diligencia es obligatorio.",
+                nameof(estampe));
+        }
+
+        if (fechaGestion == default)
+        {
+            throw new ArgumentException(
+                "La fecha de gestiÃ³n es obligatoria.",
+                nameof(fechaGestion));
+        }
+
+        if (Estado == EstadoDiligencia.Cancelada)
+        {
+            throw new InvalidOperationException(
+                "No se puede registrar resultado en una diligencia cancelada.");
+        }
+
+        Resultado = resultado;
+
+        ResultadoDetalle = resultadoDetalle.Trim();
+
+        Estampe = estampe.Trim();
+
+        FechaGestion = fechaGestion;
+
+        Estado = EstadoDiligencia.Completada;
     }
 }
