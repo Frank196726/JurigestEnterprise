@@ -9,6 +9,8 @@ using System.Threading.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
 using MediatR;
 using Microsoft.AspNetCore.Routing;
+using Jurigest.Persistence.Context;
+using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -201,6 +203,24 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    catch (Exception exception)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILoggerFactory>().CreateLogger("Jurigest.Api.Error");
+        logger.LogError(exception, "Error no controlado. TraceId={TraceId} Metodo={Metodo} Ruta={Ruta} Usuario={Usuario}", context.TraceIdentifier, context.Request.Method, context.Request.Path, context.User.Identity?.Name ?? "anonimo");
+        if (!context.Response.HasStarted)
+        {
+            context.Response.StatusCode = StatusCodes.Status500InternalServerError;
+            await context.Response.WriteAsJsonAsync(new { mensaje = "Ocurrió un error interno.", traceId = context.TraceIdentifier });
+        }
+    }
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
@@ -215,6 +235,16 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapGet("/health/live", () => Results.Ok(new { estado = "saludable", servicio = "Jurigest.API", horaUtc = DateTime.UtcNow }));
+app.MapGet("/health/ready", async (JurigestDbContext db, CancellationToken ct) =>
+{
+    var inicio = DateTime.UtcNow;
+    var disponible = await db.Database.CanConnectAsync(ct);
+    return disponible
+        ? Results.Ok(new { estado = "saludable", baseDatos = "disponible", duracionMs = (DateTime.UtcNow - inicio).TotalMilliseconds, horaUtc = DateTime.UtcNow })
+        : Results.Json(new { estado = "degradado", baseDatos = "no disponible", horaUtc = DateTime.UtcNow }, statusCode: 503);
+});
 
 foreach (var endpoint in app.Services
     .GetRequiredService<EndpointDataSource>()

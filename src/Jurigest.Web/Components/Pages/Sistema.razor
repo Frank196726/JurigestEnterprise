@@ -1,0 +1,14 @@
+@page "/sistema"
+@rendermode InteractiveServer
+@attribute [Authorize(Roles = "Administrador")]
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+<PageTitle>Estado del sistema | Jurigest Enterprise</PageTitle>
+<section class="system-page"><header><span class="eyebrow">Operación y continuidad</span><h1>Estado del sistema</h1><p>Disponibilidad de servicios y respaldo controlado de información judicial.</p></header>
+@if(_cargando){<div class="state">Verificando servicios…</div>}else{<section class="health-grid"><article class="@Clase(_api?.Estado)"><span>API</span><strong>@Texto(_api?.Estado)</strong><small>Última revisión: @(_api?.HoraUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss") ?? "—")</small></article><article class="@Clase(_ready?.Estado)"><span>Base de datos</span><strong>@Texto(_ready?.Estado)</strong><small>@(_ready?.DuracionMs is null ? "Sin medición" : $"Respuesta: {_ready.DuracionMs:0} ms")</small></article></section>}
+@if(!string.IsNullOrWhiteSpace(_error)){<div class="state error">@_error</div>}
+<section class="backup-card"><div><span class="eyebrow">Continuidad operacional</span><h2>Respaldo judicial</h2><p>Descarga causas, diligencias, resoluciones y metadatos documentales en formato JSON. El archivo contiene información confidencial y debe almacenarse de forma segura.</p></div><a href="/sistema/respaldo">Descargar respaldo</a></section>
+<section class="notice"><strong>Restauración protegida</strong><p>La restauración no está habilitada desde la interfaz. Debe validarse el archivo y ejecutarse mediante un procedimiento administrativo controlado.</p></section></section>
+@code{private EstadoSaludResumen?_api;private EstadoSaludResumen?_ready;private bool _cargando=true;private string?_error;protected override async Task OnInitializedAsync(){try{_api=await ApiClient.GetAsync<EstadoSaludResumen>("/health/live");_ready=await ApiClient.GetAsync<EstadoSaludResumen>("/health/ready");}catch(UnauthorizedAccessException){Navigation.NavigateTo("/login",true);}catch(HttpRequestException){_error="No fue posible verificar el estado de los servicios.";}finally{_cargando=false;}}private static string Texto(string?e)=>e=="saludable"?"Operativo":"No disponible";private static string Clase(string?e)=>e=="saludable"?"healthy":"unhealthy";}
