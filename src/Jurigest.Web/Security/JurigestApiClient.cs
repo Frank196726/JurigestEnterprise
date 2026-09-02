@@ -75,6 +75,17 @@ public sealed class JurigestApiClient
             cancellationToken);
     }
 
+    public Task<HttpResponseMessage> DeleteAsync(
+        string ruta,
+        CancellationToken cancellationToken = default)
+    {
+        return SendAsync(
+            HttpMethod.Delete,
+            ruta,
+            contenido: null,
+            cancellationToken);
+    }
+
     private async Task<HttpResponseMessage> SendAsync(
         HttpMethod metodo,
         string ruta,

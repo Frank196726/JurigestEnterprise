@@ -15,4 +15,8 @@ public interface IJurigestApiClient
         string ruta,
         HttpContent contenido,
         CancellationToken cancellationToken = default);
+
+    Task<HttpResponseMessage> DeleteAsync(
+        string ruta,
+        CancellationToken cancellationToken = default);
 }
