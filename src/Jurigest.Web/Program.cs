@@ -72,6 +72,8 @@ app.MapSeguridadWebEndpoints();
 
 app.MapDocumentosWebEndpoints();
 
+app.MapReportesWebEndpoints();
+
 app.MapRazorComponents<App>()
     .AddInteractiveServerRenderMode();
 

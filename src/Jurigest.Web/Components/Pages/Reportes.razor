@@ -1,0 +1,66 @@
+@page "/reportes"
+@rendermode InteractiveServer
+@attribute [Authorize]
+
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+@using Microsoft.JSInterop
+
+@inject IJurigestApiClient ApiClient
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+
+<PageTitle>Reportes ejecutivos | Jurigest Enterprise</PageTitle>
+
+<section class="reports-page">
+    <header class="page-heading"><div><span class="eyebrow">Inteligencia operacional</span><h1>Reportes ejecutivos</h1><p>Analiza la cartera judicial y exporta los resultados filtrados.</p></div><div class="export-actions"><a class="export" href="@UrlCsv">Exportar a Excel</a><button class="print" @onclick="ImprimirAsync">Imprimir / PDF</button></div></header>
+
+    <section class="filters">
+        <label><span>Desde</span><input type="date" @bind="_desde" /></label><label><span>Hasta</span><input type="date" @bind="_hasta" /></label>
+        <label><span>Estado</span><select @bind="_estado"><option value="0">Todos</option><option value="1">Ingresada</option><option value="2">En tramitación</option><option value="3">Suspendida</option><option value="4">Terminada</option><option value="5">Archivada</option></select></label>
+        <label><span>Tribunal</span><select @bind="_tribunal"><option value="">Todos</option>@foreach (var tribunal in _causas.Select(x => x.Tribunal).Distinct().Order()) { <option value="@tribunal">@tribunal</option> }</select></label>
+        <label><span>Responsable</span><input type="search" placeholder="Nombre del receptor" @bind="_responsable" @bind:event="oninput" /></label>
+    </section>
+
+    <section class="metrics"><article><strong>@Filtradas.Count()</strong><span>Causas</span></article><article><strong>@Filtradas.Sum(x => x.TotalDiligencias)</strong><span>Diligencias</span></article><article><strong>@Filtradas.Sum(x => x.DiligenciasCompletadas)</strong><span>Completadas</span></article><article class="priority"><strong>@Filtradas.Count(x => x.DiasSinGestion > 15)</strong><span>Prioritarias</span></article></section>
+
+    @if (_cargando) { <div class="state-card">Preparando reporte…</div> }
+    else if (!string.IsNullOrWhiteSpace(_error)) { <div class="state-card error">@_error</div> }
+    else if (!Filtradas.Any()) { <div class="state-card"><strong>No hay resultados para los filtros seleccionados</strong></div> }
+    else
+    {
+        <div class="table-card"><table><thead><tr><th>RIT</th><th>Tribunal</th><th>Encargo</th><th>Última gestión</th><th>Antigüedad</th><th>Responsables</th><th>Diligencias</th><th>Estado</th></tr></thead><tbody>@foreach (var fila in Filtradas) { <tr><td><strong>@fila.Rit</strong></td><td>@fila.Tribunal</td><td>@fila.FechaEncargo.ToString("dd-MM-yyyy")</td><td>@(fila.UltimaGestion?.ToString("dd-MM-yyyy") ?? "Sin gestión")</td><td><span class="age @(fila.DiasSinGestion > 15 ? "critical" : "")">@fila.DiasSinGestion días</span></td><td>@(string.IsNullOrWhiteSpace(fila.Responsables) ? "Sin asignar" : fila.Responsables)</td><td>@fila.DiligenciasCompletadas / @fila.TotalDiligencias</td><td>@Estado(fila.Estado)</td></tr> }</tbody></table></div>
+    }
+</section>
+
+@code {
+    private readonly List<ReporteCausaResumen> _causas = [];
+    private DateTime? _desde;
+    private DateTime? _hasta;
+    private int _estado;
+    private string _tribunal = string.Empty;
+    private string _responsable = string.Empty;
+    private bool _cargando = true;
+    private string? _error;
+    private IEnumerable<ReporteCausaResumen> Filtradas => _causas.Where(x => (!_desde.HasValue || x.FechaEncargo.Date >= _desde.Value.Date) && (!_hasta.HasValue || x.FechaEncargo.Date <= _hasta.Value.Date) && (_estado == 0 || x.Estado == _estado) && (string.IsNullOrWhiteSpace(_tribunal) || x.Tribunal == _tribunal) && (string.IsNullOrWhiteSpace(_responsable) || x.Responsables.Contains(_responsable, StringComparison.OrdinalIgnoreCase)));
+    private string UrlCsv => $"/reportes/causas.csv?desde={_desde:yyyy-MM-dd}&hasta={_hasta:yyyy-MM-dd}&estado={_estado}&tribunal={Uri.EscapeDataString(_tribunal)}&responsable={Uri.EscapeDataString(_responsable)}";
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var causas = await ApiClient.GetAsync<List<CausaResumen>>("/api/Causas") ?? [];
+            foreach (var causa in causas)
+            {
+                var diligencias = await ApiClient.GetAsync<List<DiligenciaResumen>>($"/api/Diligencias/causa/{causa.Id}") ?? [];
+                var responsables = string.Join(", ", diligencias.Select(x => x.ReceptorJudicial).Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase));
+                _causas.Add(new(causa.Id, causa.Rit, causa.Tribunal, causa.Descripcion, causa.FechaEncargoCausa, causa.FechaGestionCausa, causa.DiasSinGestion, causa.Estado, responsables, diligencias.Count, diligencias.Count(x => x.Estado == 3)));
+            }
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _error = "No fue posible obtener los datos del reporte."; }
+        finally { _cargando = false; }
+    }
+    private async Task ImprimirAsync() => await JS.InvokeVoidAsync("print");
+    private static string Estado(int value) => value switch { 1 => "Ingresada", 2 => "En tramitación", 3 => "Suspendida", 4 => "Terminada", 5 => "Archivada", _ => "Sin estado" };
+}
