@@ -41,6 +41,11 @@ jobs:
           dotnet restore
           src/Jurigest.API/Jurigest.API.csproj
 
+      - name: Restaurar Web
+        run: >
+          dotnet restore
+          src/Jurigest.Web/Jurigest.Web.csproj
+
       - name: Restaurar pruebas de dominio
         run: >
           dotnet restore
@@ -62,6 +67,24 @@ jobs:
           src/Jurigest.API/Jurigest.API.csproj
           --configuration Release
           --no-restore
+
+      - name: Compilar Web
+        run: >
+          dotnet build
+          src/Jurigest.Web/Jurigest.Web.csproj
+          --configuration Release
+          --no-restore
+
+      - name: Instalar herramientas de Entity Framework
+        run: dotnet tool install --global dotnet-ef --version 10.*
+
+      - name: Verificar coherencia de migraciones
+        run: >
+          dotnet ef migrations has-pending-model-changes
+          --no-build
+          --configuration Release
+          --project src/Jurigest.Persistence/Jurigest.Persistence.csproj
+          --startup-project src/Jurigest.API/Jurigest.API.csproj
 
       - name: Ejecutar pruebas de dominio
         run: >

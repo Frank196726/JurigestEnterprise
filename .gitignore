@@ -3,6 +3,7 @@
 # ==========================
 **/bin/
 **/obj/
+build/
 
 # ==========================
 # Visual Studio
@@ -40,3 +41,6 @@ packages/
 
 # Uploaded files
 **/App_Data/
+
+# Respaldos locales de migraciones dañadas
+*.corrupto.bak
