@@ -138,7 +138,7 @@ else if (_causaEncontrada is not null)
 
         private void CrearRol() =>
             Navigation.NavigateTo(
-                $"/causas?rit={Uri.EscapeDataString(_rit.Trim())}");
+                $"/causas/nueva?rit={Uri.EscapeDataString(_rit.Trim())}");
 
         private void ModificarRol() =>
             Navigation.NavigateTo(
