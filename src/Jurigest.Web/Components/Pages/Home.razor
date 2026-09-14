@@ -1,3 +1,4 @@
+@using Jurigest.Domain.Judicial
 @page "/"
 @rendermode InteractiveServer
 @using System.Globalization
@@ -129,6 +130,7 @@ else if (_causaEncontrada is not null)
         private async Task BuscarAsync()
     {
         if (string.IsNullOrWhiteSpace(_rit)) return;
+        _rit = IdentificacionCausa.NormalizarRol(_rit);
         _buscando = true; _busquedaRealizada = false; _causaEncontrada = null; _mensajeError = null;
         try { _causaEncontrada = await ApiClient.GetAsync<CausaEncontradaResumen>($"/api/Causas/rit/{Uri.EscapeDataString(_rit.Trim())}"); _busquedaRealizada = true; }
         catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }

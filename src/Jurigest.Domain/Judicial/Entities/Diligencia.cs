@@ -107,6 +107,20 @@ public sealed class Diligencia : Entity<Guid>
             : observaciones.Trim();
     }
 
+    // Solo el agregado Causa autoriza esta corrección, sin alterar el resultado ni el estado.
+    internal void CorregirEncargo(string descripcion, TipoDiligencia tipo, DateTime? fechaProgramada)
+    {
+        if (string.IsNullOrWhiteSpace(descripcion) || descripcion.Trim().Length > 500)
+            throw new ArgumentException("La diligencia encargada es obligatoria y admite hasta 500 caracteres.");
+        if (!Enum.IsDefined(tipo))
+            throw new ArgumentException("El tipo de diligencia no es válido.");
+        if (!fechaProgramada.HasValue || fechaProgramada.Value == default)
+            throw new ArgumentException("La fecha programada es obligatoria.");
+        Descripcion = descripcion.Trim();
+        Tipo = tipo;
+        FechaProgramada = fechaProgramada;
+    }
+
     public void Programar(DateTime fecha)
     {
         if (Estado != EstadoDiligencia.Pendiente &&

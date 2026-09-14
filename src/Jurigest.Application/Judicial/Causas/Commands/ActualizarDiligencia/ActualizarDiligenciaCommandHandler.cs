@@ -7,10 +7,12 @@ public sealed class ActualizarDiligenciaCommandHandler
     : IRequestHandler<ActualizarDiligenciaCommand, bool>
 {
     private readonly IDiligenciaRepository _repository;
+    private readonly ICausaRepository _causas;
 
-    public ActualizarDiligenciaCommandHandler(IDiligenciaRepository repository)
+    public ActualizarDiligenciaCommandHandler(IDiligenciaRepository repository, ICausaRepository causas)
     {
         _repository = repository;
+        _causas = causas;
     }
 
     public async Task<bool> Handle(
@@ -23,6 +25,10 @@ public sealed class ActualizarDiligenciaCommandHandler
 
         if (diligencia is null)
             return false;
+
+        var causa = await _causas.GetByIdAsync(diligencia.CausaId, cancellationToken)
+            ?? throw new InvalidOperationException("La causa no existe.");
+        causa.ValidarCorreccionDiligencia(diligencia.Id);
 
         diligencia.ActualizarDatos(
             request.Descripcion,

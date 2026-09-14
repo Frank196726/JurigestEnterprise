@@ -55,7 +55,11 @@
                     </p>
                 </div>
 
-                <div style="display:grid; gap:1rem; margin-bottom:1rem;">
+                @if (!_causa.PuedeCorregirIngreso)
+                {
+                    <div class="alert alert-info">No se puede corregir el ingreso: existe una diligencia posterior a la primera.</div>
+                }
+                <fieldset disabled="@(!_causa.PuedeCorregirIngreso || _guardando)" style="display:grid; gap:1rem; margin-bottom:1rem;">
                     <label>
                         <span>Tribunal *</span>
                         <input type="text"
@@ -66,15 +70,43 @@
                     </label>
 
                     <label>
-                        <span>Descripción *</span>
+                        <span>Carátula (demandante / demandado) *</span>
                         <textarea class="form-control"
                                   rows="5"
-                                  maxlength="1000"
+                                  maxlength="500"
                                   @bind="_descripcion"
                                   placeholder="Carátula o descripción de la causa">
                         </textarea>
-                    </label>
-                </div>
+		    </label>
+
+		    <label>
+    			<span>Fecha de encargo *</span>
+    			<input type="date"
+           			class="form-control"
+           			@bind="_fechaEncargoCausa" />
+		    </label>
+                    @if (_causa.DiligenciaId.HasValue)
+                    {
+                    <label>
+                            <span>Fecha de diligencia / fecha programada *</span>
+                            <input type="date" class="form-control" @bind="_fechaProgramada" />
+                     </label>
+                        <label>
+                            <span>Diligencia encargada *</span>
+                            <select class="form-control" @bind="_diligenciaEncargadaId">
+                                <option value="">Conservar: @_causa.DiligenciaEncargada</option>
+                                @foreach (var item in _encargos)
+                                {
+                                    <option value="@item.Id">@item.Nombre</option>
+                                }
+                            </select>
+                        </label>
+                    }
+                    else
+                    {
+                        <p>Esta causa todavía no tiene una diligencia inicial registrada.</p>
+                    }
+                </fieldset>
 
                 @if (!string.IsNullOrWhiteSpace(_mensaje))
                 {
@@ -87,7 +119,7 @@
                 <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
                     <button type="button"
                             class="btn btn-primary"
-                            disabled="@_guardando"
+                            disabled="@(_guardando || !_causa.PuedeCorregirIngreso)"
                             @onclick="GuardarAsync">
                         @(_guardando ? "Guardando..." : "Guardar cambios")
                     </button>
@@ -108,7 +140,22 @@
     [Parameter]
     public Guid CausaId { get; set; }
 
-    private CausaResumen? _causa;
+    private CausaEdicion? _causa;
+    private DateTime? _fechaEncargoCausa;
+    private DateTime? _fechaProgramada;
+    private Guid? _diligenciaEncargadaId;
+    private List<EncargoItem> _encargos = new();
+    private sealed record EncargoItem(Guid Id, string Nombre);
+    private sealed record CausaEdicion(
+    Guid Id,
+    string Rit,
+    string Tribunal,
+    string Descripcion,
+    DateTime FechaEncargoCausa,
+    bool PuedeCorregirIngreso,
+    Guid? DiligenciaId,
+    string? DiligenciaEncargada,
+    DateTime? FechaProgramada);
     private string _tribunal = string.Empty;
     private string _descripcion = string.Empty;
     private string? _mensaje;
@@ -121,13 +168,7 @@
     {
         try
         {
-            var causas =
-                await ApiClient.GetAsync<List<CausaResumen>>(
-                    "/api/Causas");
-
-            _causa =
-                causas?.FirstOrDefault(
-                    causa => causa.Id == CausaId);
+            _causa = await ApiClient.GetAsync<CausaEdicion>($"/api/Causas/{CausaId}");
 
             if (_causa is null)
             {
@@ -138,7 +179,11 @@
             }
 
             _tribunal = _causa.Tribunal;
-            _descripcion = _causa.Descripcion;
+	    _descripcion = _causa.Descripcion;
+	    _fechaEncargoCausa = _causa.FechaEncargoCausa;
+	    _fechaProgramada = _causa.FechaProgramada;
+            if (_causa.PuedeCorregirIngreso && _causa.DiligenciaId.HasValue)
+                _encargos = await ApiClient.GetAsync<List<EncargoItem>>("/api/Catalogos/diligencias-encargadas") ?? new();
         }
         catch (UnauthorizedAccessException)
         {
@@ -161,6 +206,17 @@
     {
         _mensaje = null;
         _guardado = false;
+        if (_causa is null || !_causa.PuedeCorregirIngreso) return;
+	if (!_fechaEncargoCausa.HasValue)
+	{
+    	     _mensaje = "Debe indicar la fecha de encargo.";
+    	     return;
+	}
+        if (_causa.DiligenciaId.HasValue && !_fechaProgramada.HasValue)
+        {
+            _mensaje = "Debe indicar la fecha programada.";
+            return;
+        }
 
         if (string.IsNullOrWhiteSpace(_tribunal))
         {
@@ -180,9 +236,9 @@
             return;
         }
 
-        if (_descripcion.Trim().Length > 1000)
+        if (_descripcion.Trim().Length > 500)
         {
-            _mensaje = "La descripción no puede superar 1000 caracteres.";
+            _mensaje = "La carátula no puede superar 500 caracteres.";
             return;
         }
 
@@ -197,9 +253,15 @@
                         new
                         {
                             tribunal = _tribunal.Trim(),
-                            descripcion = _descripcion.Trim()
+                            descripcion = _descripcion.Trim(),
+			    fechaEncargoCausa = _fechaEncargoCausa,
+                            diligenciaId = _causa.DiligenciaId,
+                            diligenciaEncargadaId = _diligenciaEncargadaId,
+                            fechaProgramada = _fechaProgramada
                         }));
 
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+                _causa = await ApiClient.GetAsync<CausaEdicion>($"/api/Causas/{CausaId}");
             await VerificarRespuestaAsync(response);
 
             _guardado = true;

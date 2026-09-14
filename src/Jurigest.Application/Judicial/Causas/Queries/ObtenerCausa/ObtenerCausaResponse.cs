@@ -10,4 +10,8 @@ public sealed record ObtenerCausaResponse(
     DateTime? FechaGestionCausa,
     int DiasSinGestion,
     bool EsCritica,
-    int Estado);
+    int Estado,
+    bool PuedeCorregirIngreso,
+    Guid? DiligenciaId,
+    string? DiligenciaEncargada,
+    DateTime? FechaProgramada);

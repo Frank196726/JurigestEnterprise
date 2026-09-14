@@ -27,6 +27,7 @@ public sealed class CausaRepository : ICausaRepository
         CancellationToken cancellationToken)
     {
         return await _context.Causas
+            .Include(c => c.Diligencias)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
@@ -74,9 +75,11 @@ public sealed class CausaRepository : ICausaRepository
     string rit,
     CancellationToken cancellationToken)
     {
+    var normalizado = Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(rit);
+    var legado = normalizado.StartsWith("C-", StringComparison.Ordinal) ? normalizado[2..] : normalizado;
     return await _context.Causas
-        .FirstOrDefaultAsync(
-            c => c.Rit == rit,
-            cancellationToken);
+        .Where(c => c.Rit.Trim().ToUpper() == normalizado || c.Rit.Trim().ToUpper() == legado)
+        .OrderBy(c => c.FechaCreacion).ThenBy(c => c.Id)
+        .FirstOrDefaultAsync(cancellationToken);
     }
 }

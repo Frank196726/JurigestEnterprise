@@ -1,3 +1,4 @@
+@using Jurigest.Domain.Judicial
 @page "/causas/buscar"
 @rendermode InteractiveServer
 @using Jurigest.Web.Security
@@ -292,6 +293,7 @@ private bool busquedaInicialEjecutada;
 
         try
         {
+            rit = IdentificacionCausa.NormalizarRol(rit);
             buscando = true;
 
             causa = await Api.GetAsync<CausaResponse>(

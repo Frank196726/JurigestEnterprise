@@ -37,6 +37,10 @@ public sealed class ObtenerCausaHandler
             causa.FechaGestionCausa,
             diasSinGestion,
             diasSinGestion > 10,
-            (int)causa.Estado);
+            (int)causa.Estado,
+            causa.PuedeCorregirIngreso,
+            causa.PrimeraDiligencia?.Id,
+            causa.PrimeraDiligencia?.Descripcion,
+            causa.PrimeraDiligencia?.FechaProgramada);
     }
 }

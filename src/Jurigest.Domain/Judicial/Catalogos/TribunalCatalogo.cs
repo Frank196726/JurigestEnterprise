@@ -35,7 +35,7 @@ public sealed class TribunalCatalogo : Entity<Guid>
                 nameof(nombre));
         }
 
-        Nombre = nombre.Trim();
+        Nombre = IdentificacionCausa.NormalizarTribunal(nombre);
     }
 
     public void Activar() =>

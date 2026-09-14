@@ -38,9 +38,9 @@ public sealed class Causa
 
         Id = Guid.NewGuid();
 
-        Rit = rit.Trim();
+        Rit = IdentificacionCausa.NormalizarRol(rit);
 
-        Tribunal = tribunal.Trim();
+        Tribunal = IdentificacionCausa.NormalizarTribunal(tribunal);
 
         Descripcion = descripcion.Trim();
 
@@ -89,6 +89,48 @@ public sealed class Causa
 
     public IReadOnlyCollection<Diligencia> Diligencias =>
         _diligencias.AsReadOnly();
+
+    // La primera diligencia corresponde al ingreso inicial, incluso si ya tiene resultado.
+    public bool PuedeCorregirIngreso => _diligencias.Count <= 1;
+
+    public Diligencia? PrimeraDiligencia => _diligencias
+        .OrderBy(d => d.FechaCreacion).ThenBy(d => d.Id).FirstOrDefault();
+
+    public void ValidarCorreccionIngreso()
+    {
+        if (!PuedeCorregirIngreso)
+            throw new InvalidOperationException(
+                "No se puede corregir el ingreso: existe una diligencia posterior a la primera.");
+    }
+
+    public void ValidarCorreccionDiligencia(Guid diligenciaId)
+    {
+        if (PrimeraDiligencia?.Id == diligenciaId)
+            ValidarCorreccionIngreso();
+    }
+
+    public void CorregirIngreso(string tribunal, string descripcion,
+        Guid? diligenciaId, string? diligenciaEncargada,
+        TipoDiligencia? tipo, DateTime? fechaProgramada)
+    {
+        ValidarCorreccionIngreso();
+        ValidarTribunal(tribunal);
+        ValidarDescripcion(descripcion);
+        if (tribunal.Trim().Length > 200 || descripcion.Trim().Length > 500)
+            throw new ArgumentException("El tribunal admite 200 caracteres y la carátula 500.");
+
+        if (diligenciaId.HasValue)
+        {
+            var primera = PrimeraDiligencia;
+            if (primera is null || primera.Id != diligenciaId.Value)
+                throw new ArgumentException("La diligencia no corresponde al ingreso inicial de esta causa.");
+            primera.CorregirEncargo(diligenciaEncargada!, tipo ?? primera.Tipo, fechaProgramada);
+        }
+        else if (diligenciaEncargada is not null || tipo.HasValue || fechaProgramada.HasValue)
+            throw new ArgumentException("Debe indicar la diligencia inicial que desea corregir.");
+
+        ActualizarDatos(tribunal, descripcion);
+    }
 
     public void AsignarTipoCausa(
         Guid tipoCausaId,
@@ -140,11 +182,12 @@ public sealed class Causa
         string tribunal,
         string descripcion)
     {
+        ValidarCorreccionIngreso();
         ValidarTribunal(tribunal);
         ValidarDescripcion(descripcion);
 
         Tribunal =
-            tribunal.Trim();
+            IdentificacionCausa.NormalizarTribunal(tribunal);
 
         Descripcion =
             descripcion.Trim();
@@ -156,6 +199,9 @@ public sealed class Causa
         string descripcion)
     {
         ValidarRit(rit);
+        if (!string.Equals(Rit, rit.Trim(), StringComparison.Ordinal))
+            throw new InvalidOperationException("El número de ROL no se puede modificar.");
+        ValidarCorreccionIngreso();
         ValidarTribunal(tribunal);
         ValidarDescripcion(descripcion);
 
@@ -163,7 +209,7 @@ public sealed class Causa
             rit.Trim();
 
         Tribunal =
-            tribunal.Trim();
+            IdentificacionCausa.NormalizarTribunal(tribunal);
 
         Descripcion =
             descripcion.Trim();
@@ -176,8 +222,10 @@ public sealed class Causa
     public void ActualizarFechaEncargo(
         DateTime fechaEncargoCausa)
     {
-        ValidarFechaEncargo(
-            fechaEncargoCausa);
+        ValidarCorreccionIngreso();
+
+    	ValidarFechaEncargo(
+        	fechaEncargoCausa);
 
         if (FechaGestionCausa.HasValue &&
             fechaEncargoCausa >

@@ -19,24 +19,23 @@ public sealed class TribunalCatalogoRepository
     public async Task<List<TribunalCatalogo>> GetActivosAsync(
         CancellationToken cancellationToken)
     {
-        return await _context.Tribunales
+        var tribunales = await _context.Tribunales
             .AsNoTracking()
             .Where(x => x.Activo)
             .OrderBy(x => x.Nombre)
             .ToListAsync(cancellationToken);
+
+        return tribunales.GroupBy(x => x.Nombre, StringComparer.OrdinalIgnoreCase)
+            .Select(grupo => grupo.OrderBy(x => x.Id).First()).ToList();
     }
 
     public async Task<bool> ExisteNombreAsync(
         string nombre,
         CancellationToken cancellationToken)
     {
-        var normalizado =
-            nombre.Trim();
-
-        return await _context.Tribunales
-            .AnyAsync(
-                x => x.Nombre == normalizado,
-                cancellationToken);
+        var nombres = await _context.Tribunales.AsNoTracking()
+            .Select(x => x.Nombre).ToListAsync(cancellationToken);
+        return nombres.Any(x => Jurigest.Domain.Judicial.IdentificacionCausa.MismoTribunal(x, nombre));
     }
 
     public async Task AddAsync(

@@ -7,11 +7,13 @@ public sealed class ProgramarDiligenciaHandler
     : IRequestHandler<ProgramarDiligenciaCommand, bool>
 {
     private readonly IDiligenciaRepository _repository;
+    private readonly ICausaRepository _causas;
 
     public ProgramarDiligenciaHandler(
-        IDiligenciaRepository repository)
+        IDiligenciaRepository repository, ICausaRepository causas)
     {
         _repository = repository;
+        _causas = causas;
     }
 
     public async Task<bool> Handle(
@@ -24,6 +26,10 @@ public sealed class ProgramarDiligenciaHandler
 
         if (diligencia is null)
             return false;
+
+        var causa = await _causas.GetByIdAsync(diligencia.CausaId, cancellationToken)
+            ?? throw new InvalidOperationException("La causa no existe.");
+        causa.ValidarCorreccionDiligencia(diligencia.Id);
 
         diligencia.Programar(request.FechaProgramada);
 

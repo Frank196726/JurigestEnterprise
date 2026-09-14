@@ -1,4 +1,4 @@
-﻿using Jurigest.API.Contracts;
+using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarCausa;
 using Jurigest.Application.Judicial.Causas.Commands.CrearCausa;
 using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
@@ -50,11 +50,19 @@ public sealed class CausasController : ControllerBase
             FechaEncargoCausa = request.FechaEncargoCausa
         };
 
-        var resultado = await _mediator.Send(
-            command,
-            cancellationToken);
-
-        return Ok(resultado);
+        try
+        {
+            var resultado = await _mediator.Send(command, cancellationToken);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
     }
 
     [HttpGet]
@@ -128,21 +136,28 @@ public sealed class CausasController : ControllerBase
 
         var command = new ActualizarCausaCommand
         {
-            Id = id,
-            Tribunal = request.Tribunal,
-            Descripcion = request.Descripcion
-        };
+    	Id = id,
+    	Tribunal = request.Tribunal,
+    	Descripcion = request.Descripcion,
+    	FechaEncargoCausa = request.FechaEncargoCausa,
+    	DiligenciaId = request.DiligenciaId,
+    	DiligenciaEncargadaId = request.DiligenciaEncargadaId,
+    	FechaProgramada = request.FechaProgramada
+	};
 
-        var resultado = await _mediator.Send(
-            command,
-            cancellationToken);
-
-        if (resultado is null)
+        try
         {
-            return NotFound();
+            var resultado = await _mediator.Send(command, cancellationToken);
+            return resultado is null ? NotFound() : Ok(resultado);
         }
-
-        return Ok(resultado);
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
     }
 
     [HttpDelete("{id:guid}")]

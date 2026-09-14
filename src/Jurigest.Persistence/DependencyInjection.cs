@@ -23,6 +23,7 @@ public static class DependencyInjection
             options.UseSqlServer(
                 configuration.GetConnectionString("DefaultConnection")));
 
+        services.AddScoped(typeof(MediatR.IPipelineBehavior<,>), typeof(CorreccionIngresoTransactionBehavior<,>));
         services.AddScoped<ICausaRepository, CausaRepository>();
 
         services.AddScoped<IDiligenciaRepository, DiligenciaRepository>();

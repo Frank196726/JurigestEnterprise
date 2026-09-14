@@ -1,3 +1,4 @@
+@using Jurigest.Domain.Judicial
 @page "/causas"
 
 @rendermode InteractiveServer
@@ -194,10 +195,6 @@
                         Ver historial
                     </a>
                     <a class="manage-action"
-                       href="@($"/causas/{causa.Id}/historial")">
-                        Ver historial
-                    </a>
-                    <a class="manage-action"
                        href="@($"/causas/{causa.Id}/diligencias/registrar")">
                         Gestionar diligencia
                     </a>
@@ -237,7 +234,7 @@
 
             return _causas.Where(causa =>
                 causa.Rit.Contains(filtro, StringComparison.OrdinalIgnoreCase) ||
-                causa.Tribunal.Contains(filtro, StringComparison.OrdinalIgnoreCase) ||
+                IdentificacionCausa.NormalizarTribunal(causa.Tribunal).Contains(IdentificacionCausa.NormalizarTribunal(filtro), StringComparison.OrdinalIgnoreCase) ||
                 causa.Descripcion.Contains(filtro, StringComparison.OrdinalIgnoreCase));
         }
     }

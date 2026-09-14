@@ -1,3 +1,4 @@
+@using Jurigest.Domain.Judicial
 @page "/causas/nueva"
 
 @rendermode InteractiveServer
@@ -1407,7 +1408,8 @@
             _tiposCausa.Count > 0)
         {
             _nuevaGestion.TipoCausaId =
-                _tiposCausa[0].Id;
+                (_tiposCausa.FirstOrDefault(x => string.Equals(x.Codigo, "C", StringComparison.OrdinalIgnoreCase))
+                    ?? _tiposCausa[0]).Id;
         }
 
         if (!_nuevaGestion.TribunalId.HasValue &&
@@ -1469,7 +1471,7 @@
         string ritInicial)
     {
         var rit =
-            ritInicial.Trim();
+            IdentificacionCausa.NormalizarRol(ritInicial);
 
         if (string.IsNullOrWhiteSpace(
                 rit))

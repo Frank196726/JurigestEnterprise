@@ -85,6 +85,12 @@ public sealed class CrearCausaCommandHandler
                 request.FechaEncargoCausa);
         }
 
+        var existentes = await _causaRepository.GetAllAsync(cancellationToken);
+        if (existentes.Any(x =>
+            Jurigest.Domain.Judicial.IdentificacionCausa.MismoRol(x.Rit, causa.Rit) &&
+            Jurigest.Domain.Judicial.IdentificacionCausa.MismoTribunal(x.Tribunal, causa.Tribunal)))
+            throw new InvalidOperationException("Ya existe una causa con ese ROL en el mismo tribunal.");
+
         await _causaRepository.AddAsync(
             causa,
             cancellationToken);

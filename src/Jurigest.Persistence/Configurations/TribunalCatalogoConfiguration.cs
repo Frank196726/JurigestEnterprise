@@ -15,6 +15,9 @@ public sealed class TribunalCatalogoConfiguration
         builder.HasKey(x => x.Id);
 
         builder.Property(x => x.Nombre)
+            .HasConversion(
+                valor => Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarTribunal(valor),
+                valor => Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarTribunal(valor))
             .HasMaxLength(200)
             .IsRequired();
 

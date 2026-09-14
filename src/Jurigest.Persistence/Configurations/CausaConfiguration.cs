@@ -11,6 +11,8 @@ public sealed class CausaConfiguration
         EntityTypeBuilder<Causa> builder)
     {
         builder.ToTable("Causas");
+        builder.Ignore(x => x.PuedeCorregirIngreso);
+        builder.Ignore(x => x.PrimeraDiligencia);
 
         builder.HasKey(
             x => x.Id);
@@ -31,6 +33,9 @@ public sealed class CausaConfiguration
 
         builder.Property(
                 x => x.Tribunal)
+            .HasConversion(
+                valor => Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarTribunal(valor),
+                valor => Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarTribunal(valor))
             .HasMaxLength(200)
             .IsRequired();
 
