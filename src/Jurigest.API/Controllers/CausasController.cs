@@ -191,7 +191,8 @@ public sealed class CausasController : ControllerBase
 
         var command = new CrearDiligenciaCommand(
             causaId,
-            request.Descripcion);
+            request.Descripcion,
+            request.Tipo);
 
         var id = await _mediator.Send(
             command,

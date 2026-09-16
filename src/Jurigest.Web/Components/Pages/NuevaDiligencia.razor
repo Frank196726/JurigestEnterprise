@@ -727,9 +727,6 @@
             var diligenciaId =
                 await CrearDiligenciaAsync();
 
-            await ConfigurarTipoAsync(
-                diligenciaId);
-
             if (_fechaProgramada.HasValue)
             {
                 await ProgramarAsync(
@@ -787,7 +784,9 @@
                     new
                     {
                         descripcion =
-                            _descripcion.Trim()
+                            _descripcion.Trim(),
+                        tipo =
+                            _tipo!.Value
                     }));
 
         await VerificarRespuestaAsync(
@@ -801,23 +800,6 @@
         return resultado?.Id
             ?? throw new InvalidOperationException(
                 "La API no devolvió el identificador de la diligencia.");
-    }
-
-    private async Task ConfigurarTipoAsync(
-        Guid diligenciaId)
-    {
-        using var response =
-            await ApiClient.PutAsync(
-                $"/api/Diligencias/{diligenciaId}/tipo",
-                JsonContent.Create(
-                    new
-                    {
-                        tipo = _tipo!.Value
-                    }));
-
-        await VerificarRespuestaAsync(
-            response,
-            "asignar el tipo de diligencia");
     }
 
     private async Task ProgramarAsync(

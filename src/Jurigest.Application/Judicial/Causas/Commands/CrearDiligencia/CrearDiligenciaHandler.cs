@@ -32,6 +32,9 @@ public sealed class CrearDiligenciaHandler
         var diligencia = causa.AgregarDiligencia(
             request.Descripcion);
 
+        diligencia.CambiarTipo(
+            request.Tipo);
+
         await _diligenciaRepository.AddAsync(
             diligencia,
             cancellationToken);

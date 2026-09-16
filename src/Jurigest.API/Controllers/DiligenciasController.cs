@@ -1,4 +1,4 @@
-﻿using Jurigest.API.Contracts;
+using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Diligencias.Commands.AgregarObservacion;
 using Jurigest.Application.Judicial.Diligencias.Commands.RegistrarCoordenadas;
 using Jurigest.Application.Judicial.Diligencias.Commands.AsignarUbicacion;
@@ -182,6 +182,8 @@ public sealed class DiligenciasController : ControllerBase
         diligencia.Estado,
         diligencia.Resultado,
         diligencia.ResultadoDetalle,
+        diligencia.DiligenciaRealizadaId,
+        diligencia.DiligenciaRealizada,
         diligencia.FechaProgramada,
         diligencia.FechaGestion,
         diligencia.ReceptorJudicial,
@@ -589,6 +591,14 @@ public sealed class DiligenciasController : ControllerBase
         });
     }
 
+    if (request.DiligenciaRealizadaId == Guid.Empty)
+    {
+        return BadRequest(new
+        {
+            mensaje = "Debe indicar la diligencia realizada."
+        });
+    }
+
     if (request.Resultado == 0)
     {
         return BadRequest(new
@@ -634,6 +644,7 @@ public sealed class DiligenciasController : ControllerBase
         await _mediator.Send(
             new RegistrarResultadoDiligenciaCommand(
                 id,
+                request.DiligenciaRealizadaId,
                 request.Resultado,
                 request.ResultadoDetalle,
                 request.Estampe,

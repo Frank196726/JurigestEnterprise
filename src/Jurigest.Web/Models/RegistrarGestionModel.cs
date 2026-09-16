@@ -71,6 +71,24 @@ public sealed class RegistrarGestionModel : IValidatableObject
     public string Demandado { get; set; } =
         string.Empty;
 
+    [Required(
+        ErrorMessage = "El domicilio del demandado es obligatorio.")]
+    [StringLength(
+        300,
+        ErrorMessage =
+            "El domicilio del demandado no puede superar 300 caracteres.")]
+    public string Direccion { get; set; } =
+        string.Empty;
+
+    [Required(
+        ErrorMessage = "La comuna es obligatoria.")]
+    [StringLength(
+        150,
+        ErrorMessage =
+            "La comuna no puede superar 150 caracteres.")]
+    public string Comuna { get; set; } =
+        string.Empty;
+
     // =========================================================
     // FECHAS
     // =========================================================

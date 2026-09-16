@@ -336,6 +336,79 @@
                                 For="@(() => _nuevaGestion.Demandado)" />
                         </label>
 
+                        <label>
+                            <span>Domicilio del demandado *</span>
+
+                            <InputText
+                                @bind-Value="_nuevaGestion.Direccion"
+                                maxlength="300"
+                                placeholder="Dirección donde se practicará la diligencia" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.Direccion)" />
+                        </label>
+
+                        <div>
+
+                            <label>
+
+                                <span>Comuna *</span>
+
+                            <InputSelect
+                                @bind-Value="_nuevaGestion.Comuna">
+
+                                <option value="">
+                                    Seleccione...
+                                </option>
+
+                                @foreach (var comuna in _comunas)
+                                {
+                                    <option value="@comuna.Nombre">
+                                        @comuna.Nombre
+                                    </option>
+                                }
+
+
+                            </InputSelect>
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.Comuna)" />
+                        </label>
+
+                        <button type="button"
+                                class="btn btn-secondary"
+                                style="margin-top:.5rem;"
+                                disabled="@_guardandoCatalogo"
+                                @onclick="AlternarAgregarComuna">
+                            @(_mostrarAgregarComuna
+                                ? "Cancelar nueva comuna"
+                                : "+ Agregar comuna")
+                        </button>
+                    </div>
+
+                        @if (_mostrarAgregarComuna)
+                        {
+                            <div class="full-width catalog-editor single">
+                                <label>
+                                    <span>Nombre de la comuna</span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="150"
+                                           autocomplete="off"
+                                           @bind="_nuevaComuna"
+                                           placeholder="Ej.: Providencia" />
+                                </label>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarComunaAsync">
+                                    Agregar comuna
+                                </button>
+                            </div>
+                        }
+
                         @* ==================================================
                            FECHAS
                            ================================================== *@
@@ -533,6 +606,9 @@
     private readonly List<CatalogoItem>
         _tribunales = [];
 
+    private readonly List<CatalogoItem>
+        _comunas = [];
+
     private readonly List<AbogadoItem>
         _abogados = [];
 
@@ -565,7 +641,9 @@
 
     private bool _mostrarAgregarTribunal;
 
-    private bool _mostrarAgregarAbogado;
+
+    private bool _mostrarAgregarComuna;
+private bool _mostrarAgregarAbogado;
 
     private bool _mostrarAgregarDiligencia;
 
@@ -578,7 +656,10 @@
     private string _nuevoTribunal =
         string.Empty;
 
-    private string _nuevoAbogado =
+
+    private string _nuevaComuna =
+        string.Empty;
+private string _nuevoAbogado =
         string.Empty;
 
     private string _nuevaDiligencia =
@@ -625,6 +706,7 @@
         await CargarTribunalesAsync();
         await CargarAbogadosAsync();
         await CargarDiligenciasEncargadasAsync();
+        await CargarComunasAsync();
         await CargarTiposDiligenciaAsync();
     }
 
@@ -659,6 +741,19 @@
         {
             if (!ResolverCatalogosSeleccionados())
             {
+                return;
+            }
+
+            var diligenciaCatalogo =
+                ObtenerDiligenciaEncargadaSeleccionada();
+
+            if (diligenciaCatalogo?.CodigoTipoDiligencia
+                is not int codigoTipo)
+            {
+                _mensajeGestion =
+                    "La diligencia encargada seleccionada no tiene " +
+                    "un tipo de diligencia asociado.";
+
                 return;
             }
 
@@ -736,8 +831,9 @@
                         new
                         {
                             descripcion =
-                                _nuevaGestion.Diligencia
-                        }));
+                                _nuevaGestion.Diligencia,
+                            tipo =
+                                codigoTipo}));
 
             await VerificarRespuestaAsync(
                 respuestaDiligencia,
@@ -753,26 +849,6 @@
                 ?? throw new InvalidOperationException(
                     "La API no devolvió el identificador de la diligencia.");
 
-            var diligenciaCatalogo =
-                ObtenerDiligenciaEncargadaSeleccionada();
-
-            if (diligenciaCatalogo?.CodigoTipoDiligencia
-                is int codigoTipo)
-            {
-                using var respuestaTipo =
-                    await ApiClient.PutAsync(
-                        $"/api/Diligencias/{diligenciaId}/tipo",
-                        JsonContent.Create(
-                            new
-                            {
-                                tipo =
-                                    codigoTipo
-                            }));
-
-                await VerificarRespuestaAsync(
-                    respuestaTipo,
-                    "asignar el tipo de diligencia");
-            }
 
             using var respuestaProgramacion =
                 await ApiClient.PutAsync(
@@ -790,6 +866,23 @@
             await VerificarRespuestaAsync(
                 respuestaProgramacion,
                 "programar la diligencia");
+
+            using var respuestaUbicacion =
+                await ApiClient.PutAsync(
+                    $"/api/Diligencias/{diligenciaId}/ubicacion",
+                    JsonContent.Create(
+                        new
+                        {
+                            direccion =
+                                _nuevaGestion.Direccion.Trim(),
+                            comuna =
+                                _nuevaGestion.Comuna.Trim()
+                        }));
+
+            await VerificarRespuestaAsync(
+                respuestaUbicacion,
+                "registrar la ubicación de la diligencia");
+
 
             var retiro =
                 _nuevaGestion.FechaRetiro.HasValue
@@ -825,6 +918,9 @@
                 CrearModeloGestion();
 
             SeleccionarValoresIniciales();
+
+            _nuevaGestion.DiligenciaEncargadaId =
+                null;
         }
         catch (UnauthorizedAccessException)
         {
@@ -1246,6 +1342,86 @@
         }
     }
 
+    private async Task CargarComunasAsync()
+    {
+        var resultado =
+            await ApiClient.GetAsync<
+                List<CatalogoItem>>(
+                "/api/Catalogos/comunas");
+
+        _comunas.Clear();
+
+        if (resultado is not null)
+        {
+            _comunas.AddRange(
+                resultado);
+        }
+    }
+    private void AlternarAgregarComuna()
+    {
+        _mostrarAgregarComuna =
+            !_mostrarAgregarComuna;
+
+        _mensajeGestion =
+            null;
+
+        if (!_mostrarAgregarComuna)
+        {
+            _nuevaComuna =
+                string.Empty;
+        }
+    }
+
+    private async Task AgregarComunaAsync()
+    {
+        var nombre =
+            _nuevaComuna.Trim();
+
+        if (string.IsNullOrWhiteSpace(nombre))
+        {
+            _mensajeGestion =
+                "Debe indicar el nombre de la comuna.";
+
+            return;
+        }
+
+        await EjecutarCreacionCatalogoAsync(
+            async () =>
+            {
+                using var response =
+                    await ApiClient.PostAsync(
+                        "/api/Catalogos/comunas",
+                        JsonContent.Create(
+                            new
+                            {
+                                nombre
+                            }));
+
+                await VerificarRespuestaAsync(
+                    response,
+                    "agregar la comuna");
+
+                var creada =
+                    await response.Content
+                        .ReadFromJsonAsync<CatalogoItem>();
+
+                await CargarComunasAsync();
+
+                _nuevaGestion.Comuna =
+                    creada?.Nombre ?? nombre;
+
+                _nuevaComuna =
+                    string.Empty;
+
+                _mostrarAgregarComuna =
+                    false;
+
+                _mensajeGestion =
+                    $"Comuna {nombre} agregada correctamente.";
+            });
+    }
+
+
     private async Task CargarTiposDiligenciaAsync()
     {
         var resultado =
@@ -1424,15 +1600,6 @@
         {
             _nuevaGestion.AbogadoId =
                 _abogados[0].Id;
-        }
-
-        if (!_nuevaGestion
-                .DiligenciaEncargadaId
-                .HasValue &&
-            _diligenciasEncargadas.Count > 0)
-        {
-            _nuevaGestion.DiligenciaEncargadaId =
-                _diligenciasEncargadas[0].Id;
         }
     }
 

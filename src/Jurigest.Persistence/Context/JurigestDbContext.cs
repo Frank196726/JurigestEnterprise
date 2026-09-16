@@ -38,6 +38,10 @@ public class JurigestDbContext : DbContext
     DiligenciasEncargadas =>
     Set<DiligenciaEncargadaCatalogo>();
 
+    public DbSet<DiligenciaRealizadaCatalogo>
+    DiligenciasRealizadas =>
+    Set<DiligenciaRealizadaCatalogo>();
+
     public DbSet<Documento> Documentos => Set<Documento>();
 
     public DbSet<Resolucion> Resoluciones => Set<Resolucion>();

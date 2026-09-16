@@ -4,6 +4,7 @@ using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jurigest.Persistence.Migrations
 {
     [DbContext(typeof(JurigestDbContext))]
-    partial class JurigestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914215857_AgregarDiligenciasRealizadas")]
+    partial class AgregarDiligenciasRealizadas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -411,13 +414,6 @@ namespace Jurigest.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("DiligenciaRealizada")
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<Guid?>("DiligenciaRealizadaId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<string>("Direccion")
                         .HasColumnType("nvarchar(max)");
 
@@ -467,8 +463,6 @@ namespace Jurigest.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CausaId");
-
-                    b.HasIndex("DiligenciaRealizadaId");
 
                     b.ToTable("Diligencias", (string)null);
                 });

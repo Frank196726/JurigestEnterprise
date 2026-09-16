@@ -56,6 +56,10 @@ public static class DependencyInjection
             IDiligenciaEncargadaCatalogoRepository,
             DiligenciaEncargadaCatalogoRepository>();
 
+        services.AddScoped<
+            IDiligenciaRealizadaCatalogoRepository,
+            DiligenciaRealizadaCatalogoRepository>();
+
         services.AddScoped<IDocumentoRepository, DocumentoRepository>();
 
         services.AddScoped<IResolucionRepository, ResolucionRepository>();

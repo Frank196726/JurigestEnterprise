@@ -2,6 +2,10 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Jurigest.Integration.Tests.Infrastructure;
+using Jurigest.Domain.Judicial.Catalogos;
+using Jurigest.Domain.Judicial.Enums;
+using Jurigest.Persistence.Context;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Jurigest.Integration.Tests.Judicial;
 
@@ -31,9 +35,45 @@ public sealed class FlujoCausaDiligenciaResultadoTests
 
         using var response = await SeguridadTestHelper.EnviarAutorizadoAsync(
             client, HttpMethod.Put, $"/api/Diligencias/{Guid.NewGuid()}/resultado", admin.Token,
-            new { resultado = 1, resultadoDetalle = "", estampe = "Estampe", fechaGestion = DateTime.UtcNow });
+            new { diligenciaRealizadaId = Guid.NewGuid(), resultado = 1, resultadoDetalle = "", estampe = "Estampe", fechaGestion = DateTime.UtcNow });
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RegistrarResultado_SinDiligenciaRealizada_Devuelve400()
+    {
+        await using var factory = new JurigestApiFactory();
+        using var client = factory.CreateClient();
+
+        await SeguridadTestHelper.CrearAdministradorAsync(client);
+
+        var admin = await SeguridadTestHelper.IniciarSesionAsync(
+            client,
+            SeguridadTestHelper.AdminEmail,
+            SeguridadTestHelper.AdminPassword);
+
+        using var response = await SeguridadTestHelper.EnviarAutorizadoAsync(
+            client,
+            HttpMethod.Put,
+            $"/api/Diligencias/{Guid.NewGuid()}/resultado",
+            admin.Token,
+            new
+            {
+                diligenciaRealizadaId = Guid.Empty,
+                resultado = 1,
+                resultadoDetalle = "Detalle",
+                estampe = "Estampe",
+                fechaGestion = DateTime.UtcNow
+            });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var contenido = await response.Content.ReadAsStringAsync();
+
+        Assert.Contains(
+            "Debe indicar la diligencia realizada.",
+            contenido);
     }
 
     [Fact]
@@ -44,6 +84,23 @@ public sealed class FlujoCausaDiligenciaResultadoTests
         await SeguridadTestHelper.CrearAdministradorAsync(client);
         var admin = await SeguridadTestHelper.IniciarSesionAsync(
             client, SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
+
+        var diligenciaRealizadaId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var dbContext =
+                scope.ServiceProvider.GetRequiredService<JurigestDbContext>();
+
+            dbContext.DiligenciasRealizadas.Add(
+                new DiligenciaRealizadaCatalogo(
+                    diligenciaRealizadaId,
+                    "Gestión realizada de prueba",
+                    (int)TipoDiligencia.Otro));
+
+            await dbContext.SaveChangesAsync();
+        }
+
         var fechaEncargo = new DateTime(2026, 8, 1, 9, 0, 0, DateTimeKind.Utc);
         var fechaGestion = fechaEncargo.AddDays(4);
 
@@ -70,6 +127,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
             client, HttpMethod.Put, $"/api/Diligencias/{diligenciaId}/resultado", admin.Token,
             new
             {
+                diligenciaRealizadaId,
                 resultado = 1,
                 resultadoDetalle = "Notificación entregada",
                 estampe = "Estampe de integración",

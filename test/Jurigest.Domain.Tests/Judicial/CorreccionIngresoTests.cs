@@ -1,4 +1,4 @@
-using Jurigest.Domain.Judicial.Entities;
+﻿using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Judicial.Enums;
 
 namespace Jurigest.Domain.Tests.Judicial;
@@ -13,9 +13,15 @@ public sealed class CorreccionIngresoTests
     public void PrimeraDiligencia_PermiteCorregirInclusoConResultado(bool conResultado)
     {
         var causa = Crear();
-        var primera = causa.AgregarDiligencia("Notificación");
+        var primera = causa.AgregarDiligencia("NotificaciÃ³n");
         if (conResultado)
-            primera.RegistrarResultado((ResultadoDiligencia)1, "Resultado", "Estampe", DateTime.Today);
+            primera.RegistrarResultado(
+                Guid.NewGuid(),
+                "Diligencia realizada",
+                (ResultadoDiligencia)1,
+                "Resultado",
+                "Estampe",
+                DateTime.Today);
         var estado = primera.Estado;
         var fechaGestion = primera.FechaGestion;
 

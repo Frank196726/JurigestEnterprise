@@ -42,6 +42,10 @@ public sealed class Diligencia : Entity<Guid>
 
     public string? ResultadoDetalle { get; private set; }
 
+    public Guid? DiligenciaRealizadaId { get; private set; }
+
+    public string? DiligenciaRealizada { get; private set; }
+
     public string? Estampe { get; private set; }
 
     public DateTime? FechaGestion { get; private set; }
@@ -255,11 +259,35 @@ public sealed class Diligencia : Entity<Guid>
     }
 
     public void RegistrarResultado(
+        Guid diligenciaRealizadaId,
+        string diligenciaRealizada,
         ResultadoDiligencia resultado,
         string resultadoDetalle,
         string estampe,
         DateTime fechaGestion)
     {
+
+        if (diligenciaRealizadaId == Guid.Empty)
+        {
+        throw new ArgumentException(
+            "Debe indicar la diligencia realizada.",
+            nameof(diligenciaRealizadaId));
+        }
+
+        if (string.IsNullOrWhiteSpace(diligenciaRealizada))
+        {
+        throw new ArgumentException(
+            "El nombre de la diligencia realizada es obligatorio.",
+            nameof(diligenciaRealizada));
+        }
+
+        if (diligenciaRealizada.Trim().Length > 200)
+        {
+        throw new ArgumentException(
+            "El nombre de la diligencia realizada no puede superar 200 caracteres.",
+            nameof(diligenciaRealizada));
+        }
+
         if (resultado == ResultadoDiligencia.SinResultado)
         {
             throw new ArgumentException(
@@ -300,6 +328,12 @@ public sealed class Diligencia : Entity<Guid>
             throw new InvalidOperationException(
                 "No se puede registrar resultado en una diligencia cancelada.");
         }
+
+        DiligenciaRealizadaId =
+            diligenciaRealizadaId;
+
+        DiligenciaRealizada =
+            diligenciaRealizada.Trim();
 
         Resultado = resultado;
 

@@ -1,4 +1,4 @@
-using Jurigest.Application.Abstractions.Persistence;
+﻿using Jurigest.Application.Abstractions.Persistence;
 using MediatR;
 
 namespace Jurigest.Application.Judicial.Diligencias.Commands.RegistrarResultado;
@@ -6,21 +6,20 @@ namespace Jurigest.Application.Judicial.Diligencias.Commands.RegistrarResultado;
 public sealed class RegistrarResultadoDiligenciaCommandHandler
     : IRequestHandler<RegistrarResultadoDiligenciaCommand>
 {
-    private readonly IDiligenciaRepository
-        _diligenciaRepository;
-
-    private readonly ICausaRepository
-        _causaRepository;
+    private readonly IDiligenciaRepository _diligenciaRepository;
+    private readonly ICausaRepository _causaRepository;
+    private readonly IDiligenciaRealizadaCatalogoRepository
+        _diligenciaRealizadaCatalogoRepository;
 
     public RegistrarResultadoDiligenciaCommandHandler(
         IDiligenciaRepository diligenciaRepository,
-        ICausaRepository causaRepository)
+        ICausaRepository causaRepository,
+        IDiligenciaRealizadaCatalogoRepository diligenciaRealizadaCatalogoRepository)
     {
-        _diligenciaRepository =
-            diligenciaRepository;
-
-        _causaRepository =
-            causaRepository;
+        _diligenciaRepository = diligenciaRepository;
+        _causaRepository = causaRepository;
+        _diligenciaRealizadaCatalogoRepository =
+            diligenciaRealizadaCatalogoRepository;
     }
 
     public async Task Handle(
@@ -49,29 +48,35 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
                 "La causa asociada a la diligencia no existe.");
         }
 
-        // -------------------------------------------------
-        // 1. Registrar el resultado de la diligencia
-        // -------------------------------------------------
+        var diligenciaRealizada =
+            await _diligenciaRealizadaCatalogoRepository.GetByIdAsync(
+                request.DiligenciaRealizadaId,
+                cancellationToken);
+
+        if (diligenciaRealizada is null ||
+            !diligenciaRealizada.Activo)
+        {
+            throw new ArgumentException(
+                "La diligencia realizada seleccionada no existe o no está activa.");
+        }
+
+        if (diligenciaRealizada.CodigoTipoDiligencia !=
+            (int)diligencia.Tipo)
+        {
+            throw new ArgumentException(
+                "La diligencia realizada seleccionada no corresponde al tipo de diligencia encargada.");
+        }
 
         diligencia.RegistrarResultado(
+            diligenciaRealizada.Id,
+            diligenciaRealizada.Nombre,
             request.Resultado,
             request.ResultadoDetalle,
             request.Estampe,
             request.FechaGestion);
 
-        // -------------------------------------------------
-        // 2. Registrar la gestión efectiva de la causa
-        // -------------------------------------------------
-
         causa.RegistrarGestion(
             request.FechaGestion);
-
-        // -------------------------------------------------
-        // 3. Persistir ambos cambios juntos
-        //
-        // Diligencia y Causa están siendo rastreadas por
-        // el mismo JurigestDbContext.
-        // -------------------------------------------------
 
         await _causaRepository.SaveChangesAsync(
             cancellationToken);

@@ -5,6 +5,8 @@
 @using System.Net.Http.Json
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
+@using Jurigest.Web.Services.Estampes
+@using Jurigest.Domain.Judicial.Enums
 
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
@@ -16,13 +18,7 @@
     <header class="page-heading">
         <div>
 
-        <button type="button"
-            class="btn btn-outline-secondary mb-3"
-                @onclick="Volver">
-            ← Volver
-        </button>
-
-            <span class="eyebrow">Gestión judicial</span>
+             <span class="eyebrow">Gestión judicial</span>
 
             <h1>Registrar resultado de diligencia</h1>
 
@@ -225,6 +221,28 @@
                         gap:1rem;
                         margin-top:1.5rem;">
 
+            <label style="grid-column:1 / -1;">
+
+                <span>Diligencia realizada *</span>
+
+                <select class="form-control"
+                        @bind="_diligenciaRealizadaId">
+
+                    <option value="">
+                        Seleccionar diligencia realizada...
+                    </option>
+
+                     @foreach (var item in _diligenciasRealizadas)
+                    {
+                             <option value="@item.Id">
+                                 @item.Nombre
+                              </option>
+                     }
+
+                            </select>
+
+                        </label>
+
                         <label>
 
                             <span>Clasificación *</span>
@@ -260,71 +278,97 @@
 
                         <label style="grid-column:1 / -1;">
 
-                            <span>Resultado de la diligencia *</span>
+    <span>Resultado de la diligencia *</span>
 
-                            <input type="text"
-                                   class="form-control"
-                                   maxlength="500"
-                                   @bind="_resultadoDetalle"
-                                   placeholder="Ej.: Frustrada, oposición, no habido, domicilio inexistente..." />
+    <textarea class="form-control"
+              rows="5"
+              maxlength="500"
+              @bind="_resultadoDetalle"
+              placeholder="Ingrese el resultado de la diligencia">
+    </textarea>
 
-                        </label>
+</label>
 
-                        <label style="grid-column:1 / -1;">
+<div style="
+    grid-column:1 / -1;
+    display:flex;
+    gap:.75rem;
+    flex-wrap:wrap;
+    align-items:center;">
 
-                            <span>Estampe *</span>
+    <button type="button"
+            class="btn btn-outline-primary"
+            disabled="@_guardando"
+            @onclick="GenerarBorradorEstampe">
 
-                            <textarea class="form-control"
-                                      rows="10"
-                                      maxlength="8000"
-                                      @bind="_estampe"
-                                      placeholder="Ingrese el texto del estampe de la diligencia">
-                            </textarea>
+        Generar estampe
 
-                        </label>
+    </button>
 
-                    </div>
+    @if (!string.IsNullOrWhiteSpace(_estampe))
+    {
+        <span style="font-size:.9rem;color:#666;">
+            Revise el estampe antes de guardarlo.
+        </span>
+    }
 
-                    @if (!string.IsNullOrWhiteSpace(_mensaje))
-                    {
-                        <div class="@(
-                                _guardado
-                                    ? "alert alert-success"
-                                    : "alert alert-danger")"
-                             style="margin-top:1rem;">
+</div>
 
-                            @_mensaje
+<label style="grid-column:1 / -1;">
 
-                        </div>
-                    }
+    <span>Borrador de estampe *</span>
 
-                    <div style="
-                        display:flex;
-                        gap:.75rem;
-                        flex-wrap:wrap;
-                        margin-top:1.5rem;">
+    <textarea class="form-control"
+              rows="10"
+              maxlength="8000"
+              @bind="_estampe"
+              placeholder="El estampe generado aparecerá aquí y puede ser revisado antes de guardarlo.">
+    </textarea>
 
-                        <button type="button"
-                                class="btn btn-primary"
-                                disabled="@_guardando"
-                                @onclick="GuardarResultadoAsync">
+</label>
 
-                            @(_guardando
-                                ? "Guardando..."
-                                : "Guardar resultado")
+</div>
 
-                        </button>
+@if (!string.IsNullOrWhiteSpace(_mensaje))
+{
+    <div class="@(
+            _guardado
+                ? "alert alert-success"
+                : "alert alert-danger")"
+         style="margin-top:1rem;">
 
-                        <button type="button"
-                                class="btn btn-secondary"
-                                disabled="@_guardando"
-                                @onclick="CancelarEdicion">
+        @_mensaje
 
-                            Cancelar
+    </div>
+}
 
-                        </button>
+<div style="
+    display:flex;
+    gap:.75rem;
+    flex-wrap:wrap;
+    margin-top:1.5rem;">
 
-                    </div>
+    <button type="button"
+            class="btn btn-primary"
+            disabled="@(_guardando || string.IsNullOrWhiteSpace(_estampe))"
+            @onclick="GuardarResultadoAsync">
+
+        @(_guardando
+            ? "Guardando estampe..."
+            : "Guardar estampe")
+
+    </button>
+
+    <button type="button"
+            class="btn btn-secondary"
+            disabled="@_guardando"
+            @onclick="CancelarEdicion">
+
+        Cancelar
+
+    </button>
+
+</div>
                 }
 
             </div>
@@ -342,6 +386,11 @@
     private CausaResumen? _causa;
 
     private DiligenciaResponse? _diligencia;
+
+    private List<DiligenciaRealizadaItem> _diligenciasRealizadas =
+    new();
+
+    private Guid? _diligenciaRealizadaId;
 
     private int? _resultado;
 
@@ -390,6 +439,8 @@
                 return;
             }
 
+            await CargarDiligenciasRealizadasAsync();
+
             CargarResultadoExistente();
         }
         catch (UnauthorizedAccessException)
@@ -423,9 +474,25 @@
 
     private async Task CargarUltimaDiligenciaAsync()
     {
-        _diligencia =
+            _diligencia =
             await ApiClient.GetAsync<DiligenciaResponse>(
                 $"/api/Diligencias/causa/{CausaId}/ultima");
+    }
+
+    private async Task CargarDiligenciasRealizadasAsync()
+    {
+        if (_diligencia is null)
+    {
+        _diligenciasRealizadas.Clear();
+        return;
+    }
+
+    var resultado =
+        await ApiClient.GetAsync<List<DiligenciaRealizadaItem>>(
+            $"/api/catalogos/diligencias-realizadas?codigoTipoDiligencia={_diligencia.Tipo}");
+
+        _diligenciasRealizadas =
+        resultado ?? new List<DiligenciaRealizadaItem>();
     }
 
     private void CargarResultadoExistente()
@@ -435,6 +502,9 @@
         {
             return;
         }
+
+        _diligenciaRealizadaId =
+            _diligencia.DiligenciaRealizadaId;
 
         _resultado =
             _diligencia.Resultado;
@@ -474,32 +544,118 @@
 
     private void Volver()
 {
-        Navigation.NavigateTo(
-            $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}");
+    Navigation.NavigateTo(
+        $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}");
 }
 
-    private async Task GuardarResultadoAsync()
+private void GenerarBorradorEstampe()
+{
+    _mensaje = null;
+    _guardado = false;
+
+    if (_causa is null ||
+        _diligencia is null)
     {
-        _mensaje = null;
-        _guardado = false;
+        _mensaje =
+            "No existen antecedentes suficientes para generar el estampe.";
 
-        if (_diligencia is null)
-        {
-            _mensaje =
-                "No existe una diligencia disponible para registrar.";
+        return;
+    }
 
-            return;
-        }
+    if (!_resultado.HasValue ||
+        _resultado.Value <= 0)
+    {
+        _mensaje =
+            "Debe indicar primero la clasificación del resultado.";
 
-        if (!_resultado.HasValue ||
-            _resultado.Value <= 0)
-        {
-            _mensaje =
-                "Debe indicar la clasificación del resultado.";
+        return;
+    }
 
-            return;
-        }
+    if (string.IsNullOrWhiteSpace(
+            _resultadoDetalle))
+    {
+        _mensaje =
+            "Debe indicar primero el resultado de la diligencia.";
 
+        return;
+    }
+
+    if (!_fechaGestion.HasValue)
+    {
+        _mensaje =
+            "Debe indicar primero la fecha de gestión.";
+
+        return;
+    }
+
+    var diligenciaRealizada =
+        _diligenciasRealizadas.FirstOrDefault(
+            x =>
+                _diligenciaRealizadaId.HasValue &&
+                x.Id == _diligenciaRealizadaId.Value);
+
+    if (diligenciaRealizada is null)
+    {
+        _mensaje =
+            "Debe seleccionar una diligencia realizada válida.";
+
+        return;
+    }
+
+    try
+    {
+        _estampe =
+            GeneradorEstampe.Generar(
+                _causa.Rit,
+                _causa.Tribunal,
+                _causa.Descripcion,
+                _diligencia.Descripcion,
+                (TipoDiligencia)_diligencia.Tipo,
+                diligenciaRealizada.Nombre,
+                (ResultadoDiligencia)_resultado.Value,
+                _resultadoDetalle,
+                _fechaGestion.Value,
+                _diligencia.ReceptorJudicial,
+                _diligencia.Direccion,
+                _diligencia.Comuna);
+    }
+    catch (ArgumentException ex)
+    {
+        _mensaje =
+            ex.Message;
+    }
+}
+
+private async Task GuardarResultadoAsync()
+{
+    _mensaje = null;
+    _guardado = false;
+
+    if (_diligencia is null)
+    {
+        _mensaje =
+            "No existe una diligencia disponible para registrar.";
+
+        return;
+    }
+
+    if (!_diligenciaRealizadaId.HasValue ||
+        _diligenciaRealizadaId.Value == Guid.Empty)
+    {
+        _mensaje =
+            "Debe indicar la diligencia realizada.";
+
+        return;
+    }
+
+    if (!_resultado.HasValue ||
+        _resultado.Value <= 0)
+    {
+        _mensaje =
+            "Debe indicar la clasificación del resultado.";
+
+        return;
+    }
         if (string.IsNullOrWhiteSpace(_resultadoDetalle))
         {
             _mensaje =
@@ -542,6 +698,9 @@
                     JsonContent.Create(
                         new
                         {
+                            diligenciaRealizadaId =
+                                _diligenciaRealizadaId.Value,
+
                             resultado =
                                 _resultado.Value,
 
@@ -636,6 +795,10 @@
 
         public string? ResultadoDetalle { get; set; }
 
+        public Guid? DiligenciaRealizadaId { get; set; }
+
+        public string? DiligenciaRealizada { get; set; }
+
         public DateTime? FechaProgramada { get; set; }
 
         public DateTime? FechaGestion { get; set; }
@@ -649,5 +812,15 @@
         public string? Estampe { get; set; }
 
         public DateTime FechaCreacion { get; set; }
+    }
+
+    private sealed class DiligenciaRealizadaItem
+    {
+        public Guid Id { get; set; }
+
+        public string Nombre { get; set; } =
+        string.Empty;
+
+        public int CodigoTipoDiligencia { get; set; }
     }
 }

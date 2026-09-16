@@ -1,9 +1,11 @@
-using Jurigest.Domain.Judicial.Enums;
+﻿using Jurigest.Domain.Judicial.Enums;
 
 namespace Jurigest.API.Contracts;
 
 public sealed class RegistrarResultadoDiligenciaRequest
 {
+    public Guid DiligenciaRealizadaId { get; set; }
+
     public ResultadoDiligencia Resultado { get; set; }
 
     public string ResultadoDetalle { get; set; } =

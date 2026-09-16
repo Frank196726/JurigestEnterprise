@@ -31,6 +31,9 @@ public sealed class CatalogosController : ControllerBase
     private readonly IDiligenciaEncargadaCatalogoRepository
         _diligenciaEncargadaRepository;
 
+    private readonly IDiligenciaRealizadaCatalogoRepository
+        _diligenciaRealizadaRepository;
+
     public CatalogosController(
         ITipoDiligenciaCatalogoRepository tipoDiligenciaRepository,
         IReceptorJudicialCatalogoRepository receptorRepository,
@@ -38,7 +41,9 @@ public sealed class CatalogosController : ControllerBase
         ITipoCausaCatalogoRepository tipoCausaRepository,
         ITribunalCatalogoRepository tribunalRepository,
         IAbogadoCatalogoRepository abogadoRepository,
-        IDiligenciaEncargadaCatalogoRepository diligenciaEncargadaRepository)
+        IDiligenciaEncargadaCatalogoRepository diligenciaEncargadaRepository,
+        IDiligenciaRealizadaCatalogoRepository diligenciaRealizadaRepository)
+
     {
         _tipoDiligenciaRepository =
             tipoDiligenciaRepository;
@@ -60,6 +65,9 @@ public sealed class CatalogosController : ControllerBase
 
         _diligenciaEncargadaRepository =
             diligenciaEncargadaRepository;
+
+        _diligenciaRealizadaRepository =
+            diligenciaRealizadaRepository;
     }
 
     // ============================================================
@@ -313,7 +321,7 @@ public sealed class CatalogosController : ControllerBase
             return BadRequest(new
             {
                 mensaje =
-                    "Debe indicar nombre y código del tipo de causa."
+                    "Debe indicar nombre y cÃ³digo del tipo de causa."
             });
         }
 
@@ -345,7 +353,7 @@ public sealed class CatalogosController : ControllerBase
             return Conflict(new
             {
                 mensaje =
-                    "Ya existe un tipo de causa con ese código."
+                    "Ya existe un tipo de causa con ese cÃ³digo."
             });
         }
 
@@ -577,6 +585,36 @@ public sealed class CatalogosController : ControllerBase
             diligencia.Nombre,
             diligencia.CodigoTipoDiligencia
         });
+    }
+
+    // ============================================================
+    // DILIGENCIAS REALIZADAS
+    // ============================================================
+
+    [HttpGet("diligencias-realizadas")]
+    [Authorize(Policy = "DiligenciasLectura")]
+    public async Task<IActionResult> ObtenerDiligenciasRealizadas(
+        [FromQuery] int? codigoTipoDiligencia,
+        CancellationToken cancellationToken)
+    {
+        var diligencias =
+            codigoTipoDiligencia.HasValue
+                ? await _diligenciaRealizadaRepository
+                    .GetActivosPorTipoAsync(
+                        codigoTipoDiligencia.Value,
+                        cancellationToken)
+                : await _diligenciaRealizadaRepository
+                    .GetActivosAsync(
+                        cancellationToken);
+
+        return Ok(
+            diligencias.Select(
+                x => new
+                {
+                    x.Id,
+                    x.Nombre,
+                    x.CodigoTipoDiligencia
+                }));
     }
 
     // ============================================================
