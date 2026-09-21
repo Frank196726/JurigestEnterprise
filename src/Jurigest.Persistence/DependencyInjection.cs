@@ -1,4 +1,4 @@
-using Jurigest.Application.Abstractions.Persistence;
+﻿using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Persistence.Context;
 using Jurigest.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -27,6 +27,8 @@ public static class DependencyInjection
         services.AddScoped<ICausaRepository, CausaRepository>();
 
         services.AddScoped<IDiligenciaRepository, DiligenciaRepository>();
+
+        services.AddScoped<IReciboRepository, ReciboRepository>();
 
         services.AddScoped<
             ITipoDiligenciaCatalogoRepository,
@@ -100,3 +102,4 @@ public static class DependencyInjection
         return services;
     }
 }
+

@@ -4,6 +4,7 @@ using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Jurigest.Persistence.Migrations
 {
     [DbContext(typeof(JurigestDbContext))]
-    partial class JurigestDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260920214506_AgregarArancelDiligenciaRealizada")]
+    partial class AgregarArancelDiligenciaRealizada
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -517,51 +520,6 @@ namespace Jurigest.Persistence.Migrations
                     b.ToTable("Documentos", (string)null);
                 });
 
-            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Recibo", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("CausaId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<Guid>("DiligenciaId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<string>("DiligenciaRealizada")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<Guid>("DiligenciaRealizadaId")
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("Estado")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime>("FechaEmision")
-                        .HasColumnType("datetime2");
-
-                    b.Property<DateTime?>("FechaPago")
-                        .HasColumnType("datetime2");
-
-                    b.Property<decimal>("Monto")
-                        .HasPrecision(18)
-                        .HasColumnType("decimal(18,0)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("CausaId");
-
-                    b.HasIndex("DiligenciaId")
-                        .IsUnique();
-
-                    b.HasIndex("DiligenciaRealizadaId");
-
-                    b.ToTable("Recibos", (string)null);
-                });
-
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Resolucion", b =>
                 {
                     b.Property<Guid>("Id")
@@ -783,21 +741,6 @@ namespace Jurigest.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("CausaId")
                         .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-                });
-
-            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Recibo", b =>
-                {
-                    b.HasOne("Jurigest.Domain.Judicial.Entities.Causa", null)
-                        .WithMany()
-                        .HasForeignKey("CausaId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Jurigest.Domain.Judicial.Entities.Diligencia", null)
-                        .WithOne()
-                        .HasForeignKey("Jurigest.Domain.Judicial.Entities.Recibo", "DiligenciaId")
-                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

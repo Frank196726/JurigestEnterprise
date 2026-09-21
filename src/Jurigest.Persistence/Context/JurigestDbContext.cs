@@ -1,4 +1,4 @@
-using Jurigest.Domain.Judicial.Entities;
+﻿using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Seguridad.Entities;
 using Microsoft.EntityFrameworkCore;
 using Jurigest.Domain.Judicial.Catalogos;
@@ -15,6 +15,8 @@ public class JurigestDbContext : DbContext
     public DbSet<Causa> Causas => Set<Causa>();
 
     public DbSet<Diligencia> Diligencias => Set<Diligencia>();
+
+    public DbSet<Recibo> Recibos => Set<Recibo>();
 
     public DbSet<TipoDiligenciaCatalogo> TiposDiligencia =>
     Set<TipoDiligenciaCatalogo>();
@@ -64,3 +66,4 @@ public class JurigestDbContext : DbContext
         base.OnModelCreating(modelBuilder);
     }
 }
+

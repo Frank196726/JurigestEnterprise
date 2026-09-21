@@ -1,4 +1,5 @@
 ﻿using Jurigest.Application.Abstractions.Persistence;
+using Jurigest.Domain.Judicial.Entities;
 using MediatR;
 
 namespace Jurigest.Application.Judicial.Diligencias.Commands.RegistrarResultado;
@@ -10,16 +11,19 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
     private readonly ICausaRepository _causaRepository;
     private readonly IDiligenciaRealizadaCatalogoRepository
         _diligenciaRealizadaCatalogoRepository;
+    private readonly IReciboRepository _reciboRepository;
 
     public RegistrarResultadoDiligenciaCommandHandler(
         IDiligenciaRepository diligenciaRepository,
         ICausaRepository causaRepository,
-        IDiligenciaRealizadaCatalogoRepository diligenciaRealizadaCatalogoRepository)
+        IDiligenciaRealizadaCatalogoRepository diligenciaRealizadaCatalogoRepository,
+        IReciboRepository reciboRepository)
     {
         _diligenciaRepository = diligenciaRepository;
         _causaRepository = causaRepository;
         _diligenciaRealizadaCatalogoRepository =
             diligenciaRealizadaCatalogoRepository;
+        _reciboRepository = reciboRepository;
     }
 
     public async Task Handle(
@@ -77,6 +81,31 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
 
         causa.RegistrarGestion(
             request.FechaGestion);
+
+        if (diligenciaRealizada.Arancel.HasValue &&
+            diligenciaRealizada.Arancel.Value > 0)
+        {
+            var reciboExistente =
+                await _reciboRepository.GetByDiligenciaIdAsync(
+                    diligencia.Id,
+                    cancellationToken);
+
+            if (reciboExistente is null)
+            {
+                var recibo = new Recibo(
+                    Guid.NewGuid(),
+                    causa.Id,
+                    diligencia.Id,
+                    diligenciaRealizada.Id,
+                    diligenciaRealizada.Nombre,
+                    diligenciaRealizada.Arancel.Value,
+                    request.FechaGestion);
+
+                await _reciboRepository.AddAsync(
+                    recibo,
+                    cancellationToken);
+            }
+        }
 
         await _causaRepository.SaveChangesAsync(
             cancellationToken);

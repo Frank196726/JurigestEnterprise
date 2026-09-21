@@ -21,6 +21,10 @@ public sealed class DiligenciaRealizadaCatalogoConfiguration
         builder.Property(x => x.CodigoTipoDiligencia)
             .IsRequired();
 
+        builder.Property(x => x.Arancel)
+            .HasPrecision(18, 0)
+            .IsRequired(false);
+
         builder.Property(x => x.Activo)
             .IsRequired();
 

@@ -50,7 +50,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             new RegistrarResultadoDiligenciaCommandHandler(
                 diligenciaRepository,
                 causaRepository,
-                catalogoRepository);
+                catalogoRepository,
+                new ReciboRepositoryFake());
 
         await handler.Handle(
             new RegistrarResultadoDiligenciaCommand(
@@ -103,7 +104,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             new RegistrarResultadoDiligenciaCommandHandler(
                 diligenciaRepository,
                 causaRepository,
-                catalogoRepository);
+                catalogoRepository,
+                new ReciboRepositoryFake());
 
         await Assert.ThrowsAsync<InvalidOperationException>(
             () => handler.Handle(
@@ -140,7 +142,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             new RegistrarResultadoDiligenciaCommandHandler(
                 new DiligenciaRepositoryFake(diligencia),
                 causaRepository,
-                catalogoRepository);
+                catalogoRepository,
+                new ReciboRepositoryFake());
 
         var excepcion =
             await Assert.ThrowsAsync<InvalidOperationException>(
@@ -196,7 +199,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
                 new DiligenciaRepositoryFake(diligencia),
                 causaRepository,
                 new DiligenciaRealizadaCatalogoRepositoryFake(
-                    diligenciaRealizada));
+                    diligenciaRealizada),
+                new ReciboRepositoryFake());
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => handler.Handle(
@@ -243,7 +247,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             new RegistrarResultadoDiligenciaCommandHandler(
                 new DiligenciaRepositoryFake(diligencia),
                 causaRepository,
-                new DiligenciaRealizadaCatalogoRepositoryFake(null));
+                new DiligenciaRealizadaCatalogoRepositoryFake(null),
+                new ReciboRepositoryFake());
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => handler.Handle(
@@ -301,7 +306,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
                 new DiligenciaRepositoryFake(diligencia),
                 causaRepository,
                 new DiligenciaRealizadaCatalogoRepositoryFake(
-                    diligenciaRealizada));
+                    diligenciaRealizada),
+                new ReciboRepositoryFake());
 
         await Assert.ThrowsAsync<ArgumentException>(
             () => handler.Handle(
@@ -322,6 +328,171 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             causaRepository.SaveChangesCalls);
     }
 
+    [Fact]
+    public async Task Handle_NotificacionPersonalConArancel_GeneraReciboPendiente()
+    {
+        var fechaEncargo =
+            new DateTime(
+                2026, 9, 20, 9, 0, 0,
+                DateTimeKind.Utc);
+
+        var fechaGestion =
+            fechaEncargo.AddDays(1);
+
+        var causa =
+            new Causa(
+                "C-RECIBO-1-2026",
+                "1° Juzgado Civil",
+                "Persona A / Persona B",
+                fechaEncargo);
+
+        var diligencia =
+            causa.AgregarDiligencia(
+                "Notificación");
+
+        var diligenciaRealizada =
+            new DiligenciaRealizadaCatalogo(
+                Guid.NewGuid(),
+                "Notificación personal",
+                (int)diligencia.Tipo);
+
+        diligenciaRealizada.CambiarArancel(60000);
+
+        var causaRepository =
+            new CausaRepositoryFake(causa);
+
+        var reciboRepository =
+            new ReciboRepositoryFake();
+
+        var handler =
+            new RegistrarResultadoDiligenciaCommandHandler(
+                new DiligenciaRepositoryFake(diligencia),
+                causaRepository,
+                new DiligenciaRealizadaCatalogoRepositoryFake(
+                    diligenciaRealizada),
+                reciboRepository);
+
+        await handler.Handle(
+            new RegistrarResultadoDiligenciaCommand(
+                diligencia.Id,
+                diligenciaRealizada.Id,
+                ResultadoDiligencia.Positiva,
+                "Notificación entregada",
+                "Estampe receptor",
+                fechaGestion),
+            CancellationToken.None);
+
+        var recibo =
+            Assert.Single(
+                reciboRepository.RecibosAgregados);
+
+        Assert.Equal(
+            causa.Id,
+            recibo.CausaId);
+
+        Assert.Equal(
+            diligencia.Id,
+            recibo.DiligenciaId);
+
+        Assert.Equal(
+            diligenciaRealizada.Id,
+            recibo.DiligenciaRealizadaId);
+
+        Assert.Equal(
+            "Notificación personal",
+            recibo.DiligenciaRealizada);
+
+        Assert.Equal(
+            60000m,
+            recibo.Monto);
+
+        Assert.Equal(
+            EstadoRecibo.Pendiente,
+            recibo.Estado);
+
+        Assert.Equal(
+            fechaGestion,
+            recibo.FechaEmision);
+
+        Assert.Null(
+            recibo.FechaPago);
+
+        Assert.Equal(
+            1,
+            causaRepository.SaveChangesCalls);
+    }
+    [Fact]
+    public async Task Handle_DiligenciaConReciboExistente_NoGeneraDuplicado()
+    {
+        var fechaEncargo =
+            new DateTime(
+                2026, 9, 20, 9, 0, 0,
+                DateTimeKind.Utc);
+
+        var fechaGestion =
+            fechaEncargo.AddDays(1);
+
+        var causa =
+            new Causa(
+                "C-RECIBO-2-2026",
+                "1° Juzgado Civil",
+                "Persona A / Persona B",
+                fechaEncargo);
+
+        var diligencia =
+            causa.AgregarDiligencia(
+                "Notificación");
+
+        var diligenciaRealizada =
+            new DiligenciaRealizadaCatalogo(
+                Guid.NewGuid(),
+                "Notificación personal",
+                (int)diligencia.Tipo);
+
+        diligenciaRealizada.CambiarArancel(60000);
+
+        var reciboExistente =
+            new Recibo(
+                Guid.NewGuid(),
+                causa.Id,
+                diligencia.Id,
+                diligenciaRealizada.Id,
+                diligenciaRealizada.Nombre,
+                60000m,
+                fechaGestion.AddHours(-1));
+
+        var causaRepository =
+            new CausaRepositoryFake(causa);
+
+        var reciboRepository =
+            new ReciboRepositoryFake(
+                reciboExistente);
+
+        var handler =
+            new RegistrarResultadoDiligenciaCommandHandler(
+                new DiligenciaRepositoryFake(diligencia),
+                causaRepository,
+                new DiligenciaRealizadaCatalogoRepositoryFake(
+                    diligenciaRealizada),
+                reciboRepository);
+
+        await handler.Handle(
+            new RegistrarResultadoDiligenciaCommand(
+                diligencia.Id,
+                diligenciaRealizada.Id,
+                ResultadoDiligencia.Positiva,
+                "Notificación entregada",
+                "Estampe receptor",
+                fechaGestion),
+            CancellationToken.None);
+
+        Assert.Empty(
+            reciboRepository.RecibosAgregados);
+
+        Assert.Equal(
+            1,
+            causaRepository.SaveChangesCalls);
+    }
     private sealed class CausaRepositoryFake(Causa? causa)
         : ICausaRepository
     {
@@ -478,4 +649,50 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             CancellationToken cancellationToken) =>
             Task.CompletedTask;
     }
+
+    private sealed class ReciboRepositoryFake(
+        Recibo? recibo = null)
+        : IReciboRepository
+    {
+        public List<Recibo> RecibosAgregados { get; } = new();
+
+        public Task<Recibo?> GetByIdAsync(
+            Guid id,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                recibo?.Id == id
+                    ? recibo
+                    : RecibosAgregados.FirstOrDefault(x => x.Id == id));
+
+        public Task<Recibo?> GetByDiligenciaIdAsync(
+            Guid diligenciaId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                recibo?.DiligenciaId == diligenciaId
+                    ? recibo
+                    : RecibosAgregados.FirstOrDefault(
+                        x => x.DiligenciaId == diligenciaId));
+
+        public Task<List<Recibo>> GetAllAsync(
+            CancellationToken cancellationToken) =>
+            Task.FromResult(
+                RecibosAgregados.ToList());
+
+        public Task AddAsync(
+            Recibo reciboNuevo,
+            CancellationToken cancellationToken)
+        {
+            RecibosAgregados.Add(reciboNuevo);
+            return Task.CompletedTask;
+        }
+
+        public Task UpdateAsync(
+            Recibo reciboActualizado,
+            CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+    }
 }
+
+
+
+

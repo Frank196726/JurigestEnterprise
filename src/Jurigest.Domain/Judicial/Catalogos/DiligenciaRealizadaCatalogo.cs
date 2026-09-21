@@ -21,6 +21,8 @@ public sealed class DiligenciaRealizadaCatalogo : Entity<Guid>
         FechaCreacion = DateTime.UtcNow;
     }
 
+    public decimal? Arancel { get; private set; }
+
     public string Nombre { get; private set; } =
         string.Empty;
 
@@ -64,6 +66,18 @@ public sealed class DiligenciaRealizadaCatalogo : Entity<Guid>
 
     public void Activar() =>
         Activo = true;
+
+    public void CambiarArancel(decimal? arancel)
+    {
+        if (arancel.HasValue && arancel.Value < 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(arancel),
+                "El arancel no puede ser negativo.");
+        }
+
+        Arancel = arancel;
+    }
 
     public void Desactivar() =>
         Activo = false;
