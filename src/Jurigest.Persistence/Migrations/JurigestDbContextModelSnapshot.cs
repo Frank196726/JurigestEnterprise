@@ -141,6 +141,32 @@ namespace Jurigest.Persistence.Migrations
                     b.ToTable("DiligenciasRealizadas", (string)null);
                 });
 
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.MateriaCatalogo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.ToTable("Materias", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("ab854cf1-3121-4bf3-912f-2157537ab901"),
+                            Nombre = "Ejecutivo"
+                        });
+                });
+
             modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.ReceptorJudicialCatalogo", b =>
                 {
                     b.Property<Guid>("Id")
@@ -348,6 +374,66 @@ namespace Jurigest.Persistence.Migrations
                     b.ToTable("Tribunales", (string)null);
                 });
 
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Catalogos.VehiculoOpcion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Categoria")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Categoria", "Nombre")
+                        .IsUnique();
+
+                    b.ToTable("VehiculoOpciones", (string)null);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.AvalSolidario", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("DemandadoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RepresentanteLegal")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Rut")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("RutRepresentanteLegal")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<int>("TipoPersona")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DemandadoId");
+
+                    b.ToTable("AvalesSolidarios", (string)null);
+                });
+
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Causa", b =>
                 {
                     b.Property<Guid>("Id")
@@ -371,6 +457,13 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<DateTime?>("FechaGestionCausa")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Materia")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<Guid?>("MateriaId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("NumeroRol")
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -392,11 +485,54 @@ namespace Jurigest.Persistence.Migrations
 
                     b.HasIndex("FechaGestionCausa");
 
+                    b.HasIndex("MateriaId");
+
                     b.HasIndex("TipoCausaId");
 
                     b.HasIndex("TipoCausaId", "NumeroRol");
 
                     b.ToTable("Causas", (string)null);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Demandado", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("CausaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("EsPrincipal")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("RepresentanteLegal")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Rut")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("RutRepresentanteLegal")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<int>("TipoPersona")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CausaId", "EsPrincipal")
+                        .IsUnique()
+                        .HasFilter("[EsPrincipal] = 1");
+
+                    b.ToTable("Demandados", (string)null);
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Diligencia", b =>
@@ -517,14 +653,80 @@ namespace Jurigest.Persistence.Migrations
                     b.ToTable("Documentos", (string)null);
                 });
 
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.ModeloEstampe", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<bool>("Activo")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Contenido")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<Guid?>("DiligenciaRealizadaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("FechaActualizacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime>("FechaCreacion")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("Resultado")
+                        .HasColumnType("int");
+
+                    b.Property<int>("TipoDiligencia")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Nombre")
+                        .IsUnique();
+
+                    b.HasIndex("DiligenciaRealizadaId", "Resultado", "Activo");
+
+                    b.HasIndex("TipoDiligencia", "Resultado", "Activo");
+
+                    b.ToTable("ModelosEstampe", (string)null);
+                });
+
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Recibo", b =>
                 {
                     b.Property<Guid>("Id")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
+                    b.Property<string>("Abogado")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Caratulado")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
                     b.Property<Guid>("CausaId")
                         .HasColumnType("uniqueidentifier");
+
+                    b.Property<decimal?>("Cuantia")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("DetalleAdicionales")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("DiligenciaEncargada")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<Guid>("DiligenciaId")
                         .HasColumnType("uniqueidentifier");
@@ -550,6 +752,40 @@ namespace Jurigest.Persistence.Migrations
                         .HasPrecision(18)
                         .HasColumnType("decimal(18,0)");
 
+                    b.Property<long>("Numero")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Numero"));
+
+                    b.Property<string>("NumeroOperacion")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Observacion")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Receptor")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Rol")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("TotalAdicionales")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<string>("Tribunal")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<decimal>("ValorGestion")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CausaId");
@@ -558,6 +794,9 @@ namespace Jurigest.Persistence.Migrations
                         .IsUnique();
 
                     b.HasIndex("DiligenciaRealizadaId");
+
+                    b.HasIndex("Numero")
+                        .IsUnique();
 
                     b.ToTable("Recibos", (string)null);
                 });
@@ -587,6 +826,131 @@ namespace Jurigest.Persistence.Migrations
                     b.HasIndex("CausaId");
 
                     b.ToTable("Resoluciones", (string)null);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.VehiculoEncargo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("AlzamientoProhibicion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("Ano")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Chasis")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Cilindrada")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<decimal>("DerechosInscripcion")
+                        .HasPrecision(18)
+                        .HasColumnType("decimal(18,0)");
+
+                    b.Property<Guid>("DiligenciaId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Direccion")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("FechaDocumento")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LimitacionDominio")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("LugarSolicitud")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Marca")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Modelo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Motor")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("NumeroSolicitud")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Observaciones")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("Patente")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("RutTitular")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Serie")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TipoAdquisicion")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("TipoDocumento")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int>("TipoPropietario")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TipoVehiculo")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DiligenciaId", "Patente")
+                        .IsUnique();
+
+                    b.ToTable("VehiculosEncargo", (string)null);
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.AuditoriaSeguridad", b =>
@@ -626,6 +990,76 @@ namespace Jurigest.Persistence.Migrations
                     b.HasIndex("UsuarioAfectadoId");
 
                     b.ToTable("AuditoriasSeguridad", (string)null);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.PermisosRol", b =>
+                {
+                    b.Property<string>("Clave")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("SeleccionJson")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<Guid>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.HasKey("Clave");
+
+                    b.ToTable("PermisosRoles", (string)null);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.RolCatalogo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Nombre")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("NombreNormalizado")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<int>("Perfil")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NombreNormalizado")
+                        .IsUnique();
+
+                    b.ToTable("RolesCatalogo", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("71000000-0000-0000-0000-000000000001"),
+                            Nombre = "Receptor",
+                            NombreNormalizado = "RECEPTOR",
+                            Perfil = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("71000000-0000-0000-0000-000000000002"),
+                            Nombre = "Operador",
+                            NombreNormalizado = "OPERADOR",
+                            Perfil = 3
+                        },
+                        new
+                        {
+                            Id = new Guid("71000000-0000-0000-0000-000000000003"),
+                            Nombre = "Digitador",
+                            NombreNormalizado = "DIGITADOR",
+                            Perfil = 3
+                        });
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.SesionUsuario", b =>
@@ -729,6 +1163,13 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<DateTime?>("BloqueadoHastaUtc")
                         .HasColumnType("datetime2");
 
+                    b.Property<bool>("DebeCambiarPassword")
+                        .HasColumnType("bit");
+
+                    b.Property<string>("Direccion")
+                        .HasMaxLength(250)
+                        .HasColumnType("nvarchar(250)");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(320)
@@ -747,6 +1188,14 @@ namespace Jurigest.Persistence.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("nvarchar(200)");
 
+                    b.Property<string>("NombreRolPersonalizado")
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.Property<string>("NumeroOficina")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasMaxLength(1000)
@@ -754,6 +1203,17 @@ namespace Jurigest.Persistence.Migrations
 
                     b.Property<int>("Rol")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("RolCatalogoId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Rut")
+                        .HasMaxLength(12)
+                        .HasColumnType("nvarchar(12)");
+
+                    b.Property<string>("Telefono")
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
 
                     b.Property<int>("VersionSeguridad")
                         .ValueGeneratedOnAdd()
@@ -765,7 +1225,39 @@ namespace Jurigest.Persistence.Migrations
                     b.HasIndex("Email")
                         .IsUnique();
 
+                    b.HasIndex("RolCatalogoId");
+
+                    b.HasIndex("Rut")
+                        .IsUnique()
+                        .HasFilter("[Rut] IS NOT NULL");
+
                     b.ToTable("Usuarios", (string)null);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.AvalSolidario", b =>
+                {
+                    b.HasOne("Jurigest.Domain.Judicial.Entities.Demandado", null)
+                        .WithMany("Avales")
+                        .HasForeignKey("DemandadoId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Causa", b =>
+                {
+                    b.HasOne("Jurigest.Domain.Judicial.Catalogos.MateriaCatalogo", null)
+                        .WithMany()
+                        .HasForeignKey("MateriaId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Demandado", b =>
+                {
+                    b.HasOne("Jurigest.Domain.Judicial.Entities.Causa", null)
+                        .WithMany("Demandados")
+                        .HasForeignKey("CausaId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Diligencia", b =>
@@ -810,6 +1302,15 @@ namespace Jurigest.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.VehiculoEncargo", b =>
+                {
+                    b.HasOne("Jurigest.Domain.Judicial.Entities.Diligencia", null)
+                        .WithMany()
+                        .HasForeignKey("DiligenciaId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.SesionUsuario", b =>
                 {
                     b.HasOne("Jurigest.Domain.Seguridad.Entities.Usuario", null)
@@ -828,9 +1329,24 @@ namespace Jurigest.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.Usuario", b =>
+                {
+                    b.HasOne("Jurigest.Domain.Seguridad.Entities.RolCatalogo", null)
+                        .WithMany()
+                        .HasForeignKey("RolCatalogoId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Causa", b =>
                 {
+                    b.Navigation("Demandados");
+
                     b.Navigation("Diligencias");
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Demandado", b =>
+                {
+                    b.Navigation("Avales");
                 });
 #pragma warning restore 612, 618
         }

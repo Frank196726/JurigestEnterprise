@@ -11,8 +11,14 @@ public sealed class CausaConfiguration
         EntityTypeBuilder<Causa> builder)
     {
         builder.ToTable("Causas");
+        builder.Property(x => x.Materia).HasMaxLength(200);
+        builder.HasOne<Jurigest.Domain.Judicial.Catalogos.MateriaCatalogo>().WithMany()
+            .HasForeignKey(x => x.MateriaId).OnDelete(DeleteBehavior.Restrict);
         builder.Ignore(x => x.PuedeCorregirIngreso);
         builder.Ignore(x => x.PrimeraDiligencia);
+        builder.HasMany(x => x.Demandados).WithOne().HasForeignKey(x => x.CausaId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Navigation(x => x.Demandados).UsePropertyAccessMode(PropertyAccessMode.Field);
 
         builder.HasKey(
             x => x.Id);

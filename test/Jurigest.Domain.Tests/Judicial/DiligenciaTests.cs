@@ -74,4 +74,14 @@ public sealed class DiligenciaTests
                 "Estampe",
                 DateTime.UtcNow));
     }
+
+    [Fact]
+    public void RegistrarResultado_SinDetalle_GuardaCertificacionSinTextoAdicional()
+    {
+        var diligencia = new Diligencia(Guid.NewGuid(), Guid.NewGuid(), "Notificación");
+        diligencia.RegistrarResultado(Guid.NewGuid(), "Búsqueda negativa",
+            ResultadoDiligencia.Negativa, null, "CERTIFICO:\nTexto del modelo", DateTime.UtcNow);
+        Assert.Null(diligencia.ResultadoDetalle);
+        Assert.Equal(EstadoDiligencia.Completada, diligencia.Estado);
+    }
 }

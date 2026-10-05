@@ -1,6 +1,6 @@
 @page "/causas/{CausaId:guid}/diligencias/nueva"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "DiligenciasGestion")]
 
 @using System.Net.Http.Json
 @using Jurigest.Web.Models
@@ -142,7 +142,7 @@
                     </div>
 
                     <label>
-                        <span>Fecha programada</span>
+                        <span>Fecha de diligencia</span>
 
                         <input type="datetime-local"
                                class="form-control"

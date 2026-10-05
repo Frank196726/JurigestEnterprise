@@ -324,3 +324,36 @@ tbody tr:hover {
         grid-column: auto;
     }
 }
+
+/* Distribución de ficha de gestión, con seguimiento lateral. */
+.reference-layout { width:100%; max-width:none; display:grid; grid-template-columns:minmax(0,1fr) 18rem; gap:1rem; align-items:start; }
+.reference-layout > .page-heading { grid-column:1 / -1; }
+.reference-layout .history-card { grid-column:1; grid-row:2; }
+.reference-layout .management-card { grid-column:1; grid-row:3; padding:1rem; }
+.reference-layout .gestion-sidebar { grid-column:2; grid-row:2 / span 2; display:grid; gap:1rem; }
+.history-card, .sidebar-card { background:white; border:1px solid #dbe3df; border-radius:.5rem; padding:1rem; }
+.history-card h2, .sidebar-card h2 { font-size:1rem; margin:0 0 .8rem; }
+.history-scroll { overflow-x:auto; }
+.history-card table { width:100%; border-collapse:collapse; font-size:.8rem; }
+.history-card th { background:#4b9262; color:white; padding:.45rem; white-space:nowrap; }
+.history-card td { padding:.65rem; text-align:center; border:1px solid #dbe3df; }
+.sidebar-card form { display:grid; gap:.6rem; }
+.sidebar-card p { display:flex; justify-content:space-between; gap:1rem; font-size:.85rem; }
+.sidebar-card strong { color:#255b38; }
+.reference-layout .management-heading .eyebrow, .reference-layout .management-heading p { display:none; }
+.reference-layout .management-heading h2 { font-size:1.1rem; margin-bottom:1rem; }
+.reference-layout .main-fields { grid-template-columns:repeat(4,minmax(0,1fr)); gap:.8rem; }
+.reference-layout .rol-preview { padding:.5rem .75rem; background:#f1f7f2; }
+.reference-layout .rol-preview .eyebrow { display:inline; margin-right:.6rem; }
+.caratula-box { min-width:0; border:1px solid #dbe3df; border-radius:.5rem; padding:.8rem; }
+.caratula-box legend { width:auto; padding:0 .4rem; font-size:.95rem; }
+.caratula-fields { display:grid; grid-template-columns:1fr auto 1fr; align-items:start; gap:.7rem; }
+.caratula-con { align-self:center; }
+.reference-layout ::deep input:not([type=checkbox]), .reference-layout ::deep select, .reference-layout ::deep textarea { width:100%; box-sizing:border-box; border:1px solid #cbd5e1; border-radius:.35rem; padding:.5rem .6rem; background:white; color:#172033; font:inherit; }
+.reference-layout ::deep button { border-radius:.35rem; padding:.45rem .65rem; font-size:.8rem; }
+.reference-layout ::deep .form-actions button[type=submit] { background:#397e50; border:1px solid #397e50; color:white; }
+.reference-layout .observations-field textarea { min-height:6rem; }
+.reference-layout .form-actions { position:sticky; bottom:0; background:white; padding:.8rem 0; border-top:1px solid #e2e8f0; z-index:2; }
+@media(max-width:1200px) { .reference-layout { grid-template-columns:minmax(0,1fr) 15rem; } .reference-layout .main-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:900px) { .reference-layout { grid-template-columns:1fr; } .reference-layout .gestion-sidebar { grid-column:1; grid-row:4; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); } }
+@media(max-width:600px) { .reference-layout .main-fields, .caratula-fields { grid-template-columns:1fr; } .caratula-con { display:none; } }

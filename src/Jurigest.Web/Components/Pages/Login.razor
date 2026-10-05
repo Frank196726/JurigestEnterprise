@@ -28,6 +28,13 @@
                         </div>
                     }
 
+                    @if (ClaveActualizada)
+                    {
+                        <div class="alert alert-success" role="status">
+                            Contraseña actualizada. Ya puedes iniciar sesión con tu nueva clave.
+                        </div>
+                    }
+
                     <form method="post"
                           action="/auth/login">
 
@@ -85,6 +92,9 @@
     [SupplyParameterFromQuery(Name = "error")]
     private string? Error { get; set; }
 
+    [SupplyParameterFromQuery(Name = "claveActualizada")]
+    private bool ClaveActualizada { get; set; }
+
     private string? MensajeError =>
         Error switch
         {
@@ -102,6 +112,9 @@
 
             "servicio" =>
                 "No fue posible iniciar sesión en este momento.",
+
+            "sesion" =>
+                "La sesión expiró. Inicia sesión nuevamente.",
 
             _ => null
         };

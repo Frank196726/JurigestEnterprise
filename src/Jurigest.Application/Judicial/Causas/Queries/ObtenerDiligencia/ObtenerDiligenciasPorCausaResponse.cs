@@ -16,4 +16,7 @@ public sealed record ObtenerDiligenciasPorCausaResponse(
     string? ReceptorJudicial,
     string? Direccion,
     string? Comuna,
-    string? Estampe);
+    string? Estampe)
+{
+    public string? DiligenciaRealizada { get; init; }
+}

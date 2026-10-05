@@ -24,6 +24,15 @@ public sealed class ObtenerCausasQueryHandler
             await _repository.GetAllAsync(
                 cancellationToken);
 
+        if (!string.IsNullOrWhiteSpace(request.ReceptorAsignado))
+        {
+            causas = causas.Where(c => c.Diligencias.Any(d =>
+                string.Equals(
+                    d.ReceptorJudicial?.Trim(),
+                    request.ReceptorAsignado.Trim(),
+                    StringComparison.OrdinalIgnoreCase))).ToList();
+        }
+
         var hoy = DateTime.UtcNow.Date;
 
         return causas

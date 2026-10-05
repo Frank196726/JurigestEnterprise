@@ -80,6 +80,14 @@ public sealed class JwtTokenService : ITokenService
                 usuario.Rol.ToString()),
 
             new Claim(
+                "rol_asignado",
+                usuario.NombreRolPersonalizado ?? usuario.Rol.ToString()),
+
+            new Claim(
+                "debe_cambiar_password",
+                usuario.DebeCambiarPassword ? "true" : "false"),
+
+            new Claim(
                 JwtRegisteredClaimNames.Jti,
                 Guid.NewGuid().ToString())
         };

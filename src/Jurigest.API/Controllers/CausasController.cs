@@ -1,6 +1,9 @@
 using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarCausa;
 using Jurigest.Application.Judicial.Causas.Commands.CrearCausa;
+using Jurigest.Application.Judicial.Causas.Commands.AgregarDemandado;
+using Jurigest.Application.Judicial.Causas.Commands.AgregarAvalSolidario;
+using Jurigest.Application.Judicial.Causas.Commands.ActualizarIdentificacionParte;
 using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
 using Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
 using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
@@ -29,6 +32,7 @@ public sealed class CausasController : ControllerBase
     [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> Crear(
         [FromBody] CrearCausaRequest request,
+        [FromServices] Jurigest.Persistence.Context.JurigestDbContext db,
         CancellationToken cancellationToken)
     {
         if (request is null)
@@ -39,15 +43,24 @@ public sealed class CausasController : ControllerBase
             });
         }
 
+        var materia = request.MateriaId.HasValue ? await db.Materias.FindAsync(new object[] { request.MateriaId.Value }, cancellationToken) : null;
+        if (request.MateriaId.HasValue && materia is null) return BadRequest(new { mensaje = "La materia seleccionada no existe." });
         var command = new CrearCausaCommand
         {
             Id = request.Id,
+            MateriaId = materia?.Id,
+            Materia = materia?.Nombre,
             Rit = request.Rit,
             TipoCausaId = request.TipoCausaId,
             NumeroRol = request.NumeroRol,
             Tribunal = request.Tribunal,
             Descripcion = request.Descripcion,
-            FechaEncargoCausa = request.FechaEncargoCausa
+            FechaEncargoCausa = request.FechaEncargoCausa,
+            Demandados = (request.Demandados ?? []).Select(x => new DemandadoInput(
+                x.Nombre, x.TipoPersona, x.EsPrincipal,
+                (x.Avales ?? []).Select(a => new AvalSolidarioInput(a.Nombre, a.TipoPersona,
+                    a.Rut, a.RepresentanteLegal, a.RutRepresentanteLegal)).ToList(),
+                x.Rut, x.RepresentanteLegal, x.RutRepresentanteLegal)).ToList()
         };
 
         try
@@ -71,7 +84,7 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerCausasQuery(),
+            new ObtenerCausasQuery(ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
@@ -84,7 +97,7 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerCausaQuery(id),
+            new ObtenerCausaQuery(id, ObtenerFiltroReceptor()),
             cancellationToken);
 
         if (resultado is null)
@@ -98,6 +111,70 @@ public sealed class CausasController : ControllerBase
         return Ok(resultado);
     }
 
+    [HttpPost("{causaId:guid}/demandados")]
+    [Authorize(Policy = "CausasEscritura")]
+    public async Task<IActionResult> AgregarDemandado(
+        Guid causaId, [FromBody] AgregarParteRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null) return BadRequest(new { mensaje = "Debe indicar el demandado." });
+        try
+        {
+            var id = await _mediator.Send(new AgregarDemandadoCommand(
+                causaId, request.Nombre, request.TipoPersona, request.EsPrincipal,
+                request.Rut, request.RepresentanteLegal, request.RutRepresentanteLegal), cancellationToken);
+            return id is null ? NotFound() : Ok(new { id });
+        }
+        catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+    }
+
+    [HttpPost("{causaId:guid}/demandados/{demandadoId:guid}/avales")]
+    [Authorize(Policy = "CausasEscritura")]
+    public async Task<IActionResult> AgregarAvalSolidario(
+        Guid causaId, Guid demandadoId, [FromBody] AgregarParteRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null) return BadRequest(new { mensaje = "Debe indicar el aval solidario." });
+        try
+        {
+            var id = await _mediator.Send(new AgregarAvalSolidarioCommand(
+                causaId, demandadoId, request.Nombre, request.TipoPersona,
+                request.Rut, request.RepresentanteLegal, request.RutRepresentanteLegal), cancellationToken);
+            return id is null ? NotFound() : Ok(new { id });
+        }
+        catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+    }
+
+    [HttpPut("{causaId:guid}/demandados/{demandadoId:guid}/identificacion")]
+    [Authorize(Policy = "CausasEscritura")]
+    public Task<IActionResult> ActualizarDemandado(
+        Guid causaId, Guid demandadoId, [FromBody] ActualizarIdentificacionParteRequest request,
+        CancellationToken cancellationToken) =>
+        ActualizarIdentificacion(causaId, demandadoId, null, request, cancellationToken);
+
+    [HttpPut("{causaId:guid}/demandados/{demandadoId:guid}/avales/{avalId:guid}/identificacion")]
+    [Authorize(Policy = "CausasEscritura")]
+    public Task<IActionResult> ActualizarAval(
+        Guid causaId, Guid demandadoId, Guid avalId,
+        [FromBody] ActualizarIdentificacionParteRequest request, CancellationToken cancellationToken) =>
+        ActualizarIdentificacion(causaId, demandadoId, avalId, request, cancellationToken);
+
+    private async Task<IActionResult> ActualizarIdentificacion(
+        Guid causaId, Guid demandadoId, Guid? avalId,
+        ActualizarIdentificacionParteRequest request, CancellationToken cancellationToken)
+    {
+        if (request is null) return BadRequest(new { mensaje = "Debe indicar los datos de identificación." });
+        try
+        {
+            var actualizado = await _mediator.Send(new ActualizarIdentificacionParteCommand(
+                causaId, demandadoId, avalId, request.Rut,
+                request.RepresentanteLegal, request.RutRepresentanteLegal), cancellationToken);
+            return actualizado ? NoContent() : NotFound();
+        }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+    }
+
     [HttpGet("rit/{rit}")]
     [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> BuscarPorRit(
@@ -105,7 +182,7 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new BuscarCausaPorRitQuery(rit),
+            new BuscarCausaPorRitQuery(rit, ObtenerFiltroReceptor()),
             cancellationToken);
 
         if (resultado is null)
@@ -119,12 +196,12 @@ public sealed class CausasController : ControllerBase
         return Ok(resultado);
     }
 
-        [HttpPut("{id:guid}")]
-        [Authorize(Policy = "CausasEscritura")]
+    [HttpPut("{id:guid}")]
+    [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> Actualizar(
-        Guid id,
-        [FromBody] ActualizarCausaRequest request,
-        CancellationToken cancellationToken)
+    Guid id,
+    [FromBody] ActualizarCausaRequest request,
+    CancellationToken cancellationToken)
     {
         if (request is null)
         {
@@ -136,14 +213,15 @@ public sealed class CausasController : ControllerBase
 
         var command = new ActualizarCausaCommand
         {
-    	Id = id,
-    	Tribunal = request.Tribunal,
-    	Descripcion = request.Descripcion,
-    	FechaEncargoCausa = request.FechaEncargoCausa,
-    	DiligenciaId = request.DiligenciaId,
-    	DiligenciaEncargadaId = request.DiligenciaEncargadaId,
-    	FechaProgramada = request.FechaProgramada
-	};
+            Id = id,
+            Tribunal = request.Tribunal,
+            Descripcion = request.Descripcion,
+            FechaEncargoCausa = request.FechaEncargoCausa,
+            DiligenciaId = request.DiligenciaId,
+            DiligenciaEncargadaId = request.DiligenciaEncargadaId,
+            FechaProgramada = request.FechaProgramada,
+            ReceptorJudicial = request.ReceptorJudicial
+        };
 
         try
         {
@@ -192,7 +270,8 @@ public sealed class CausasController : ControllerBase
         var command = new CrearDiligenciaCommand(
             causaId,
             request.Descripcion,
-            request.Tipo);
+            request.Tipo,
+            ObtenerFiltroReceptor());
 
         var id = await _mediator.Send(
             command,
@@ -209,7 +288,7 @@ public sealed class CausasController : ControllerBase
     [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> ObtenerReporte(CancellationToken cancellationToken)
     {
-        return Ok(await _mediator.Send(new ObtenerReporteCausasQuery(), cancellationToken));
+        return Ok(await _mediator.Send(new ObtenerReporteCausasQuery(ObtenerFiltroReceptor()), cancellationToken));
     }
 
     [HttpGet("panel-ejecutivo")]
@@ -218,9 +297,17 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerPanelEjecutivoQuery(),
+            new ObtenerPanelEjecutivoQuery(ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
+    }
+
+    private string? ObtenerFiltroReceptor()
+    {
+        var rolAsignado = User.FindFirst("rol_asignado")?.Value;
+        return string.Equals(rolAsignado, "Receptor", StringComparison.OrdinalIgnoreCase)
+            ? User.Identity?.Name
+            : null;
     }
 }

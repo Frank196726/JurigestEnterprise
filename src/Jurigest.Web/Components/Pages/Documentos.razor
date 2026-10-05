@@ -1,6 +1,6 @@
 @page "/documentos"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "DocumentosLectura")]
 
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
@@ -41,7 +41,7 @@
         </label>
     </section>
 
-    <AuthorizeView Roles="Administrador,Abogado,Procurador">
+    <AuthorizeView Policy="DocumentosCarga">
         <Authorized>
             <section class="upload-card">
                 <div class="upload-heading">

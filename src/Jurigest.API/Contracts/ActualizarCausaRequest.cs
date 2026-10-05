@@ -13,4 +13,6 @@ public sealed class ActualizarCausaRequest
     public Guid? DiligenciaEncargadaId { get; set; }
 
     public DateTime? FechaProgramada { get; set; }
+
+    public string? ReceptorJudicial { get; set; }
 }

@@ -41,7 +41,7 @@ public sealed class SesionAuthenticationHandler
         var sesion =
             _sesionStore.Obtener(identificador);
 
-        if (sesion is null)
+        if (sesion is null || sesion.ExpiresAtUtc <= DateTime.UtcNow || sesion.RefreshTokenExpiresAtUtc <= DateTime.UtcNow)
         {
             return Task.FromResult(
                 AuthenticateResult.Fail(
@@ -64,7 +64,13 @@ public sealed class SesionAuthenticationHandler
 
             new Claim(
                 ClaimTypes.Role,
-                sesion.Rol)
+                sesion.Rol),
+
+            new Claim("rol_asignado", sesion.RolAsignado),
+
+            new Claim(
+                "debe_cambiar_password",
+                sesion.DebeCambiarPassword ? "true" : "false")
         };
 
         var identidad = new ClaimsIdentity(
@@ -87,6 +93,12 @@ public sealed class SesionAuthenticationHandler
         AuthenticationProperties properties)
     {
         Response.Redirect("/login");
+        return Task.CompletedTask;
+    }
+
+    protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        Response.Redirect("/acceso-denegado");
         return Task.CompletedTask;
     }
 }

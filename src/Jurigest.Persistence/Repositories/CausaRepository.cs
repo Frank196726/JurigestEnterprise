@@ -7,6 +7,17 @@ namespace Jurigest.Persistence.Repositories;
 
 public sealed class CausaRepository : ICausaRepository
 {
+    public Task AddDemandadoAsync(Demandado demandado, CancellationToken cancellationToken)
+    {
+        _context.Demandados.Add(demandado);
+        return Task.CompletedTask;
+    }
+
+    public Task AddAvalSolidarioAsync(AvalSolidario aval, CancellationToken cancellationToken)
+    {
+        _context.AvalesSolidarios.Add(aval);
+        return Task.CompletedTask;
+    }
     private readonly JurigestDbContext _context;
 
     public CausaRepository(JurigestDbContext context)
@@ -28,6 +39,7 @@ public sealed class CausaRepository : ICausaRepository
     {
         return await _context.Causas
             .Include(c => c.Diligencias)
+            .Include(c => c.Demandados).ThenInclude(d => d.Avales)
             .FirstOrDefaultAsync(c => c.Id == id, cancellationToken);
     }
 
@@ -43,6 +55,7 @@ public sealed class CausaRepository : ICausaRepository
         CancellationToken cancellationToken)
     {
         return await _context.Causas
+            .Include(c => c.Diligencias)
             .OrderBy(c => c.FechaCreacion)
             .ToListAsync(cancellationToken);
     }
@@ -78,6 +91,8 @@ public sealed class CausaRepository : ICausaRepository
     var normalizado = Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(rit);
     var legado = normalizado.StartsWith("C-", StringComparison.Ordinal) ? normalizado[2..] : normalizado;
     return await _context.Causas
+        .Include(c => c.Demandados)
+        .Include(c => c.Diligencias)
         .Where(c => c.Rit.Trim().ToUpper() == normalizado || c.Rit.Trim().ToUpper() == legado)
         .OrderBy(c => c.FechaCreacion).ThenBy(c => c.Id)
         .FirstOrDefaultAsync(cancellationToken);

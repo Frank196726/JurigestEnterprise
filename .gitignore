@@ -4,6 +4,11 @@
 **/bin/
 **/obj/
 build/
+artifacts/
+publish/
+.publish/
+.build-check/
+.runlogs/
 
 # ==========================
 # Visual Studio
@@ -32,6 +37,22 @@ build/
 !deploy/production.env.example
 logs/
 
+# Configuracion local y secretos
+appsettings.Local.json
+appsettings.*.Local.json
+secrets.json
+*.pfx
+*.p12
+*.pem
+*.key
+
+# Bases de datos locales
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+
 # ==========================
 # Test
 # ==========================
@@ -41,6 +62,11 @@ TestResults/
 # NuGet
 # ==========================
 packages/
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+Desktop.ini
 
 # Uploaded files
 **/App_Data/

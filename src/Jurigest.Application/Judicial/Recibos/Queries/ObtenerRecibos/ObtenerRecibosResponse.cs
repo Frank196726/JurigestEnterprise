@@ -1,4 +1,4 @@
-﻿using Jurigest.Domain.Judicial.Enums;
+using Jurigest.Domain.Judicial.Enums;
 
 namespace Jurigest.Application.Judicial.Recibos.Queries.ObtenerRecibos;
 
@@ -11,4 +11,20 @@ public sealed record ObtenerRecibosResponse(
     decimal Monto,
     EstadoRecibo Estado,
     DateTime FechaEmision,
-    DateTime? FechaPago);
+    DateTime? FechaPago)
+{
+    public long Numero { get; init; }
+    public string? Abogado { get; init; }
+    public string? Demandante { get; init; }
+    public string? Receptor { get; init; }
+    public string? Rol { get; init; }
+    public string? Tribunal { get; init; }
+    public string? Caratulado { get; init; }
+    public string? DiligenciaEncargada { get; init; }
+    public string? NumeroOperacion { get; init; }
+    public decimal? Cuantia { get; init; }
+    public decimal ValorGestion { get; init; }
+    public string? Observacion { get; init; }
+    public string? DetalleAdicionales { get; init; }
+    public decimal TotalAdicionales { get; init; }
+}

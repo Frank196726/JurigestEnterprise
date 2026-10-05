@@ -189,3 +189,8 @@ tbody tr:last-child td {
     font-size: 0.72rem;
     font-weight: 500;
 }
+
+.recibo-detalle dl { display: grid; grid-template-columns: minmax(140px, 210px) 1fr; gap: .4rem 1rem; }
+.recibo-detalle dd { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.recibo-detalle legend { float: none; width: auto; padding: 0 .4rem; }
+@media (max-width: 720px) { .recibo-detalle dl { grid-template-columns: 1fr; } }

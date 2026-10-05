@@ -10,15 +10,18 @@ public sealed class CrearUsuarioHandler
 {
     private readonly IUsuarioRepository _repository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IRolCatalogoRepository _roles;
     private readonly IAuditoriaSeguridadRepository
         _auditoriaRepository;
 
     public CrearUsuarioHandler(
         IUsuarioRepository repository,
         IPasswordHasher passwordHasher,
-        IAuditoriaSeguridadRepository auditoriaRepository)
+        IAuditoriaSeguridadRepository auditoriaRepository,
+        IRolCatalogoRepository roles)
     {
         _repository = repository;
+        _roles = roles;
         _passwordHasher = passwordHasher;
         _auditoriaRepository = auditoriaRepository;
     }
@@ -34,8 +37,17 @@ public sealed class CrearUsuarioHandler
             return new CrearUsuarioResult(
                 false,
                 true,
+                false,
                 null);
         }
+
+        if (await _repository.ExistsByRutAsync(request.Rut, cancellationToken))
+            return new CrearUsuarioResult(false, false, true, null);
+
+        RolCatalogo? rolCatalogo = null;
+        if (request.RolCatalogoId is Guid rolId)
+            rolCatalogo = await _roles.GetByIdAsync(rolId, cancellationToken)
+                ?? throw new ArgumentException("El rol seleccionado no existe.");
 
         var passwordHash =
             _passwordHasher.Hash(request.Password);
@@ -45,7 +57,16 @@ public sealed class CrearUsuarioHandler
             request.Nombre,
             request.Email,
             passwordHash,
-            request.Rol);
+            rolCatalogo?.Perfil ?? request.Rol);
+
+        usuario.ActualizarDatosPersonales(
+            request.Rut,
+            request.Telefono,
+            request.Direccion,
+            request.NumeroOficina);
+        usuario.RequerirCambioPassword();
+
+        if (rolCatalogo is not null) usuario.AsignarRolCatalogo(rolCatalogo);
 
         await _repository.AddAsync(
             usuario,
@@ -56,7 +77,9 @@ public sealed class CrearUsuarioHandler
             request.UsuarioActorId,
             "UsuarioCreado",
             usuario.Id,
-            $"Rol asignado: {usuario.Rol}.",
+            usuario.NombreRolPersonalizado is null
+                ? $"Rol asignado: {usuario.Rol}."
+                : $"Rol asignado: {usuario.NombreRolPersonalizado}. Perfil: {usuario.Rol}.",
             request.DireccionIp);
 
         await _auditoriaRepository.AddAsync(
@@ -65,6 +88,7 @@ public sealed class CrearUsuarioHandler
 
         return new CrearUsuarioResult(
             true,
+            false,
             false,
             usuario.Id);
     }

@@ -35,6 +35,9 @@ public sealed class CrearDiligenciaHandler
         diligencia.CambiarTipo(
             request.Tipo);
 
+        if (!string.IsNullOrWhiteSpace(request.ReceptorJudicial))
+            diligencia.AsignarReceptor(request.ReceptorJudicial);
+
         await _diligenciaRepository.AddAsync(
             diligencia,
             cancellationToken);

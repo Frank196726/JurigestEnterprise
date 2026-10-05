@@ -38,7 +38,15 @@ public sealed class ObtenerDiligenciaHandler
         diligencia.Comuna,
         diligencia.Observaciones,
         diligencia.Latitud,
-        diligencia.Longitud);
+        diligencia.Longitud)
+        {
+            Resultado = diligencia.Resultado,
+            ResultadoDetalle = diligencia.ResultadoDetalle,
+            DiligenciaRealizadaId = diligencia.DiligenciaRealizadaId,
+            DiligenciaRealizada = diligencia.DiligenciaRealizada,
+            FechaGestion = diligencia.FechaGestion,
+            Estampe = diligencia.Estampe
+        };
 
     }
 }

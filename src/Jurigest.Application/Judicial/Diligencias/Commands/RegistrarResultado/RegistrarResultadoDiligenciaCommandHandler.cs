@@ -1,4 +1,4 @@
-﻿using Jurigest.Application.Abstractions.Persistence;
+using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Domain.Judicial.Entities;
 using MediatR;
 
@@ -71,25 +71,38 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
                 "La diligencia realizada seleccionada no corresponde al tipo de diligencia encargada.");
         }
 
+        var reciboExistente = await _reciboRepository.GetByDiligenciaIdAsync(diligencia.Id, cancellationToken);
+        var monto = request.Monto ?? reciboExistente?.ValorGestion ?? diligenciaRealizada.Arancel ?? 0m;
+        Jurigest.Domain.Judicial.MontoEstampe.Validar(monto);
+        if (reciboExistente is not null && (reciboExistente.ValorGestion != monto ||
+            reciboExistente.DiligenciaRealizadaId != diligenciaRealizada.Id))
+            throw new Jurigest.Domain.Judicial.ReciboEmitidoException();
+
+        Jurigest.Domain.Judicial.MontoEstampe.Validar(request.TotalAdicionales);
+        Jurigest.Domain.Judicial.MontoEstampe.Validar(monto + request.TotalAdicionales);
+        if (request.Cuantia.HasValue) Jurigest.Domain.Judicial.MontoEstampe.Validar(request.Cuantia.Value);
+        if (reciboExistente is not null && (reciboExistente.TotalAdicionales != request.TotalAdicionales ||
+            reciboExistente.NumeroOperacion != request.NumeroOperacion || reciboExistente.Cuantia != request.Cuantia ||
+            reciboExistente.Abogado != request.Abogado || reciboExistente.Observacion != request.ObservacionRecibo ||
+            reciboExistente.DetalleAdicionales != request.DetalleAdicionales))
+            throw new Jurigest.Domain.Judicial.ReciboEmitidoException();
+
+        var estampe = request.Monto.HasValue || monto > 0
+            ? Jurigest.Domain.Judicial.MontoEstampe.Aplicar(request.Estampe, monto)
+            : request.Estampe;
         diligencia.RegistrarResultado(
             diligenciaRealizada.Id,
             diligenciaRealizada.Nombre,
             request.Resultado,
             request.ResultadoDetalle,
-            request.Estampe,
+            estampe,
             request.FechaGestion);
 
         causa.RegistrarGestion(
             request.FechaGestion);
 
-        if (diligenciaRealizada.Arancel.HasValue &&
-            diligenciaRealizada.Arancel.Value > 0)
+        if (monto + request.TotalAdicionales > 0)
         {
-            var reciboExistente =
-                await _reciboRepository.GetByDiligenciaIdAsync(
-                    diligencia.Id,
-                    cancellationToken);
-
             if (reciboExistente is null)
             {
                 var recibo = new Recibo(
@@ -98,8 +111,13 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
                     diligencia.Id,
                     diligenciaRealizada.Id,
                     diligenciaRealizada.Nombre,
-                    diligenciaRealizada.Arancel.Value,
+                    monto + request.TotalAdicionales,
                     request.FechaGestion);
+
+                // La emisión conserva los datos de la causa y del encargo.
+                recibo.CompletarDatos(request.Abogado, diligencia.ReceptorJudicial, causa.Rit, causa.Tribunal,
+                    causa.Descripcion, diligencia.Descripcion, request.NumeroOperacion, request.Cuantia,
+                    request.ObservacionRecibo, request.DetalleAdicionales, request.TotalAdicionales, monto);
 
                 await _reciboRepository.AddAsync(
                     recibo,

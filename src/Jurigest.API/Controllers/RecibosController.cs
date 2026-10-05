@@ -1,4 +1,4 @@
-﻿using Jurigest.API.Contracts;
+using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Recibos.Commands.MarcarPagado;
 using Jurigest.Application.Judicial.Recibos.Queries.ObtenerRecibo;
 using Jurigest.Application.Judicial.Recibos.Queries.ObtenerRecibos;
@@ -13,6 +13,15 @@ namespace Jurigest.API.Controllers;
 [Authorize(Policy = "DiligenciasLectura")]
 public sealed class RecibosController : ControllerBase
 {
+    [HttpGet("diligencia/{diligenciaId:guid}")]
+    public async Task<IActionResult> ObtenerPorDiligencia(Guid diligenciaId,
+        [FromServices] Jurigest.Application.Abstractions.Persistence.IReciboRepository repository,
+        CancellationToken cancellationToken)
+    {
+        var recibo = await repository.GetByDiligenciaIdAsync(diligenciaId, cancellationToken);
+        return recibo is null ? NotFound() : Ok(new { recibo.Id, recibo.Monto, recibo.Estado, recibo.ValorGestion, recibo.Abogado, recibo.NumeroOperacion, recibo.Cuantia, recibo.Observacion, recibo.DetalleAdicionales, recibo.TotalAdicionales });
+    }
+
     private readonly IMediator _mediator;
 
     public RecibosController(

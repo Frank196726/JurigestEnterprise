@@ -1,12 +1,7 @@
-﻿<nav class="navigation"
+<nav class="navigation"
      aria-label="Navegación principal">
     <a class="brand" href="/">
-        <span class="brand-mark">J</span>
-
-        <span>
-            <strong>Jurigest</strong>
-            <small>Enterprise</small>
-        </span>
+        <img class="brand-logo" src="@Assets["images/jurigest-enterprise-logo.png"]" alt="Jurigest Enterprise" width="1664" height="928" />
     </a>
 
     <div class="nav-section">
@@ -65,7 +60,7 @@
     </NavLink>
 </div>
 
-    <AuthorizeView Roles="Administrador">
+    <AuthorizeView Policy="Administracion">
         <Authorized>
             <div class="nav-section">
                 <span class="section-label">Administración</span>
@@ -75,6 +70,7 @@
                     Usuarios
                 </NavLink>
 
+                <NavLink class="nav-link" href="permisos"><span class="nav-icon">P</span>Permisos por rol</NavLink>
                 <NavLink class="nav-link" href="auditoria">
                     <span class="nav-icon">S</span>
                     Auditoría

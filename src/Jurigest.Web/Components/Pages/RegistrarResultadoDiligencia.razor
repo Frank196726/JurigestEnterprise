@@ -1,8 +1,9 @@
 @page "/causas/{CausaId:guid}/diligencias/registrar"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "DiligenciasGestion")]
 
 @using System.Net.Http.Json
+@using Microsoft.JSInterop
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
 @using Jurigest.Web.Services.Estampes
@@ -10,6 +11,7 @@
 
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Registrar resultado | Jurigest Enterprise</PageTitle>
 
@@ -29,6 +31,7 @@
                 </p>
             }
         </div>
+        <a class="btn btn-secondary" href="@($"/diligencias?causaId={CausaId}")">← Volver</a>
     </header>
 
     @if (_cargando)
@@ -80,55 +83,13 @@
                         @_causa.Descripcion
                     </p>
 
-                </div>
-
-                <hr />
-
-                <div style="margin:1.5rem 0;">
-
-                    <span class="eyebrow">
-                        Última diligencia encargada
-                    </span>
-
-                    <h3 style="margin-top:.4rem;">
-                        @_diligencia.Descripcion
-                    </h3>
-
-                    <p>
-                        <strong>Fecha de encargo:</strong>
-
-                        @(_diligencia.FechaProgramada.HasValue
-                            ? _diligencia.FechaProgramada.Value
-                                .ToString("dd-MM-yyyy HH:mm")
-                            : "No registrada")
-                    </p>
-
-                    <p>
-                        <strong>Receptor judicial:</strong>
-
-                        @(string.IsNullOrWhiteSpace(
-                            _diligencia.ReceptorJudicial)
-                                ? "No asignado"
-                                : _diligencia.ReceptorJudicial)
-                    </p>
-
-                    <p>
-                        <strong>Dirección:</strong>
-
-                        @(string.IsNullOrWhiteSpace(
-                            _diligencia.Direccion)
-                                ? "No registrada"
-                                : _diligencia.Direccion)
-                    </p>
-
-                    <p>
-                        <strong>Comuna:</strong>
-
-                        @(string.IsNullOrWhiteSpace(
-                            _diligencia.Comuna)
-                                ? "No registrada"
-                                : _diligencia.Comuna)
-                    </p>
+                    <section aria-labelledby="antecedentes-demandado" style="border:1px solid #dbe3ef;border-radius:.75rem;padding:1rem;margin-top:1rem;">
+                        <h3 id="antecedentes-demandado">Antecedentes del demandado</h3>
+                        <p><strong>Nombre / Razón Social:</strong> @(DemandadoPrincipal?.Nombre ?? "No registrado")</p>
+                        <p><strong>RUT:</strong> @(string.IsNullOrWhiteSpace(DemandadoPrincipal?.Rut) ? "No registrado" : DemandadoPrincipal.Rut)</p>
+                        <p><strong>Dirección:</strong> @(string.IsNullOrWhiteSpace(_diligencia.Direccion) ? "No registrada" : _diligencia.Direccion)</p>
+                        <p><strong>Comuna:</strong> @(string.IsNullOrWhiteSpace(_diligencia.Comuna) ? "No registrada" : _diligencia.Comuna)</p>
+                    </section>
 
                 </div>
 
@@ -180,6 +141,7 @@
                                 @_diligencia.Estampe
 
                             </div>
+                            <button type="button" class="btn btn-primary mt-3" @onclick="ImprimirEstampeAsync">Imprimir estampe</button>
                         }
 
                     </div>
@@ -214,120 +176,119 @@
                 }
                 else
                 {
-                    <div style="
-                        display:grid;
-                        grid-template-columns:
-                            repeat(2,minmax(0,1fr));
-                        gap:1rem;
-                        margin-top:1.5rem;">
+                    <div class="result-workspace">
+                        <section class="result-panel">
+                            <div class="panel-heading">
+                                <div><span class="eyebrow">Ingreso del resultado</span><h3>Gestión realizada</h3></div>
+                                <span class="required-note">* Campos obligatorios</span>
+                            </div>
 
-            <label style="grid-column:1 / -1;">
+                            <div class="result-group">
+                                <label>
+                                    <span>Diligencia realizada *</span>
+                                    <select class="form-select" @bind="_diligenciaRealizadaId" @bind:after="SeleccionarGestion" disabled="@(_reciboExistente is not null)">
+                                        <option value="">Seleccionar diligencia realizada...</option>
+                                        @foreach (var item in _diligenciasRealizadas) { <option value="@item.Id">@item.Nombre</option> }
+                                    </select>
+                                </label>
+                                <button type="button" class="inline-add" disabled="@_guardandoCatalogo"
+                                        @onclick="() => _mostrarAgregarDiligencia = !_mostrarAgregarDiligencia">+ Agregar opción</button>
+                                @if (_mostrarAgregarDiligencia)
+                                {
+                                    <div class="inline-editor">
+                                        <input class="form-control" maxlength="200" placeholder="Nombre de la diligencia realizada" @bind="_nuevaDiligencia" />
+                                        <button type="button" class="btn btn-primary" disabled="@_guardandoCatalogo" @onclick="AgregarDiligenciaRealizadaAsync">Agregar</button>
+                                    </div>
+                                }
 
-                <span>Diligencia realizada *</span>
+                                @if (_diligenciaRealizadaId.HasValue)
+                                {
+                                    <label><span>Materia del estampe</span><input class="form-control" @bind="_materiaEstampe" /></label>
+                                    <label><span>Valor de la gestión (CLP) *</span>
+                                        <input class="form-control" type="number" min="0" max="999999999999999999" step="1" @bind="_monto" @bind:after="ActualizarMontoEstampe" disabled="@(_reciboExistente is not null)" />
+                                    </label>
+                                    <fieldset class="border rounded p-3 mt-2" disabled="@(_reciboExistente is not null)">
+                                        <legend class="fs-6">Datos del recibo</legend>
+                                        <label>
+                                            <span>Abogado</span>
+                                            <select class="form-select" @bind="_abogadoRecibo">
+                                                <option value="">Seleccionar abogado...</option>
+                                                @if (!string.IsNullOrWhiteSpace(_abogadoRecibo) && !_abogados.Any(a => a.Nombre == _abogadoRecibo))
+                                                {
+                                                    <option value="@_abogadoRecibo">@_abogadoRecibo (registrado)</option>
+                                                }
+                                                @foreach (var abogado in _abogados.OrderBy(a => a.Nombre))
+                                                {
+                                                    <option value="@abogado.Nombre">@abogado.Nombre</option>
+                                                }
+                                            </select>
+                                        </label>
+                                        <label><span>N° operación</span><input class="form-control" maxlength="100" @bind="_numeroOperacion" /></label>
+                                        <label><span>Cuantía (CLP)</span><input class="form-control" type="number" min="0" step="1" @bind="_cuantiaRecibo" /></label>
+                                        <label><span>Observación recibo</span><input class="form-control" maxlength="1000" @bind="_observacionRecibo" /></label>
+                                        <h5 class="mt-3">Datos adicionales</h5>
+                                        <label><span>Detalle</span><input class="form-control" maxlength="1000" @bind="_detalleAdicionales" /></label>
+                                        <label><span>Total adicionales (CLP)</span><input class="form-control" type="number" min="0" step="1" @bind="_totalAdicionales" /></label>
+                                        <p class="mt-2 mb-0"><strong>Total recibo: @TotalRecibo.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("es-CL"))</strong></p>
+                                    </fieldset>
+                                    <small>El estampe conserva el valor de gestión. El recibo suma gestión y adicionales; si el total es 0, no se emite recibo.</small>
+                                    @if (_reciboExistente is not null) { <p>Esta diligencia ya tiene un recibo emitido; su gestión y valor están protegidos. <a href="/recibos">Ver recibos</a></p> }
+                                }
+                                <label>
+                                    <span>Clasificación *</span>
+                                    <select class="form-control" @bind="_resultado" @bind:after="SeleccionarModeloRelacionado">
+                                        <option value="">Seleccionar clasificación...</option>
+                                        <option value="1">Positiva</option><option value="2">Negativa</option>
+                                    </select>
+                                </label>
 
-                <select class="form-control"
-                        @bind="_diligenciaRealizadaId">
+                            </div>
 
-                    <option value="">
-                        Seleccionar diligencia realizada...
-                    </option>
+                            <div class="execution-group">
+                                <h4>Datos de ejecución</h4>
+                                <label><span>Receptor judicial</span>
+                                    <select class="form-control" @bind="_receptorJudicial">
+                                        <option value="">Seleccionar receptor...</option>
+                                        @foreach (var item in _receptores) { <option value="@item.Nombre">@item.Nombre</option> }
+                                    </select>
+                                </label>
+                                <button type="button" class="inline-add" disabled="@_guardandoCatalogo"
+                                        @onclick="() => _mostrarAgregarReceptor = !_mostrarAgregarReceptor">+ Agregar receptor</button>
+                                @if (_mostrarAgregarReceptor)
+                                {
+                                    <div class="inline-editor">
+                                        <input class="form-control" maxlength="200" placeholder="Nombre del receptor judicial" @bind="_nuevoReceptor" />
+                                        <button type="button" class="btn btn-primary" disabled="@_guardandoCatalogo" @onclick="AgregarReceptorAsync">Agregar</button>
+                                    </div>
+                                }
+                                <label><span>Fecha de gestión *</span><input type="datetime-local" class="form-control" @bind="_fechaGestion" /></label>
+                            </div>
 
-                     @foreach (var item in _diligenciasRealizadas)
-                    {
-                             <option value="@item.Id">
-                                 @item.Nombre
-                              </option>
-                     }
+                            <button type="button" class="btn btn-outline-primary generate-button" disabled="@_guardando" @onclick="GenerarBorradorEstampe">
+                                @(!string.IsNullOrWhiteSpace(_estampe) ? "Regenerar borrador" : "Generar borrador")
+                            </button>
+                        </section>
 
-                            </select>
-
-                        </label>
-
-                        <label>
-
-                            <span>Clasificación *</span>
-
-                            <select class="form-control"
-                                    @bind="_resultado">
-
-                                <option value="">
-                                    Seleccionar clasificación...
-                                </option>
-
-                                <option value="1">
-                                    Positiva
-                                </option>
-
-                                <option value="2">
-                                    Negativa
-                                </option>
-
-                            </select>
-
-                        </label>
-
-                        <label>
-
-                            <span>Fecha de gestión *</span>
-
-                            <input type="datetime-local"
-                                   class="form-control"
-                                   @bind="_fechaGestion" />
-
-                        </label>
-
-                        <label style="grid-column:1 / -1;">
-
-    <span>Resultado de la diligencia *</span>
-
-    <textarea class="form-control"
-              rows="5"
-              maxlength="500"
-              @bind="_resultadoDetalle"
-              placeholder="Ingrese el resultado de la diligencia">
-    </textarea>
-
-</label>
-
-<div style="
-    grid-column:1 / -1;
-    display:flex;
-    gap:.75rem;
-    flex-wrap:wrap;
-    align-items:center;">
-
-    <button type="button"
-            class="btn btn-outline-primary"
-            disabled="@_guardando"
-            @onclick="GenerarBorradorEstampe">
-
-        Generar estampe
-
-    </button>
-
-    @if (!string.IsNullOrWhiteSpace(_estampe))
-    {
-        <span style="font-size:.9rem;color:#666;">
-            Revise el estampe antes de guardarlo.
-        </span>
-    }
-
-</div>
-
-<label style="grid-column:1 / -1;">
-
-    <span>Borrador de estampe *</span>
-
-    <textarea class="form-control"
-              rows="10"
-              maxlength="8000"
-              @bind="_estampe"
-              placeholder="El estampe generado aparecerá aquí y puede ser revisado antes de guardarlo.">
-    </textarea>
-
-</label>
-
-</div>
+                        <section class="preview-panel">
+                            <div class="panel-heading">
+                                <div><span class="eyebrow">Vista previa</span><h3>Borrador del estampe</h3></div>
+                                @if (!string.IsNullOrWhiteSpace(_estampe)) { <span class="draft-badge">Borrador generado</span> }
+                            </div>
+                            <div class="model-box">
+                                <label><span>Modelo aplicado</span>
+                                    <select class="form-control" @bind="_modeloEstampeId" @bind:after="CambiarModeloEstampe">
+                                        <option value="">Formato predeterminado</option>
+                                        @foreach (var modelo in ModelosAplicables) { <option value="@modelo.Id">@modelo.Nombre (@NombreResultadoModelo(modelo.Resultado))</option> }
+                                    </select>
+                                </label>
+                                <small>Seleccione el modelo requerido para la gestión actual. Al cambiarlo se regenera el borrador.</small>
+                                <a href="/configuracion/modelos-estampe">Administrar modelos</a>
+                            </div>
+                            <textarea class="form-control stamp-preview" rows="22" maxlength="8000" @bind="_estampe"
+                                      placeholder="Complete los antecedentes y genere el borrador para revisarlo aquí."></textarea>
+                            @if (!string.IsNullOrWhiteSpace(_estampe)) { <small>Puede corregir manualmente el texto antes de guardarlo.</small> }
+                        </section>
+                    </div>
 
 @if (!string.IsNullOrWhiteSpace(_mensaje))
 {
@@ -342,11 +303,7 @@
     </div>
 }
 
-<div style="
-    display:flex;
-    gap:.75rem;
-    flex-wrap:wrap;
-    margin-top:1.5rem;">
+<div class="result-actions">
 
     <button type="button"
             class="btn btn-primary"
@@ -354,8 +311,8 @@
             @onclick="GuardarResultadoAsync">
 
         @(_guardando
-            ? "Guardando estampe..."
-            : "Guardar estampe")
+            ? "Guardando resultado..."
+            : "Guardar resultado y estampe")
 
     </button>
 
@@ -383,19 +340,53 @@
     [Parameter]
     public Guid CausaId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "diligenciaId")]
+    public Guid? DiligenciaSeleccionadaId { get; set; }
+
     private CausaResumen? _causa;
+
+    private DemandadoResumen? DemandadoPrincipal =>
+        _causa?.Demandados.FirstOrDefault(d => d.EsPrincipal);
 
     private DiligenciaResponse? _diligencia;
 
     private List<DiligenciaRealizadaItem> _diligenciasRealizadas =
     new();
 
+    private List<CatalogoItem> _receptores = new();
+    private List<ModeloEstampeItem> _modelosEstampe = new();
+    private Guid? _modeloEstampeId;
+    private string _receptorJudicial = string.Empty;
+    private string _nuevoReceptor = string.Empty;
+    private string _nuevaDiligencia = string.Empty;
+    private bool _mostrarAgregarReceptor;
+    private bool _mostrarAgregarDiligencia;
+    private bool _guardandoCatalogo;
+
     private Guid? _diligenciaRealizadaId;
 
+    private decimal? _monto;
+    private string? _abogadoRecibo;
+    private List<CatalogoItem> _abogados = new();
+    private string _materiaEstampe = string.Empty;
+    private string? _numeroOperacion;
+    private decimal? _cuantiaRecibo;
+    private string? _observacionRecibo;
+    private string? _detalleAdicionales;
+    private decimal _totalAdicionales;
+    private decimal TotalRecibo => (_monto ?? 0m) + _totalAdicionales;
+    private ReciboItem? _reciboExistente;
+    private sealed record ReciboItem(Guid Id, decimal Monto, int Estado)
+    {
+        public decimal ValorGestion { get; init; }
+        public decimal TotalAdicionales { get; init; }
+        public decimal? Cuantia { get; init; }
+        public string? Abogado { get; init; }
+        public string? NumeroOperacion { get; init; }
+        public string? Observacion { get; init; }
+        public string? DetalleAdicionales { get; init; }
+    }
     private int? _resultado;
-
-    private string _resultadoDetalle =
-        string.Empty;
 
     private DateTime? _fechaGestion =
         DateTime.Now;
@@ -440,6 +431,15 @@
             }
 
             await CargarDiligenciasRealizadasAsync();
+            _abogados = await ApiClient.GetAsync<List<CatalogoItem>>("/api/Catalogos/abogados") ?? new();
+            await CargarReceptoresAsync();
+            await CargarModelosEstampeAsync();
+            _receptorJudicial = _diligencia.ReceptorJudicial ?? string.Empty;
+            if (!string.IsNullOrWhiteSpace(_receptorJudicial) &&
+                !_receptores.Any(x => x.Nombre == _receptorJudicial))
+            {
+                _receptores.Insert(0, new CatalogoItem { Nombre = _receptorJudicial });
+            }
 
             CargarResultadoExistente();
         }
@@ -463,20 +463,33 @@
 
     private async Task CargarCausaAsync()
     {
-        var causas =
-            await ApiClient.GetAsync<List<CausaResumen>>(
-                "/api/Causas");
-
         _causa =
-            causas?.FirstOrDefault(
-                c => c.Id == CausaId);
+            await ApiClient.GetAsync<CausaResumen>(
+                $"/api/Causas/{CausaId}");
+        _materiaEstampe = _causa?.Materia ?? string.Empty;
     }
 
     private async Task CargarUltimaDiligenciaAsync()
     {
             _diligencia =
             await ApiClient.GetAsync<DiligenciaResponse>(
-                $"/api/Diligencias/causa/{CausaId}/ultima");
+                DiligenciaSeleccionadaId.HasValue
+                    ? $"/api/Diligencias/{DiligenciaSeleccionadaId.Value}"
+                    : $"/api/Diligencias/causa/{CausaId}/ultima");
+        if (_diligencia is not null && _diligencia.CausaId != CausaId)
+            throw new HttpRequestException("La diligencia seleccionada no pertenece a esta causa.");
+        if (_diligencia is not null && string.IsNullOrWhiteSpace(_abogadoRecibo))
+        {
+            const string prefijo = "Abogado responsable: ";
+            var observaciones = _diligencia.Observaciones;
+            if (observaciones?.StartsWith(prefijo, StringComparison.Ordinal) == true)
+            {
+                var fin = observaciones.IndexOf(". Fecha de retiro:", StringComparison.Ordinal);
+                _abogadoRecibo = fin > prefijo.Length ? observaciones[prefijo.Length..fin] : null;
+            }
+        }
+        _reciboExistente = _diligencia is not null && _diligencia.Resultado != 0
+            ? await ApiClient.GetAsync<ReciboItem>($"/api/Recibos/diligencia/{_diligencia.Id}") : null;
     }
 
     private async Task CargarDiligenciasRealizadasAsync()
@@ -495,6 +508,119 @@
         resultado ?? new List<DiligenciaRealizadaItem>();
     }
 
+    private async Task CargarReceptoresAsync()
+    {
+        _receptores = await ApiClient.GetAsync<List<CatalogoItem>>(
+            "/api/Catalogos/receptores") ?? new();
+    }
+
+    private async Task CargarModelosEstampeAsync()
+    {
+        if (_diligencia is null) return;
+        _modelosEstampe = await ApiClient.GetAsync<List<ModeloEstampeItem>>(
+            "/api/modelos-estampe") ?? [];
+    }
+
+    private IEnumerable<ModeloEstampeItem> ModelosAplicables =>
+        _modelosEstampe.OrderBy(x => x.Nombre);
+
+    private void CambiarModeloEstampe()
+    {
+        _estampe = string.Empty;
+        GenerarBorradorEstampe();
+    }
+
+    private static string NombreResultadoModelo(int? resultado) => resultado switch
+    {
+        1 => "positiva", 2 => "negativa", _ => "cualquier resultado"
+    };
+
+    private void SeleccionarGestion()
+    {
+        _monto = _reciboExistente?.ValorGestion ?? _diligenciasRealizadas.FirstOrDefault(x => x.Id == _diligenciaRealizadaId)?.Arancel;
+        _estampe = string.Empty;
+        SeleccionarModeloRelacionado();
+    }
+    private bool ValidarMonto()
+    {
+        if (!_monto.HasValue) { _mensaje = "Ingrese el valor de la gestión; use 0 si no tiene cobro."; return false; }
+        try { Jurigest.Domain.Judicial.MontoEstampe.Validar(_monto.Value); Jurigest.Domain.Judicial.MontoEstampe.Validar(_totalAdicionales); Jurigest.Domain.Judicial.MontoEstampe.Validar(TotalRecibo); if (_cuantiaRecibo.HasValue) Jurigest.Domain.Judicial.MontoEstampe.Validar(_cuantiaRecibo.Value); return true; }
+        catch (ArgumentException ex) { _mensaje = ex.Message; return false; }
+    }
+    private void ActualizarMontoEstampe()
+    {
+        if (!string.IsNullOrWhiteSpace(_estampe) && ValidarMonto())
+            _estampe = Jurigest.Domain.Judicial.MontoEstampe.Aplicar(_estampe, _monto!.Value);
+    }
+    private void SeleccionarModeloRelacionado()
+    {
+        var relacionado = _modelosEstampe
+            .Where(x => x.DiligenciaRealizadaId == _diligenciaRealizadaId &&
+                (!x.Resultado.HasValue || x.Resultado == _resultado))
+            .OrderByDescending(x => x.Resultado.HasValue)
+            .FirstOrDefault();
+        relacionado ??= _modelosEstampe
+            .Where(x => !x.DiligenciaRealizadaId.HasValue &&
+                (!x.Resultado.HasValue || x.Resultado == _resultado))
+            .OrderByDescending(x => x.Resultado.HasValue)
+            .FirstOrDefault();
+        _modeloEstampeId = relacionado?.Id;
+    }
+
+    private async Task AgregarDiligenciaRealizadaAsync()
+    {
+        if (_diligencia is null || string.IsNullOrWhiteSpace(_nuevaDiligencia))
+        {
+            _mensaje = "Indique el nombre de la diligencia realizada.";
+            return;
+        }
+        _guardandoCatalogo = true;
+        _mensaje = null;
+        try
+        {
+            using var response = await ApiClient.PostAsync(
+                "/api/Catalogos/diligencias-realizadas",
+                JsonContent.Create(new { nombre = _nuevaDiligencia.Trim(), codigoTipoDiligencia = _diligencia.Tipo }));
+            await VerificarRespuestaAsync(response, "agregar la diligencia realizada");
+            var creada = await response.Content.ReadFromJsonAsync<DiligenciaRealizadaItem>()
+                ?? throw new InvalidOperationException("La API no devolvió la diligencia creada.");
+            await CargarDiligenciasRealizadasAsync();
+            _diligenciaRealizadaId = creada.Id;
+            SeleccionarGestion();
+            _nuevaDiligencia = string.Empty;
+            _mostrarAgregarDiligencia = false;
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", forceLoad: true); }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException) { _mensaje = ex.Message; }
+        finally { _guardandoCatalogo = false; }
+    }
+
+    private async Task AgregarReceptorAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoReceptor))
+        {
+            _mensaje = "Indique el nombre del receptor judicial.";
+            return;
+        }
+        _guardandoCatalogo = true;
+        _mensaje = null;
+        try
+        {
+            using var response = await ApiClient.PostAsync(
+                "/api/Catalogos/receptores", JsonContent.Create(new { nombre = _nuevoReceptor.Trim() }));
+            await VerificarRespuestaAsync(response, "agregar el receptor judicial");
+            var creado = await response.Content.ReadFromJsonAsync<CatalogoItem>()
+                ?? throw new InvalidOperationException("La API no devolvió el receptor creado.");
+            await CargarReceptoresAsync();
+            _receptorJudicial = creado.Nombre;
+            _nuevoReceptor = string.Empty;
+            _mostrarAgregarReceptor = false;
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", forceLoad: true); }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException) { _mensaje = ex.Message; }
+        finally { _guardandoCatalogo = false; }
+    }
+
     private void CargarResultadoExistente()
     {
         if (_diligencia is null ||
@@ -506,12 +632,15 @@
         _diligenciaRealizadaId =
             _diligencia.DiligenciaRealizadaId;
 
+        _monto = _reciboExistente?.ValorGestion ?? 0m;
+        _abogadoRecibo = _reciboExistente?.Abogado;
+        _numeroOperacion = _reciboExistente?.NumeroOperacion;
+        _cuantiaRecibo = _reciboExistente?.Cuantia;
+        _observacionRecibo = _reciboExistente?.Observacion;
+        _detalleAdicionales = _reciboExistente?.DetalleAdicionales;
+        _totalAdicionales = _reciboExistente?.TotalAdicionales ?? 0m;
         _resultado =
             _diligencia.Resultado;
-
-        _resultadoDetalle =
-            _diligencia.ResultadoDetalle
-            ?? string.Empty;
 
         _fechaGestion =
             _diligencia.FechaGestion
@@ -571,15 +700,6 @@ private void GenerarBorradorEstampe()
         return;
     }
 
-    if (string.IsNullOrWhiteSpace(
-            _resultadoDetalle))
-    {
-        _mensaje =
-            "Debe indicar primero el resultado de la diligencia.";
-
-        return;
-    }
-
     if (!_fechaGestion.HasValue)
     {
         _mensaje =
@@ -604,26 +724,40 @@ private void GenerarBorradorEstampe()
 
     try
     {
+        if (!ValidarMonto()) return;
+        var modeloSeleccionado = _modelosEstampe.FirstOrDefault(x => x.Id == _modeloEstampeId);
+        var modelo = modeloSeleccionado?.Contenido;
         _estampe =
             GeneradorEstampe.Generar(
                 _causa.Rit,
                 _causa.Tribunal,
                 _causa.Descripcion,
-                _diligencia.Descripcion,
-                (TipoDiligencia)_diligencia.Tipo,
+                diligenciaRealizada.Nombre,
+                modeloSeleccionado is null ? TipoDiligencia.Otro : (TipoDiligencia)modeloSeleccionado.TipoDiligencia,
                 diligenciaRealizada.Nombre,
                 (ResultadoDiligencia)_resultado.Value,
-                _resultadoDetalle,
+                string.Empty,
                 _fechaGestion.Value,
-                _diligencia.ReceptorJudicial,
+                _receptorJudicial,
                 _diligencia.Direccion,
-                _diligencia.Comuna);
+                _diligencia.Comuna,
+                modelo: modelo, monto: _monto,
+                abogado: _abogadoRecibo,
+                rutDemandado: _causa.Demandados.FirstOrDefault(x => x.EsPrincipal)?.Rut,
+                materia: _materiaEstampe);
     }
     catch (ArgumentException ex)
     {
         _mensaje =
             ex.Message;
     }
+}
+
+private async Task ImprimirEstampeAsync()
+{
+    if (string.IsNullOrWhiteSpace(_diligencia?.Estampe)) return;
+    await using var modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imprimir-documento.js");
+    await modulo.InvokeVoidAsync("imprimirDocumento", "Estampe", _diligencia.Estampe);
 }
 
 private async Task GuardarResultadoAsync()
@@ -656,22 +790,6 @@ private async Task GuardarResultadoAsync()
 
         return;
     }
-        if (string.IsNullOrWhiteSpace(_resultadoDetalle))
-        {
-            _mensaje =
-                "Debe indicar el resultado de la diligencia.";
-
-            return;
-        }
-
-        if (_resultadoDetalle.Trim().Length > 500)
-        {
-            _mensaje =
-                "El resultado de la diligencia no puede superar 500 caracteres.";
-
-            return;
-        }
-
         if (!_fechaGestion.HasValue)
         {
             _mensaje =
@@ -688,10 +806,20 @@ private async Task GuardarResultadoAsync()
             return;
         }
 
+        if (!ValidarMonto()) return;
+        ActualizarMontoEstampe();
         _guardando = true;
 
         try
         {
+            if (!string.IsNullOrWhiteSpace(_receptorJudicial) &&
+                _receptorJudicial != _diligencia.ReceptorJudicial)
+            {
+                using var asignacion = await ApiClient.PutAsync(
+                    $"/api/Diligencias/{_diligencia.Id}/asignar-receptor",
+                    JsonContent.Create(new { receptorJudicial = _receptorJudicial }));
+                await VerificarRespuestaAsync(asignacion, "asignar el receptor judicial");
+            }
             using var response =
                 await ApiClient.PutAsync(
                     $"/api/Diligencias/{_diligencia.Id}/resultado",
@@ -704,8 +832,14 @@ private async Task GuardarResultadoAsync()
                             resultado =
                                 _resultado.Value,
 
-                            resultadoDetalle =
-                                _resultadoDetalle.Trim(),
+                            monto = _monto,
+                            abogado = _abogadoRecibo,
+                            numeroOperacion = _numeroOperacion,
+                            cuantia = _cuantiaRecibo,
+                            observacionRecibo = _observacionRecibo,
+                            detalleAdicionales = _detalleAdicionales,
+                            totalAdicionales = _totalAdicionales,
+                            resultadoDetalle = string.Empty,
 
                             fechaGestion =
                                 _fechaGestion.Value,
@@ -784,6 +918,9 @@ private async Task GuardarResultadoAsync()
 
         public Guid CausaId { get; set; }
 
+    [SupplyParameterFromQuery(Name = "diligenciaId")]
+    public Guid? DiligenciaSeleccionadaId { get; set; }
+
         public string Descripcion { get; set; } =
             string.Empty;
 
@@ -809,6 +946,7 @@ private async Task GuardarResultadoAsync()
 
         public string? Comuna { get; set; }
 
+        public string? Observaciones { get; set; }
         public string? Estampe { get; set; }
 
         public DateTime FechaCreacion { get; set; }
@@ -822,5 +960,22 @@ private async Task GuardarResultadoAsync()
         string.Empty;
 
         public int CodigoTipoDiligencia { get; set; }
+        public decimal? Arancel { get; set; }
+    }
+
+    private sealed class CatalogoItem
+    {
+        public Guid Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+    }
+
+    private sealed class ModeloEstampeItem
+    {
+        public Guid Id { get; set; }
+        public string Nombre { get; set; } = string.Empty;
+        public int TipoDiligencia { get; set; }
+        public int? Resultado { get; set; }
+        public Guid? DiligenciaRealizadaId { get; set; }
+        public string Contenido { get; set; } = string.Empty;
     }
 }

@@ -2,7 +2,7 @@
 @page "/causas"
 
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "CausasLectura")]
 
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
@@ -30,7 +30,7 @@
                 @_causas.Count causas
             </span>
 
-            <AuthorizeView Roles="Administrador,Abogado">
+            <AuthorizeView Policy="CausasEscritura">
                 <Authorized>
                     <a class="btn btn-primary" href="/causas/nueva">
                         Nueva gestión
@@ -114,7 +114,7 @@
                         <th>Días sin gestionar</th>
                         <th>Prioridad</th>
                         <th>Estado</th>
-                        <AuthorizeView Roles="Administrador,Abogado,Procurador">
+                        <AuthorizeView Policy="DiligenciasGestion">
                             <th>Acciones</th>
                         </AuthorizeView>
                   </tr>
@@ -188,7 +188,7 @@
                 </span>
             </td>
 
-            <AuthorizeView Roles="Administrador,Abogado,Procurador">
+            <AuthorizeView Policy="DiligenciasGestion">
                 <td class="actions-cell">
                     <a class="manage-action"
                        href="@($"/causas/{causa.Id}/historial")">

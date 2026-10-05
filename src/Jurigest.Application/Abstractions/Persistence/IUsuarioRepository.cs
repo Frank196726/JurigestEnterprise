@@ -23,6 +23,10 @@ public interface IUsuarioRepository
         string email,
         CancellationToken cancellationToken);
 
+    Task<bool> ExistsByRutAsync(
+        string rut,
+        CancellationToken cancellationToken);
+
     Task<bool> AnyAsync(
         CancellationToken cancellationToken);
 

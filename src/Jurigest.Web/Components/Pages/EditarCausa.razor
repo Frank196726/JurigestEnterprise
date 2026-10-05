@@ -1,8 +1,9 @@
 @page "/causas/{CausaId:guid}/editar"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "CausasEscritura")]
 
 @using System.Net.Http.Json
+@using Jurigest.Web.Components.Shared
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
 
@@ -75,8 +76,9 @@
                                   rows="5"
                                   maxlength="500"
                                   @bind="_descripcion"
-                                  placeholder="Carátula o descripción de la causa">
+                                  placeholder="Demandante / primer apellido y primer nombre del demandado">
                         </textarea>
+                        <small>Ej.: Banco Del Estado de Chile / Maldonado Julio. Esta carátula es independiente del nombre completo en los antecedentes del demandado.</small>
 		    </label>
 
 		    <label>
@@ -101,6 +103,16 @@
                                 }
                             </select>
                         </label>
+                        <label>
+                            <span>Receptor asignado</span>
+                            <select class="form-control" @bind="_receptorJudicial">
+                                <option value="">No asignado</option>
+                                @foreach (var receptor in _receptores)
+                                {
+                                    <option value="@receptor.Nombre">@receptor.Nombre</option>
+                                }
+                            </select>
+                        </label>
                     }
                     else
                     {
@@ -117,6 +129,19 @@
                 }
 
                 <div style="display:flex; gap:.75rem; flex-wrap:wrap;">
+                    <button type="button" class="btn btn-outline-primary" disabled="@(_guardando || _cargandoMembrete)" @onclick="AbrirMembreteAsync">
+                        @(_cargandoMembrete ? "Cargando membrete..." : "Imprimir membrete")
+                    </button>
+                    <AuthorizeView Policy="DiligenciasGestion">
+                        @if (_causa.DiligenciaId is Guid diligenciaId)
+                        {
+                            <a class="btn btn-outline-primary" href="@($"/diligencias/{diligenciaId}/vehiculos")">Agregar vehículo</a>
+                        }
+                        else
+                        {
+                            <button type="button" class="btn btn-outline-primary" disabled title="Registre una diligencia para agregar vehículos.">Agregar vehículo</button>
+                        }
+                    </AuthorizeView>
                     <button type="button"
                             class="btn btn-primary"
                             disabled="@(_guardando || !_causa.PuedeCorregirIngreso)"
@@ -136,7 +161,67 @@
     }
 </section>
 
+@if (_mostrarMembrete && _causa is not null)
+{
+    <MembreteDialog Personas="_personasMembrete" Direcciones="_direccionesMembrete" Rol="@_causa.Rit"
+        Tribunal="@_tribunal" Caratula="@_descripcion" Abogado="@_abogadoMembrete"
+        FechaEncargo="_fechaEncargoCausa" FechaProgramada="_fechaProgramada" Encargo="@(_encargos.FirstOrDefault(x => x.Id == _diligenciaEncargadaId)?.Nombre ?? _causa.DiligenciaEncargada ?? string.Empty)" Cerrar="() => _mostrarMembrete = false" />
+}
+
 @code {
+    private bool _mostrarMembrete, _cargandoMembrete;
+    private List<string> _personasMembrete = new(), _direccionesMembrete = new();
+    private string _abogadoMembrete = string.Empty;
+    private sealed record EncargoMembrete(string? Observaciones);
+    private async Task AbrirMembreteAsync()
+    {
+        _cargandoMembrete = true;
+        _mensaje = null;
+        try
+        {
+            var causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{CausaId}");
+            if (causa is null) { _mensaje = "La causa no está disponible."; return; }
+            var personas = new List<string>();
+            void Persona(string? nombre, string rol)
+            {
+                if (!string.IsNullOrWhiteSpace(nombre)) personas.Add($"{nombre.Trim()} — {rol}");
+            }
+            foreach (var parte in causa.Demandados)
+            {
+                Persona(parte.Nombre, parte.TipoPersona == 2 ? "Demandado / Razón social" : "Demandado");
+                Persona(parte.RepresentanteLegal, $"Representante de {parte.Nombre}");
+                foreach (var aval in parte.Avales)
+                {
+                    Persona(aval.Nombre, aval.TipoPersona == 2 ? "Aval solidario / Razón social" : "Aval solidario");
+                    Persona(aval.RepresentanteLegal, $"Representante de {aval.Nombre}");
+                }
+            }
+            var diligencias = await ApiClient.GetAsync<List<DiligenciaResumen>>($"/api/Diligencias/causa/{CausaId}") ?? new();
+            _personasMembrete = personas.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            _direccionesMembrete = diligencias.Where(x => !string.IsNullOrWhiteSpace(x.Direccion))
+                .Select(x => string.Join(", comuna de ", new[] { x.Direccion, x.Comuna }.Where(y => !string.IsNullOrWhiteSpace(y))))
+                .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            _abogadoMembrete = string.Empty;
+            if (_causa?.DiligenciaId is Guid id)
+            {
+                var encargo = await ApiClient.GetAsync<EncargoMembrete>($"/api/diligencias/{id}");
+                var observaciones = encargo?.Observaciones ?? string.Empty;
+                const string inicio = "Abogado responsable: ";
+                var posicion = observaciones.IndexOf(inicio, StringComparison.OrdinalIgnoreCase);
+                if (posicion >= 0)
+                {
+                    var abogado = observaciones[(posicion + inicio.Length)..];
+                    var fin = abogado.IndexOf(". Fecha de retiro:", StringComparison.OrdinalIgnoreCase);
+                    _abogadoMembrete = (fin >= 0 ? abogado[..fin] : abogado).Trim().TrimEnd('.');
+                }
+            }
+            _mostrarMembrete = true;
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _mensaje = "No fue posible cargar los datos del membrete."; }
+        finally { _cargandoMembrete = false; }
+    }
+
     [Parameter]
     public Guid CausaId { get; set; }
 
@@ -145,7 +230,10 @@
     private DateTime? _fechaProgramada;
     private Guid? _diligenciaEncargadaId;
     private List<EncargoItem> _encargos = new();
+    private List<ReceptorItem> _receptores = new();
+    private string _receptorJudicial = string.Empty;
     private sealed record EncargoItem(Guid Id, string Nombre);
+    private sealed record ReceptorItem(Guid Id, string Nombre);
     private sealed record CausaEdicion(
     Guid Id,
     string Rit,
@@ -155,7 +243,10 @@
     bool PuedeCorregirIngreso,
     Guid? DiligenciaId,
     string? DiligenciaEncargada,
-    DateTime? FechaProgramada);
+    DateTime? FechaProgramada)
+    {
+        public string? ReceptorJudicial { get; init; }
+    }
     private string _tribunal = string.Empty;
     private string _descripcion = string.Empty;
     private string? _mensaje;
@@ -182,6 +273,15 @@
 	    _descripcion = _causa.Descripcion;
 	    _fechaEncargoCausa = _causa.FechaEncargoCausa;
 	    _fechaProgramada = _causa.FechaProgramada;
+            _receptorJudicial = _causa.ReceptorJudicial ?? string.Empty;
+            if (_causa.DiligenciaId.HasValue)
+            {
+                _receptores = await ApiClient.GetAsync<List<ReceptorItem>>(
+                    "/api/Catalogos/receptores") ?? new();
+                if (!string.IsNullOrWhiteSpace(_receptorJudicial) &&
+                    !_receptores.Any(x => x.Nombre == _receptorJudicial))
+                    _receptores.Insert(0, new ReceptorItem(Guid.Empty, _receptorJudicial));
+            }
             if (_causa.PuedeCorregirIngreso && _causa.DiligenciaId.HasValue)
                 _encargos = await ApiClient.GetAsync<List<EncargoItem>>("/api/Catalogos/diligencias-encargadas") ?? new();
         }
@@ -257,7 +357,9 @@
 			    fechaEncargoCausa = _fechaEncargoCausa,
                             diligenciaId = _causa.DiligenciaId,
                             diligenciaEncargadaId = _diligenciaEncargadaId,
-                            fechaProgramada = _fechaProgramada
+                            fechaProgramada = _fechaProgramada,
+                            receptorJudicial = string.IsNullOrWhiteSpace(_receptorJudicial)
+                                ? null : _receptorJudicial
                         }));
 
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)

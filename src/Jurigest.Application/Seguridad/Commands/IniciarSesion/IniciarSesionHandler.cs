@@ -136,7 +136,9 @@ public sealed class IniciarSesionHandler
             usuario.Id,
             usuario.Nombre,
             usuario.Email,
-            usuario.Rol.ToString());
+            usuario.Rol.ToString(),
+            usuario.NombreRolPersonalizado ?? usuario.Rol.ToString(),
+            usuario.DebeCambiarPassword);
     }
 
     private static string? Limitar(

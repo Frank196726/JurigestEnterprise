@@ -1,9 +1,10 @@
 @page "/causas/{CausaId:guid}/historial"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "CausasLectura")]
 
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
+@using System.Net.Http.Json
 
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
@@ -30,6 +31,110 @@
             <div><span>RIT</span><strong>@_causa.Rit</strong></div><div><span>Tribunal</span><strong>@_causa.Tribunal</strong></div><div class="description"><span>Descripción</span><strong>@_causa.Descripcion</strong></div>
         </section>
 
+        <section class="parties-card">
+            <header><div><span class="eyebrow">Partes</span><h2>Demandados</h2></div></header>
+            @if (_causa.Demandados.Count == 0)
+            {
+                <p>Esta causa todavía no tiene demandados registrados.</p>
+            }
+            @foreach (var demandado in _causa.Demandados.OrderByDescending(x => x.EsPrincipal))
+            {
+                <article class="party-row" @key="demandado.Id">
+                    <div>
+                        <strong>@demandado.Nombre</strong>
+                        <span>@(demandado.EsPrincipal ? "Demandado principal" : "Demandado") · @(demandado.TipoPersona == 2 ? "Persona jurídica" : "Persona natural")</span>
+                        <span>RUT: @(demandado.Rut ?? "Sin registrar")</span>
+                        @if (!string.IsNullOrWhiteSpace(demandado.RepresentanteLegal))
+                        {
+                            <span>Representante legal: @demandado.RepresentanteLegal · RUT: @(demandado.RutRepresentanteLegal ?? "Sin registrar")</span>
+                        }
+                        <AuthorizeView Policy="CausasEscritura">
+                            <Authorized>
+                                <button type="button" class="btn btn-secondary" @onclick="() => AbrirEdicionDemandado(demandado)">Completar datos</button>
+                            </Authorized>
+                        </AuthorizeView>
+                        @if (demandado.EsPrincipal && demandado.Avales is not null)
+                        {
+                            <ul>
+                                @foreach (var aval in demandado.Avales)
+                                {
+                                    <li>Aval solidario: @aval.Nombre · RUT: @(aval.Rut ?? "Sin registrar")
+                                        @if (!string.IsNullOrWhiteSpace(aval.RepresentanteLegal))
+                                        {
+                                            <span> · Representante: @aval.RepresentanteLegal (@(aval.RutRepresentanteLegal ?? "sin RUT"))</span>
+                                        }
+                                        <AuthorizeView Policy="CausasEscritura">
+                                            <Authorized>
+                                                <button type="button" class="btn btn-secondary" @onclick="() => AbrirEdicionAval(demandado.Id, aval)">Completar datos</button>
+                                            </Authorized>
+                                        </AuthorizeView>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </div>
+                </article>
+            }
+            @if (_editandoDemandadoId.HasValue)
+            {
+                <div class="party-editor">
+                    <label>RUT * <input class="form-control" maxlength="12" placeholder="12.345.678-5" @bind="_editarParte.Rut" /></label>
+                    @if (_tipoPersonaEditada == 2)
+                    {
+                        <label>Representante legal <input class="form-control" maxlength="200" @bind="_editarParte.RepresentanteLegal" /></label>
+                        <label>RUT del representante <input class="form-control" maxlength="12" @bind="_editarParte.RutRepresentanteLegal" /></label>
+                    }
+                    <button type="button" class="btn btn-primary" disabled="@_guardandoParte" @onclick="GuardarIdentificacionAsync">Guardar datos</button>
+                    <button type="button" class="btn btn-secondary" @onclick="CancelarEdicion">Cancelar</button>
+                </div>
+            }
+            <AuthorizeView Policy="CausasEscritura">
+                <Authorized>
+                    <div class="party-actions">
+                        <button type="button" class="btn btn-secondary" @onclick="() => _mostrarDemandado = !_mostrarDemandado">
+                            + @(_causa.Demandados.Any(x => x.EsPrincipal) ? "Agregar demandado" : "Agregar demandado principal")
+                        </button>
+                        @if (_causa.Demandados.Any(x => x.EsPrincipal))
+                        {
+                            <button type="button" class="btn btn-secondary" @onclick="() => _mostrarAval = !_mostrarAval">+ Agregar aval solidario</button>
+                        }
+                    </div>
+                    @if (_mostrarDemandado)
+                    {
+                        <div class="party-editor">
+                            <label>Nombre o razón social <input class="form-control" maxlength="200" @bind="_nuevoDemandado.Nombre" /></label>
+                            <label>Tipo de persona <select class="form-control" @bind="_nuevoDemandado.TipoPersona"><option value="1">Persona natural</option><option value="2">Persona jurídica</option></select></label>
+                            <label>RUT * <input class="form-control" maxlength="12" placeholder="12.345.678-5" @bind="_nuevoDemandado.Rut" /></label>
+                            @if (_nuevoDemandado.TipoPersona == 2)
+                            {
+                                <label>Representante legal <input class="form-control" maxlength="200" @bind="_nuevoDemandado.RepresentanteLegal" /></label>
+                                <label>RUT del representante <input class="form-control" maxlength="12" @bind="_nuevoDemandado.RutRepresentanteLegal" /></label>
+                            }
+                            <button type="button" class="btn btn-primary" disabled="@_guardandoParte" @onclick="GuardarDemandadoAsync">Guardar demandado</button>
+                        </div>
+                    }
+                    @if (_mostrarAval)
+                    {
+                        <div class="party-editor">
+                            <label>Nombre o razón social del aval <input class="form-control" maxlength="200" @bind="_nuevoAval.Nombre" /></label>
+                            <label>Tipo de persona <select class="form-control" @bind="_nuevoAval.TipoPersona"><option value="1">Persona natural</option><option value="2">Persona jurídica</option></select></label>
+                            <label>RUT * <input class="form-control" maxlength="12" placeholder="12.345.678-5" @bind="_nuevoAval.Rut" /></label>
+                            @if (_nuevoAval.TipoPersona == 2)
+                            {
+                                <label>Representante legal <input class="form-control" maxlength="200" @bind="_nuevoAval.RepresentanteLegal" /></label>
+                                <label>RUT del representante <input class="form-control" maxlength="12" @bind="_nuevoAval.RutRepresentanteLegal" /></label>
+                            }
+                            <button type="button" class="btn btn-primary" disabled="@_guardandoParte" @onclick="GuardarAvalAsync">Guardar aval solidario</button>
+                        </div>
+                    }
+                </Authorized>
+            </AuthorizeView>
+            @if (!string.IsNullOrWhiteSpace(_mensajeParte))
+            {
+                <p class="party-message" role="status">@_mensajeParte</p>
+            }
+        </section>
+
         <section class="summary">
             <div><strong>@_diligencias.Count</strong><span>Diligencias</span></div><div><strong>@_diligencias.Count(x => x.Resultado != 0)</strong><span>Resultados</span></div><div><strong>@_resoluciones.Count</strong><span>Resoluciones</span></div><div><strong>@_documentos.Count</strong><span>Documentos</span></div>
         </section>
@@ -49,6 +154,12 @@
                             <header><div><span class="event-type">@evento.Tipo</span><h2>@evento.Titulo</h2></div><time>@evento.Fecha.ToString("dd-MM-yyyy HH:mm")</time></header>
                             @if (!string.IsNullOrWhiteSpace(evento.Detalle)) { <p>@evento.Detalle</p> }
                             @if (!string.IsNullOrWhiteSpace(evento.Meta)) { <small>@evento.Meta</small> }
+                            @if (evento.DiligenciaSinResultadoId.HasValue)
+                            {
+                                <AuthorizeView Policy="DiligenciasGestion">
+                                    <a class="btn btn-primary mt-2" href="@($"/diligencias?causaId={CausaId}&diligenciaId={evento.DiligenciaSinResultadoId.Value}")">Actualizar diligencia</a>
+                                </AuthorizeView>
+                            }
                         </div>
                     </article>
                 }
@@ -65,6 +176,144 @@
     private readonly List<DocumentoResumen> _documentos = [];
     private bool _cargando = true;
     private string? _error;
+    private string? _mensajeParte;
+    private bool _mostrarDemandado, _mostrarAval, _guardandoParte;
+    private ParteForm _nuevoDemandado = new();
+    private ParteForm _nuevoAval = new();
+    private ParteForm _editarParte = new();
+    private Guid? _editandoDemandadoId, _editandoAvalId;
+    private int _tipoPersonaEditada;
+
+    private sealed class ParteForm
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public int TipoPersona { get; set; } = 1;
+        public string Rut { get; set; } = string.Empty;
+        public string RepresentanteLegal { get; set; } = string.Empty;
+        public string RutRepresentanteLegal { get; set; } = string.Empty;
+    }
+
+    private void AbrirEdicionDemandado(DemandadoResumen demandado)
+    {
+        _editandoDemandadoId = demandado.Id;
+        _editandoAvalId = null;
+        _tipoPersonaEditada = demandado.TipoPersona;
+        _editarParte = new ParteForm
+        {
+            Rut = demandado.Rut ?? string.Empty,
+            RepresentanteLegal = demandado.RepresentanteLegal ?? string.Empty,
+            RutRepresentanteLegal = demandado.RutRepresentanteLegal ?? string.Empty
+        };
+        _mensajeParte = null;
+    }
+
+    private void AbrirEdicionAval(Guid demandadoId, AvalSolidarioResumen aval)
+    {
+        _editandoDemandadoId = demandadoId;
+        _editandoAvalId = aval.Id;
+        _tipoPersonaEditada = aval.TipoPersona;
+        _editarParte = new ParteForm
+        {
+            Rut = aval.Rut ?? string.Empty,
+            RepresentanteLegal = aval.RepresentanteLegal ?? string.Empty,
+            RutRepresentanteLegal = aval.RutRepresentanteLegal ?? string.Empty
+        };
+        _mensajeParte = null;
+    }
+
+    private void CancelarEdicion()
+    {
+        _editandoDemandadoId = null;
+        _editandoAvalId = null;
+    }
+
+    private async Task GuardarIdentificacionAsync()
+    {
+        if (!_editandoDemandadoId.HasValue) return;
+        if (string.IsNullOrWhiteSpace(_editarParte.Rut))
+        {
+            _mensajeParte = "El RUT es obligatorio.";
+            return;
+        }
+        _guardandoParte = true;
+        _mensajeParte = null;
+        try
+        {
+            var ruta = $"/api/Causas/{CausaId}/demandados/{_editandoDemandadoId.Value}";
+            if (_editandoAvalId.HasValue) ruta += $"/avales/{_editandoAvalId.Value}";
+            ruta += "/identificacion";
+            using var response = await ApiClient.PutAsync(ruta, JsonContent.Create(new
+            {
+                rut = _editarParte.Rut.Trim(),
+                representanteLegal = _tipoPersonaEditada == 2 ? _editarParte.RepresentanteLegal.Trim() : null,
+                rutRepresentanteLegal = _tipoPersonaEditada == 2 ? _editarParte.RutRepresentanteLegal.Trim() : null
+            }));
+            if (!response.IsSuccessStatusCode)
+            {
+                _mensajeParte = $"No se pudieron guardar los datos: {await response.Content.ReadAsStringAsync()}";
+                return;
+            }
+            _causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{CausaId}");
+            CancelarEdicion();
+            _mensajeParte = "Datos de identificación actualizados.";
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _mensajeParte = "No se pudo conectar con el servicio. Inténtalo nuevamente."; }
+        finally { _guardandoParte = false; }
+    }
+
+    private async Task GuardarDemandadoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoDemandado.Rut))
+        {
+            _mensajeParte = "El RUT del demandado es obligatorio.";
+            return;
+        }
+        var esPrincipal = _causa is not null && !_causa.Demandados.Any(x => x.EsPrincipal);
+        await GuardarParteAsync($"/api/Causas/{CausaId}/demandados",
+            new { _nuevoDemandado.Nombre, _nuevoDemandado.TipoPersona, EsPrincipal = esPrincipal,
+                _nuevoDemandado.Rut,
+                RepresentanteLegal = _nuevoDemandado.TipoPersona == 2 ? _nuevoDemandado.RepresentanteLegal : null,
+                RutRepresentanteLegal = _nuevoDemandado.TipoPersona == 2 ? _nuevoDemandado.RutRepresentanteLegal : null },
+            () => { _mostrarDemandado = false; _nuevoDemandado = new(); });
+    }
+
+    private async Task GuardarAvalAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_nuevoAval.Rut))
+        {
+            _mensajeParte = "El RUT del aval solidario es obligatorio.";
+            return;
+        }
+        var principal = _causa?.Demandados.FirstOrDefault(x => x.EsPrincipal);
+        if (principal is null) return;
+        await GuardarParteAsync($"/api/Causas/{CausaId}/demandados/{principal.Id}/avales",
+            new { _nuevoAval.Nombre, _nuevoAval.TipoPersona, _nuevoAval.Rut,
+                RepresentanteLegal = _nuevoAval.TipoPersona == 2 ? _nuevoAval.RepresentanteLegal : null,
+                RutRepresentanteLegal = _nuevoAval.TipoPersona == 2 ? _nuevoAval.RutRepresentanteLegal : null },
+            () => { _mostrarAval = false; _nuevoAval = new(); });
+    }
+
+    private async Task GuardarParteAsync(string ruta, object datos, Action limpiar)
+    {
+        _guardandoParte = true;
+        _mensajeParte = null;
+        try
+        {
+            using var response = await ApiClient.PostAsync(ruta, JsonContent.Create(datos));
+            if (!response.IsSuccessStatusCode)
+            {
+                _mensajeParte = $"No se pudo guardar la parte: {await response.Content.ReadAsStringAsync()}";
+                return;
+            }
+            _causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{CausaId}");
+            limpiar();
+            _mensajeParte = "Parte registrada correctamente.";
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _mensajeParte = "No se pudo conectar con el servicio. Inténtalo nuevamente."; }
+        finally { _guardandoParte = false; }
+    }
 
     private IEnumerable<EventoHistorial> Eventos =>
         ConstruirEventos().OrderByDescending(x => x.Fecha);
@@ -90,7 +339,7 @@
     private List<EventoHistorial> ConstruirEventos()
     {
         var eventos = new List<EventoHistorial>();
-        eventos.AddRange(_diligencias.Select(d => new EventoHistorial($"d-{d.Id}", d.FechaGestion ?? d.FechaRealizada ?? d.FechaProgramada ?? d.FechaCreacion, "Diligencia", d.Descripcion, d.ResultadoDetalle, $"Estado: {Estado(d.Estado)} · Receptor: {d.ReceptorJudicial ?? "Sin asignar"}", "diligence", "D")));
+        eventos.AddRange(_diligencias.Select(d => new EventoHistorial($"d-{d.Id}", d.FechaGestion ?? d.FechaRealizada ?? d.FechaProgramada ?? d.FechaCreacion, "Diligencia", d.Descripcion, d.ResultadoDetalle, $"Estado: {Estado(d.Estado)} · Receptor: {d.ReceptorJudicial ?? "Sin asignar"}", "diligence", "D") { DiligenciaSinResultadoId = d.Resultado == 0 ? d.Id : null }));
         eventos.AddRange(_resoluciones.Select(r => new EventoHistorial($"r-{r.Id}", r.Fecha, "Resolución", TipoResolucion(r.Tipo), r.Descripcion, null, "resolution", "R")));
         eventos.AddRange(_documentos.Select(d => new EventoHistorial($"a-{d.Id}", d.FechaRegistro, "Documento", d.Nombre, $"{Formato(d.ContentType)} · {Tamano(d.TamanoBytes)}", null, "document", "A")));
         return eventos;
@@ -100,5 +349,8 @@
     private static string TipoResolucion(int valor) => valor switch { 1 => "Decreto", 2 => "Auto", 3 => "Sentencia interlocutoria", 4 => "Sentencia definitiva", 5 => "Oficio", _ => "Otra resolución" };
     private static string Formato(string tipo) => tipo.Contains("pdf", StringComparison.OrdinalIgnoreCase) ? "PDF" : tipo.Contains("word", StringComparison.OrdinalIgnoreCase) ? "Word" : "Archivo";
     private static string Tamano(long bytes) => bytes < 1024 * 1024 ? $"{bytes / 1024d:0.0} KB" : $"{bytes / 1024d / 1024d:0.0} MB";
-    private sealed record EventoHistorial(string Id, DateTime Fecha, string Tipo, string Titulo, string? Detalle, string? Meta, string Clase, string Icono);
+    private sealed record EventoHistorial(string Id, DateTime Fecha, string Tipo, string Titulo, string? Detalle, string? Meta, string Clase, string Icono)
+    {
+        public Guid? DiligenciaSinResultadoId { get; init; }
+    }
 }

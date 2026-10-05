@@ -1,12 +1,14 @@
 @page "/diligencias"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "DiligenciasLectura")]
 
+@using Microsoft.JSInterop
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
 
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Diligencias | Jurigest Enterprise</PageTitle>
 
@@ -109,19 +111,19 @@
                 <thead>
                     <tr>
                         <th>Descripción</th>
-                        <th>Tipo</th>
+                        <th>Diligencia realizada</th>
                         <th>Estado</th>
-                        <th>Programada</th>
+                        <th>Fecha de gestión</th>
                         <th>Receptor</th>
                         <th>Ubicación</th>
-                        <th></th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
 
                 <tbody>
                     @foreach (var diligencia in _diligencias)
                     {
-                        <tr @key="diligencia.Id">
+                        <tr @key="diligencia.Id" class="@(DiligenciaIdInicial == diligencia.Id ? "table-primary" : null)">
                             <td>
                                 <strong>
                                     @diligencia.Descripcion
@@ -129,7 +131,7 @@
                             </td>
 
                             <td>
-                                @ObtenerTipo(diligencia.Tipo)
+                                @(string.IsNullOrWhiteSpace(diligencia.DiligenciaRealizada) ? "Sin registrar" : diligencia.DiligenciaRealizada)
                             </td>
 
                             <td>
@@ -139,8 +141,8 @@
                             </td>
 
                             <td>
-                                @(diligencia.FechaProgramada?
-                                    .ToString("dd-MM-yyyy HH:mm") ?? "—")
+                                @(diligencia.FechaGestion?
+                                    .ToString("dd-MM-yyyy HH:mm") ?? "Sin registrar")
                             </td>
 
                             <td>
@@ -152,6 +154,18 @@
                             </td>
 
                             <td>
+                                <div class="d-flex flex-wrap gap-2">
+                                    <AuthorizeView Policy="DiligenciasGestion"><a class="btn btn-sm btn-outline-secondary" href="@($"/diligencias/{diligencia.Id}/vehiculos")">Gestionar vehículos</a></AuthorizeView>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@_cargandoDocumento"
+                                            @onclick="() => VerEstampe(diligencia)">Ver estampe</button>
+                                    <button type="button" class="btn btn-sm btn-outline-primary" disabled="@_cargandoDocumento"
+                                            @onclick="() => VerReciboAsync(diligencia)">Ver recibo</button>
+                                @if (diligencia.Resultado == 0)
+                                {
+                                    <AuthorizeView Policy="DiligenciasGestion">
+                                        <a class="btn btn-primary" href="@($"/causas/{_causaSeleccionadaId}/diligencias/registrar?diligenciaId={diligencia.Id}")">Registrar resultado</a>
+                                    </AuthorizeView>
+                                }
                                 @if (diligencia.Estado == 1)
                                 {
                                     <button type="button"
@@ -160,8 +174,70 @@
                                         Modificar diligencia
                                     </button>
                                 }
+                                </div>
                             </td>
                         </tr>
+                        @if (_documentoDiligenciaId == diligencia.Id)
+                        {
+                            <tr>
+                                <td colspan="7">
+                                    <div class="border rounded p-3 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <strong>@(_verRecibo ? "Recibo" : "Estampe") — @diligencia.Descripcion</strong>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary" disabled="@_cargandoDocumento"
+                                                    @onclick="() => _documentoDiligenciaId = null">Cerrar</button>
+                                        </div>
+                                        @if (_cargandoDocumento)
+                                        {
+                                            <p>Cargando recibo...</p>
+                                        }
+                                        else if (!string.IsNullOrWhiteSpace(_mensajeDocumento))
+                                        {
+                                            <p role="status">@_mensajeDocumento</p>
+                                        }
+                                        else if (_verRecibo && _reciboMostrar is not null)
+                                        {
+                                            <div id="recibo-para-imprimir" class="recibo-detalle">
+                                            <fieldset class="border rounded p-3 mb-3">
+                                                <legend class="fs-6">Datos del recibo <strong>R@_reciboMostrar.Numero</strong> — Abogado: @TextoRecibo(_reciboMostrar.Abogado)</legend>
+                                                <dl class="mb-0">
+                                                    <dt>Receptor asignado</dt><dd>@TextoRecibo(_reciboMostrar.Receptor ?? diligencia.ReceptorJudicial)</dd>
+                                                    <dt>Causa</dt><dd>@(_reciboMostrar.Rol ?? _causas.FirstOrDefault(c => c.Id == _causaSeleccionadaId)?.Rit) — @(_reciboMostrar.Tribunal ?? _causas.FirstOrDefault(c => c.Id == _causaSeleccionadaId)?.Tribunal)</dd>
+                                                    <dt>Caratulado</dt><dd>@(_reciboMostrar.Caratulado ?? _causas.FirstOrDefault(c => c.Id == _causaSeleccionadaId)?.Descripcion)</dd>
+                                                    <dt>Diligencia encargada</dt><dd>@(_reciboMostrar.DiligenciaEncargada ?? diligencia.Descripcion)</dd>
+                                                    <dt>Fecha creación</dt><dd>@_reciboMostrar.FechaEmision.ToString("dd-MM-yyyy")</dd>
+                                                    <dt>Estado</dt><dd>@(_reciboMostrar.Estado == 2 ? "Pagado" : "Impago")</dd>
+                                                </dl>
+                                            </fieldset>
+                                            <fieldset class="border rounded p-3">
+                                                <legend class="fs-6">Detalle del recibo</legend>
+                                                <dl class="mb-0">
+                                                    <dt>Resultado</dt><dd>@_reciboMostrar.DiligenciaRealizada</dd>
+                                                    <dt>N° operación</dt><dd>@TextoRecibo(_reciboMostrar.NumeroOperacion)</dd>
+                                                    <dt>Cuantía</dt><dd>@(_reciboMostrar.Cuantia.HasValue ? Pesos(_reciboMostrar.Cuantia.Value) : "—")</dd>
+                                                    <dt>Valor gestión</dt><dd>@Pesos(_reciboMostrar.ValorGestion)</dd>
+                                                    <dt>Observación recibo</dt><dd>@TextoRecibo(_reciboMostrar.Observacion)</dd>
+                                                    <dt>Detalle adicionales</dt><dd>@TextoRecibo(_reciboMostrar.DetalleAdicionales)</dd>
+                                                    <dt>Total adicionales</dt><dd>@Pesos(_reciboMostrar.TotalAdicionales)</dd>
+                                                    <dt>Total recibo</dt><dd><strong>@Pesos(_reciboMostrar.Monto)</strong></dd>
+                                                </dl>
+                                            </fieldset>
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@diligencia.Estampe</div>
+                                        }
+                                        @if (!_cargandoDocumento && string.IsNullOrWhiteSpace(_mensajeDocumento))
+                                        {
+                                            <button type="button" class="btn btn-primary mt-3" @onclick="() => ImprimirAsync(diligencia)">
+                                                @(_verRecibo ? "Imprimir recibo" : "Imprimir estampe")
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
                     }
                 </tbody>
             </table>
@@ -173,6 +249,9 @@
     [SupplyParameterFromQuery(Name = "causaId")]
     public Guid? CausaIdInicial { get; set; }
 
+    [SupplyParameterFromQuery(Name = "diligenciaId")]
+    public Guid? DiligenciaIdInicial { get; set; }
+
     private readonly List<CausaResumen> _causas = [];
     private readonly List<DiligenciaResumen> _diligencias = [];
 
@@ -180,6 +259,92 @@
     private string _busquedaCausa = string.Empty;
     private string? _mensajeError;
     private bool _cargando = true;
+    private Guid? _documentoDiligenciaId;
+    private bool _verRecibo;
+    private bool _cargandoDocumento;
+    private string? _mensajeDocumento;
+    private ReciboResumen? _reciboMostrar;
+
+    private static string TextoRecibo(string? texto) => string.IsNullOrWhiteSpace(texto) ? "—" : texto;
+    private static string Pesos(decimal valor) => valor.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("es-CL"));
+
+    private async Task ImprimirAsync(DiligenciaResumen diligencia)
+    {
+        var titulo = _verRecibo ? "Recibo" : "Estampe";
+        string contenido;
+        if (_verRecibo)
+        {
+            if (_reciboMostrar is null) return;
+            var recibo = _reciboMostrar;
+            var causa = _causas.FirstOrDefault(c => c.Id == _causaSeleccionadaId);
+            contenido = $"Datos del recibo R{recibo.Numero} - Abogado: {TextoRecibo(recibo.Abogado)}\n\n" +
+                $"Receptor asignado: {TextoRecibo(recibo.Receptor ?? diligencia.ReceptorJudicial)}\n" +
+                $"Causa: {recibo.Rol ?? causa?.Rit} — {recibo.Tribunal ?? causa?.Tribunal}\n" +
+                $"Caratulado: {recibo.Caratulado ?? causa?.Descripcion}\n" +
+                $"Diligencia encargada: {recibo.DiligenciaEncargada ?? diligencia.Descripcion}\n" +
+                $"Fecha creación: {recibo.FechaEmision:dd-MM-yyyy}\n" +
+                $"Estado: {(recibo.Estado == 2 ? "Pagado" : "Impago")}\n\n" +
+                $"Resultado: {recibo.DiligenciaRealizada}\nN° operación: {TextoRecibo(recibo.NumeroOperacion)}\n" +
+                $"Cuantía: {(recibo.Cuantia.HasValue ? Pesos(recibo.Cuantia.Value) : "—")}\n" +
+                $"Valor gestión: {Pesos(recibo.ValorGestion)}\nObservación recibo: {TextoRecibo(recibo.Observacion)}\n\n" +
+                $"Datos adicionales\nDetalle: {TextoRecibo(recibo.DetalleAdicionales)}\n" +
+                $"Total adicionales: {Pesos(recibo.TotalAdicionales)}\nTotal recibo: {Pesos(recibo.Monto)}";
+            if (recibo.FechaPago.HasValue)
+                contenido += $"\nFecha de pago: {recibo.FechaPago.Value:dd-MM-yyyy HH:mm}";
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(diligencia.Estampe)) return;
+            contenido = diligencia.Estampe;
+        }
+        await using var modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imprimir-documento.js");
+        await modulo.InvokeVoidAsync("imprimirDocumento", titulo, contenido, _verRecibo ? "recibo-para-imprimir" : null);
+    }
+
+    private void VerEstampe(DiligenciaResumen diligencia)
+    {
+        _documentoDiligenciaId = diligencia.Id;
+        _verRecibo = false;
+        _reciboMostrar = null;
+        _mensajeDocumento = string.IsNullOrWhiteSpace(diligencia.Estampe)
+            ? "Esta diligencia aún no tiene un estampe registrado." : null;
+    }
+
+    private async Task VerReciboAsync(DiligenciaResumen diligencia)
+    {
+        if (_cargandoDocumento) return;
+        _documentoDiligenciaId = diligencia.Id;
+        _verRecibo = true;
+        _reciboMostrar = null;
+        _mensajeDocumento = null;
+        _cargandoDocumento = true;
+        try
+        {
+            var referencia = await ApiClient.GetAsync<ReciboReferencia>(
+                $"/api/Recibos/diligencia/{diligencia.Id}");
+            if (referencia is not null)
+                _reciboMostrar = await ApiClient.GetAsync<ReciboResumen>($"/api/Recibos/{referencia.Id}");
+            if (_reciboMostrar is null)
+                _mensajeDocumento = "Esta diligencia aún no tiene un recibo emitido.";
+        }
+        catch (UnauthorizedAccessException)
+        {
+            Navigation.NavigateTo("/login", forceLoad: true);
+        }
+        catch (HttpRequestException)
+        {
+            _mensajeDocumento = "No fue posible cargar el recibo. Inténtalo nuevamente.";
+        }
+        finally
+        {
+            _cargandoDocumento = false;
+        }
+    }
+
+    private sealed class ReciboReferencia
+    {
+        public Guid Id { get; set; }
+    }
 
     private void NuevaDiligencia()
     {
@@ -312,6 +477,7 @@
 
     private async Task CargarDiligenciasAsync()
     {
+        _documentoDiligenciaId = null;
         _diligencias.Clear();
 
         if (_causaSeleccionadaId == Guid.Empty)

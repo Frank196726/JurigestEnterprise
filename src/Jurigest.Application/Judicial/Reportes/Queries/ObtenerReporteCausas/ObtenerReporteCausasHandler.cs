@@ -6,7 +6,9 @@ public sealed class ObtenerReporteCausasHandler(ICausaRepository causas, IDilige
 {
  public async Task<List<ReporteCausaResponse>> Handle(ObtenerReporteCausasQuery request,CancellationToken ct)
  {
-  var hoy=DateTime.UtcNow.Date; var cs=await causas.GetAllAsync(ct); var ds=await diligencias.GetAllAsync(ct); var grupos=ds.GroupBy(x=>x.CausaId).ToDictionary(x=>x.Key,x=>x.ToList());
+  var hoy=DateTime.UtcNow.Date; var cs=await causas.GetAllAsync(ct); var ds=await diligencias.GetAllAsync(ct);
+  if(!string.IsNullOrWhiteSpace(request.ReceptorAsignado)){ds=ds.Where(x=>string.Equals(x.ReceptorJudicial?.Trim(),request.ReceptorAsignado.Trim(),StringComparison.OrdinalIgnoreCase)).ToList();var ids=ds.Select(x=>x.CausaId).ToHashSet();cs=cs.Where(x=>ids.Contains(x.Id)).ToList();}
+  var grupos=ds.GroupBy(x=>x.CausaId).ToDictionary(x=>x.Key,x=>x.ToList());
   return cs.Select(c=>{var g=grupos.GetValueOrDefault(c.Id)??[];var fechas=g.Select(x=>x.FechaGestion??x.FechaRealizada).Where(x=>x.HasValue).Select(x=>x!.Value);DateTime? ultima=fechas.Any()?fechas.Max():null;var referencia=ultima??c.FechaGestionCausa??c.FechaEncargoCausa;var responsables=string.Join(", ",g.Select(x=>x.ReceptorJudicial).Where(x=>!string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase));return new ReporteCausaResponse(c.Id,c.Rit,c.Tribunal,c.Descripcion,c.FechaEncargoCausa,ultima??c.FechaGestionCausa,Math.Max(0,(hoy-referencia.Date).Days),(int)c.Estado,responsables,g.Count,g.Count(x=>x.Estado==EstadoDiligencia.Completada));}).OrderByDescending(x=>x.DiasSinGestion).ThenBy(x=>x.Rit).ToList();
  }
 }

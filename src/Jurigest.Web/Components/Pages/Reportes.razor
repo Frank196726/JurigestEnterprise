@@ -1,6 +1,6 @@
 @page "/reportes"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "CausasLectura")]
 
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security

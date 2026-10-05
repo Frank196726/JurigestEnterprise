@@ -15,16 +15,16 @@ namespace Jurigest.API.Controllers;
 [Route("api")]
 public sealed class DocumentosController : ControllerBase
 {
-        private readonly IMediator _mediator;
-        private readonly IArchivoStorage _archivoStorage;
+    private readonly IMediator _mediator;
+    private readonly IArchivoStorage _archivoStorage;
 
-        public DocumentosController(
-            IMediator mediator,
-            IArchivoStorage archivoStorage)
-{
-            _mediator = mediator;
-            _archivoStorage = archivoStorage;
-}
+    public DocumentosController(
+        IMediator mediator,
+        IArchivoStorage archivoStorage)
+    {
+        _mediator = mediator;
+        _archivoStorage = archivoStorage;
+    }
 
     [HttpPost("Causas/{causaId:guid}/documentos/archivo")]
     [Consumes("multipart/form-data")]
@@ -151,17 +151,17 @@ public sealed class DocumentosController : ControllerBase
     public async Task<IActionResult> Descargar(
         Guid id,
         CancellationToken cancellationToken)
-{
+    {
         var documento = await _mediator.Send(
             new ObtenerDocumentoQuery(id),
             cancellationToken);
 
         if (documento is null)
         {
-        return NotFound(new
-        {
-            mensaje = "El documento no existe."
-        });
+            return NotFound(new
+            {
+                mensaje = "El documento no existe."
+            });
         }
 
         var contenido = await _archivoStorage.AbrirLecturaAsync(
@@ -170,11 +170,11 @@ public sealed class DocumentosController : ControllerBase
 
         if (contenido is null)
         {
-        return NotFound(new
-        {
-            mensaje = "El archivo fisico no existe."
-        });
-    }
+            return NotFound(new
+            {
+                mensaje = "El archivo fisico no existe."
+            });
+        }
 
         var extension = Path.GetExtension(documento.RutaArchivo);
 
@@ -187,7 +187,7 @@ public sealed class DocumentosController : ControllerBase
             documento.ContentType,
             nombreDescarga,
             enableRangeProcessing: true);
-}
+    }
     [HttpGet("Causas/{causaId:guid}/documentos")]
     [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> ObtenerPorCausa(

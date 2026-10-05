@@ -8,4 +8,6 @@ public sealed record IniciarSesionApiResponse(
     Guid UsuarioId,
     string Nombre,
     string Email,
-    string Rol);
+    string Rol,
+    string RolAsignado,
+    bool DebeCambiarPassword);

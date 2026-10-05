@@ -2,10 +2,11 @@
 @page "/causas/nueva"
 
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "CausasEscritura")]
 
 @using System.Net.Http.Json
 @using Jurigest.Web.Models
+@using Jurigest.Web.Components.Shared
 @using Jurigest.Web.Security
 
 @inject IJurigestApiClient ApiClient
@@ -13,7 +14,7 @@
 
 <PageTitle>Nueva gestión | Jurigest Enterprise</PageTitle>
 
-<section class="causes-page">
+<section class="causes-page reference-layout">
 
     <header class="page-heading">
         <div>
@@ -28,8 +29,50 @@
     </header>
 
 
-    <AuthorizeView Roles="Administrador,Abogado">
+    <AuthorizeView Policy="CausasEscritura">
         <Authorized Context="usuarioAutorizado">
+
+            <div class="history-card">
+                <h2>Historial de gestiones · @ObtenerRitResultante()</h2>
+                <div class="history-scroll">
+                    <table><thead><tr><th>Gestión encargada</th><th>Fecha encargo</th><th>Fecha ejecución</th><th>Resultado</th><th>Observaciones</th></tr></thead>
+                        <tbody><tr><td colspan="5">Nueva causa: su primera gestión se registrará al guardar.</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <aside class="gestion-sidebar" aria-label="Búsqueda y seguimiento">
+                <section class="sidebar-card">
+                    <h2>Búsqueda rápida por ROL</h2>
+                    <form @onsubmit="BuscarRol" @onsubmit:preventDefault>
+                        <label for="busqueda-gestion">Número ROL</label>
+                        <input id="busqueda-gestion" class="form-control" @bind="_rolBusqueda" placeholder="Ej.: C-1505-26" required />
+                        <button type="submit" class="btn btn-primary">Buscar</button>
+                    </form>
+                </section>
+                <section class="sidebar-card">
+                    <h2>Causas encargadas</h2>
+                    @if (_panelGestion is null) { <p>Resumen no disponible.</p> }
+                    else
+                    {
+                        <p>0–10 días sin gestionar <strong>@_panelGestion.CausasPorAntiguedad.Hasta10Dias</strong></p>
+                        <p>11–15 días sin gestionar <strong>@_panelGestion.CausasPorAntiguedad.Entre11Y15Dias</strong></p>
+                        <p>Más de 15 días <strong>@_panelGestion.CausasPorAntiguedad.MasDe15Dias</strong></p>
+                    }
+                    <a href="/causas">Ver causas</a>
+                </section>
+                <section class="sidebar-card">
+                    <h2>Plazos de diligencias</h2>
+                    @if (_panelGestion is null) { <p>Resumen no disponible.</p> }
+                    else
+                    {
+                        <p>Vencidas <strong>@_panelGestion.DiligenciasPorPlazo.Vencidas</strong></p>
+                        <p>Vencen hoy <strong>@_panelGestion.DiligenciasPorPlazo.VencenHoy</strong></p>
+                        <p>Próximos 3 días <strong>@_panelGestion.DiligenciasPorPlazo.Proximos3Dias</strong></p>
+                    }
+                    <a href="/vencimientos">Ver vencimientos</a>
+                </section>
+            </aside>
 
             <section class="management-card"
                      aria-labelledby="titulo-nueva-gestion">
@@ -41,7 +84,7 @@
                         </span>
 
                         <h2 id="titulo-nueva-gestion">
-                            Guardar gestión
+                            Gestión actual: Nueva gestión
                         </h2>
 
                         <p>
@@ -60,7 +103,7 @@
                     <ValidationSummary
                         class="validation-summary" />
 
-                    <div class="form-grid">
+                    <div class="form-grid main-fields">
 
                         @* ==================================================
                            TIPO DE CAUSA
@@ -228,7 +271,8 @@
                                 <span>Abogado responsable *</span>
 
                                 <InputSelect
-                                    @bind-Value="_nuevaGestion.AbogadoId">
+                                    @bind-Value="_nuevaGestion.AbogadoId"
+                                    @bind-Value:after="AsociarDemandanteConAbogado">
 
                                     <option value="">
                                         Seleccione...
@@ -258,6 +302,8 @@
                                     : "+ Agregar abogado")
 
                             </button>
+
+
                         </div>
 
                         @if (_mostrarAgregarTribunal)
@@ -310,26 +356,186 @@
                             </div>
                         }
 
+                        <fieldset class="full-width caratula-box">
+                            <legend>Carátula</legend>
+                            <div class="caratula-fields">
+                                <label><span>Demandante asociado al abogado *</span><InputText @bind-Value="_nuevaGestion.Demandante" maxlength="200" /><ValidationMessage For="@(() => _nuevaGestion.Demandante)" /></label>
+                                <span class="caratula-con">con</span>
+                                <label><span>Demandado — primer apellido y primer nombre *</span><InputText @bind-Value="_nuevaGestion.DemandadoCaratula" maxlength="200" placeholder="Ej.: Maldonado Julio" /><ValidationMessage For="@(() => _nuevaGestion.DemandadoCaratula)" /><small>Ingrese el primer apellido y el primer nombre. El nombre completo se registra por separado en los antecedentes del demandado.</small></label>
+                            </div>
+                        </fieldset>
                         @* ==================================================
                            PARTES
                            ================================================== *@
 
-                        <label>
-                            <span>Demandante</span>
+                        @* ==================================================
+                           FECHAS
+                           ================================================== *@
 
-                            <InputText
-                                @bind-Value="_nuevaGestion.Demandante"
-                                maxlength="200" />
+                        <label>
+                            <span>Fecha de encargo de la causa *</span>
+
+                            <InputDate
+                                @bind-Value="_nuevaGestion.FechaEncargoCausa" />
+                            <button type="button" class="btn btn-secondary" @onclick="() => _nuevaGestion.FechaEncargoCausa = DateTime.Today">Hoy</button>
 
                             <ValidationMessage
-                                For="@(() => _nuevaGestion.Demandante)" />
+                                For="@(() => _nuevaGestion.FechaEncargoCausa)" />
                         </label>
 
                         <label>
-                            <span>Demandado</span>
+                            <span>Fecha de retiro</span>
+
+                            <InputDate
+                                @bind-Value="_nuevaGestion.FechaRetiro" />
+                            <button type="button" class="btn btn-secondary" @onclick="() => _nuevaGestion.FechaRetiro = DateTime.Today">Hoy</button>
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.FechaRetiro)" />
+                        </label>
+
+                        @* ==================================================
+                           DILIGENCIA ENCARGADA
+                           ================================================== *@
+
+                        <label>
+                            <span>Fecha programada *</span>
+
+                            <InputDate
+                                 @bind-Value="_nuevaGestion.FechaProgramada" />
+
+                            <ValidationMessage
+                                For="@(() => _nuevaGestion.FechaProgramada)" />
+                        </label>
+
+                        <div class="full-width">
+
+                            <label>
+                                <span>Diligencia encargada *</span>
+
+                                <InputSelect
+                                    @bind-Value="_nuevaGestion.DiligenciaEncargadaId">
+
+                                    <option value="">
+                                        Seleccione...
+                                    </option>
+
+                                    @foreach (var diligencia in
+                                        _diligenciasEncargadas)
+                                    {
+                                        <option value="@diligencia.Id">
+                                            @diligencia.Nombre
+                                        </option>
+                                    }
+
+                                </InputSelect>
+                            </label>
+
+                            <ValidationMessage
+                                For="@(() =>
+                                    _nuevaGestion.DiligenciaEncargadaId)" />
+                            <label class="mt-3"><span>Materia del juicio *</span>
+                                <InputSelect @bind-Value="_nuevaGestion.MateriaId">
+                                    <option value="">Seleccione...</option>
+                                    @foreach (var materia in _materias) { <option value="@materia.Id">@materia.Nombre</option> }
+                                </InputSelect>
+                            </label>
+                            <ValidationMessage For="@(() => _nuevaGestion.MateriaId)" />
+                            <button type="button" class="btn btn-secondary mt-2" @onclick="() => _mostrarMateria = !_mostrarMateria">+ Agregar materia</button>
+                            @if (_mostrarMateria)
+                            {
+                                <div class="border rounded p-3 mt-2">
+                                    <input class="form-control" placeholder="Nombre de la materia" maxlength="200" @bind="_nuevaMateria" />
+                                    <button type="button" class="btn btn-primary mt-2" disabled="@_guardandoCatalogo" @onclick="AgregarMateriaAsync">Agregar y seleccionar</button>
+                                </div>
+                            }
+
+
+                            <button type="button"
+                                    class="btn btn-secondary"
+                                    style="margin-top:.5rem;"
+                                    disabled="@_guardandoCatalogo"
+                                    @onclick="AlternarAgregarDiligencia">
+
+                                @(_mostrarAgregarDiligencia
+                                    ? "Cancelar nueva diligencia"
+                                    : "+ Agregar diligencia")
+
+                            </button>
+
+                        </div>
+
+                        @if (_mostrarAgregarDiligencia)
+                        {
+                            <div class="full-width catalog-editor">
+
+                                <label>
+                                    <span>
+                                        Nombre de la diligencia encargada
+                                    </span>
+
+                                    <input type="text"
+                                           class="form-control"
+                                           maxlength="200"
+                                           autocomplete="off"
+                                           @bind="_nuevaDiligencia"
+                                           placeholder="Ej.: Notificación de demanda" />
+                                </label>
+
+                                <label>
+                                    <span>Tipo de diligencia *</span>
+
+                                    <select class="form-control"
+                                            @bind="_nuevoCodigoTipoDiligencia">
+
+                                        <option value="">
+                                            Seleccione...
+                                        </option>
+
+                                        @foreach (var tipo in
+                                            _tiposDiligencia)
+                                        {
+                                            if (tipo.CodigoSistema.HasValue)
+                                            {
+                                                <option
+                                                    value="@tipo.CodigoSistema.Value">
+
+                                                    @tipo.Nombre
+
+                                                </option>
+                                            }
+                                        }
+
+                                    </select>
+                                </label>
+
+                                <button type="button"
+                                        class="btn btn-primary"
+                                        disabled="@_guardandoCatalogo"
+                                        @onclick="AgregarDiligenciaAsync">
+                                    Agregar diligencia
+                                </button>
+
+                            </div>
+                        }
+
+                        <label class="full-width observations-field">
+                            <span>Observaciones</span>
+                            <textarea class="form-control" rows="4" maxlength="2000" @bind="_observaciones" placeholder="Información adicional de la diligencia..."></textarea>
+                        </label>
+                        <div class="full-width d-flex gap-2 mb-2">
+                            <button type="button" class="btn btn-secondary" disabled="@_cargandoMembrete" @onclick="() => AbrirMembreteAsync()">Imprimir membrete</button>
+                            <button type="button" class="btn btn-secondary" disabled="@_cargandoMembrete" @onclick="AbrirVehiculosAsync">Gestionar vehículos</button>
+                        </div>
+                        <section class="full-width" aria-labelledby="antecedentes-demandado" style="border:1px solid #dbe3ef;border-radius:.75rem;padding:1rem;">
+                            <h3 id="antecedentes-demandado">Antecedentes del demandado</h3>
+                            <div class="form-grid main-fields">
+                        <label>
+                            <span>Nombre / Razón Social *</span>
 
                             <InputText
                                 @bind-Value="_nuevaGestion.Demandado"
+                                placeholder="Nombre completo o razón social"
                                 maxlength="200" />
 
                             <ValidationMessage
@@ -337,7 +543,26 @@
                         </label>
 
                         <label>
-                            <span>Domicilio del demandado *</span>
+                            <span>Tipo de persona del demandado principal *</span>
+                            <InputSelect @bind-Value="_nuevaGestion.TipoPersonaDemandado">
+                                <option value="1">Persona natural</option>
+                                <option value="2">Persona jurídica / razón social</option>
+                            </InputSelect>
+                        </label>
+
+                        <label>
+                            <span>RUT del demandado principal *</span>
+                            <InputText @bind-Value="_nuevaGestion.RutDemandado" maxlength="12" placeholder="12.345.678-5" />
+                            <ValidationMessage For="@(() => _nuevaGestion.RutDemandado)" />
+                        </label>
+                        @if (_nuevaGestion.TipoPersonaDemandado == 2)
+                        {
+                            <label><span>Representante legal</span><InputText @bind-Value="_nuevaGestion.RepresentanteLegalDemandado" maxlength="200" /></label>
+                            <label><span>RUT del representante legal</span><InputText @bind-Value="_nuevaGestion.RutRepresentanteLegalDemandado" maxlength="12" placeholder="12.345.678-5" /></label>
+                        }
+
+                        <label>
+                            <span>Dirección *</span>
 
                             <InputText
                                 @bind-Value="_nuevaGestion.Direccion"
@@ -409,138 +634,29 @@
                             </div>
                         }
 
-                        @* ==================================================
-                           FECHAS
-                           ================================================== *@
-
-                        <label>
-                            <span>Fecha de encargo de la causa *</span>
-
-                            <InputDate
-                                @bind-Value="_nuevaGestion.FechaEncargoCausa" />
-
-                            <ValidationMessage
-                                For="@(() => _nuevaGestion.FechaEncargoCausa)" />
-                        </label>
-
-                        <label>
-                            <span>Fecha de retiro</span>
-
-                            <InputDate
-                                @bind-Value="_nuevaGestion.FechaRetiro" />
-
-                            <ValidationMessage
-                                For="@(() => _nuevaGestion.FechaRetiro)" />
-                        </label>
-
-                        @* ==================================================
-                           DILIGENCIA ENCARGADA
-                           ================================================== *@
-
-                        <label>
-                            <span>Fecha programada *</span>
-
-                            <InputDate
-                                 @bind-Value="_nuevaGestion.FechaProgramada" />
-
-                            <ValidationMessage
-                                For="@(() => _nuevaGestion.FechaProgramada)" />
-                        </label>
-
-                        <div class="full-width">
-
-                            <label>
-                                <span>Diligencia encargada *</span>
-
-                                <InputSelect
-                                    @bind-Value="_nuevaGestion.DiligenciaEncargadaId">
-
-                                    <option value="">
-                                        Seleccione...
-                                    </option>
-
-                                    @foreach (var diligencia in
-                                        _diligenciasEncargadas)
-                                    {
-                                        <option value="@diligencia.Id">
-                                            @diligencia.Nombre
-                                        </option>
-                                    }
-
-                                </InputSelect>
-                            </label>
-
-                            <ValidationMessage
-                                For="@(() =>
-                                    _nuevaGestion.DiligenciaEncargadaId)" />
-
-                            <button type="button"
-                                    class="btn btn-secondary"
-                                    style="margin-top:.5rem;"
-                                    disabled="@_guardandoCatalogo"
-                                    @onclick="AlternarAgregarDiligencia">
-
-                                @(_mostrarAgregarDiligencia
-                                    ? "Cancelar nueva diligencia"
-                                    : "+ Agregar diligencia")
-
-                            </button>
-
-                        </div>
-
-                        @if (_mostrarAgregarDiligencia)
-                        {
-                            <div class="full-width catalog-editor">
-
-                                <label>
-                                    <span>
-                                        Nombre de la diligencia encargada
-                                    </span>
-
-                                    <input type="text"
-                                           class="form-control"
-                                           maxlength="200"
-                                           autocomplete="off"
-                                           @bind="_nuevaDiligencia"
-                                           placeholder="Ej.: Notificación de demanda" />
-                                </label>
-
-                                <label>
-                                    <span>Tipo de diligencia</span>
-
-                                    <select class="form-control"
-                                            @bind="_nuevoCodigoTipoDiligencia">
-
-                                        <option value="">
-                                            Sin asociar
-                                        </option>
-
-                                        @foreach (var tipo in
-                                            _tiposDiligencia)
-                                        {
-                                            if (tipo.CodigoSistema.HasValue)
-                                            {
-                                                <option
-                                                    value="@tipo.CodigoSistema.Value">
-
-                                                    @tipo.Nombre
-
-                                                </option>
-                                            }
-                                        }
-
-                                    </select>
-                                </label>
-
-                                <button type="button"
-                                        class="btn btn-primary"
-                                        disabled="@_guardandoCatalogo"
-                                        @onclick="AgregarDiligenciaAsync">
-                                    Agregar diligencia
-                                </button>
 
                             </div>
-                        }
+                        </section>
+
+                        <div class="full-width">
+                            <h3>Avales solidarios del demandado principal</h3>
+                            @foreach (var aval in _nuevaGestion.AvalesSolidarios)
+                            {
+                                <div class="form-grid" @key="aval">
+                                    <label><span>Nombre o razón social</span><InputText @bind-Value="aval.Nombre" maxlength="200" /></label>
+                                    <label><span>Tipo de persona</span><InputSelect @bind-Value="aval.TipoPersona"><option value="1">Persona natural</option><option value="2">Persona jurídica</option></InputSelect></label>
+                                    <label><span>RUT *</span><InputText @bind-Value="aval.Rut" maxlength="12" placeholder="12.345.678-5" /></label>
+                                    @if (aval.TipoPersona == 2)
+                                    {
+                                        <label><span>Representante legal</span><InputText @bind-Value="aval.RepresentanteLegal" maxlength="200" /></label>
+                                        <label><span>RUT del representante</span><InputText @bind-Value="aval.RutRepresentanteLegal" maxlength="12" /></label>
+                                    }
+                                    <button type="button" class="btn btn-secondary" @onclick="() => _nuevaGestion.AvalesSolidarios.Remove(aval)">Quitar aval</button>
+                                </div>
+                            }
+                            <button type="button" class="btn btn-secondary" @onclick="() => _nuevaGestion.AvalesSolidarios.Add(new DemandadoGestionModel())">+ Agregar aval solidario</button>
+                        </div>
+
 
                     </div>
 
@@ -591,7 +707,31 @@
 
 </section>
 
+@if (_mostrarMembrete)
+{
+    <MembreteDialog FechaEncargo="_nuevaGestion.FechaEncargoCausa" FechaProgramada="_nuevaGestion.FechaProgramada" Encargo="@(ObtenerDiligenciaEncargadaSeleccionada()?.Nombre ?? string.Empty)" Personas="_personasMembrete" Direcciones="_direccionesMembrete" Rol="@ObtenerRitResultante()"
+        Tribunal="@(_tribunales.FirstOrDefault(x => x.Id == _nuevaGestion.TribunalId)?.Nombre ?? string.Empty)"
+        Abogado="@(_abogados.FirstOrDefault(x => x.Id == _nuevaGestion.AbogadoId)?.Nombre ?? string.Empty)"
+        Caratula="@($"{_nuevaGestion.Demandante} / {_nuevaGestion.DemandadoCaratula}")" Cerrar="() => _mostrarMembrete = false" />
+}
+
+@if (_mostrarVehiculos)
+{
+    <VehiculosDialog Caratula="@($"{_nuevaGestion.Demandante} / {_nuevaGestion.DemandadoCaratula}")" Vehiculos="_vehiculosGestion" Personas="_personasMembrete" Direcciones="_direccionesMembrete"
+        Rol="@ObtenerRitResultante()" Tribunal="@(_tribunales.FirstOrDefault(x => x.Id == _nuevaGestion.TribunalId)?.Nombre ?? string.Empty)"
+        Cerrar="() => _mostrarVehiculos = false" />
+}
+
 @code {
+    private string _observaciones = string.Empty;
+    private string _rolBusqueda = string.Empty;
+    private PanelEjecutivoResumen? _panelGestion;
+
+    private void BuscarRol()
+    {
+        if (!string.IsNullOrWhiteSpace(_rolBusqueda))
+            Navigation.NavigateTo($"/causas/buscar?rit={Uri.EscapeDataString(_rolBusqueda.Trim())}");
+    }
 
     [SupplyParameterFromQuery(Name = "rit")]
     public string? RitInicial { get; set; }
@@ -662,6 +802,8 @@ private bool _mostrarAgregarAbogado;
 private string _nuevoAbogado =
         string.Empty;
 
+    private string? _demandanteAsociadoAnterior;
+
     private string _nuevaDiligencia =
         string.Empty;
 
@@ -676,6 +818,9 @@ private string _nuevoAbogado =
         try
         {
             await CargarCatalogosAsync();
+
+            try { _panelGestion = await ApiClient.GetAsync<PanelEjecutivoResumen>("/api/Causas/panel-ejecutivo"); }
+            catch (HttpRequestException) { _panelGestion = null; }
 
             if (!string.IsNullOrWhiteSpace(
                     RitInicial))
@@ -700,8 +845,87 @@ private string _nuevoAbogado =
         }
     }
 
+    private bool _mostrarMembrete, _cargandoMembrete;
+    private bool _mostrarVehiculos;
+    private List<VehiculoModel> _vehiculosGestion = new();
+    private async Task AbrirVehiculosAsync()
+    {
+        await AbrirMembreteAsync();
+        if (_mostrarMembrete) { _mostrarMembrete = false; _mostrarVehiculos = true; }
+    }
+    private List<string> _personasMembrete = new(), _direccionesMembrete = new();
+    private async Task AbrirMembreteAsync()
+    {
+        _cargandoMembrete = true;
+        _personasMembrete.Clear(); _direccionesMembrete.Clear();
+        void Persona(string? nombre, string rol) { if (!string.IsNullOrWhiteSpace(nombre)) _personasMembrete.Add($"{nombre.Trim()} — {rol}"); }
+        void Direccion(string? direccion, string? comuna) { if (!string.IsNullOrWhiteSpace(direccion)) _direccionesMembrete.Add(string.Join(", comuna de ", new[] { direccion, comuna }.Where(x => !string.IsNullOrWhiteSpace(x)))); }
+        void Parte(DemandadoGestionModel parte, string rol)
+        {
+            Persona(parte.Nombre, parte.TipoPersona == 2 ? $"{rol} / Razón social" : rol);
+            Persona(parte.RepresentanteLegal, $"Representante de {parte.Nombre}");
+        }
+        Persona(_nuevaGestion.Demandado, _nuevaGestion.TipoPersonaDemandado == 2 ? "Demandado / Razón social" : "Demandado");
+        Persona(_nuevaGestion.RepresentanteLegalDemandado, $"Representante de {_nuevaGestion.Demandado}");
+        foreach (var parte in _nuevaGestion.OtrosDemandados) Parte(parte, "Demandado");
+        foreach (var aval in _nuevaGestion.AvalesSolidarios) Parte(aval, "Aval solidario");
+        Direccion(_nuevaGestion.Direccion, _nuevaGestion.Comuna);
+        try
+        {
+            var rol = ObtenerRitResultante();
+            if (!string.IsNullOrWhiteSpace(rol))
+            {
+                var causas = await ApiClient.GetAsync<List<CausaResumen>>("/api/Causas") ?? new();
+                var tribunal = _tribunales.FirstOrDefault(x => x.Id == _nuevaGestion.TribunalId)?.Nombre;
+                var existente = causas.FirstOrDefault(x => IdentificacionCausa.MismoRol(x.Rit, rol) && IdentificacionCausa.MismoTribunal(x.Tribunal, tribunal ?? ""));
+                if (existente is not null)
+                {
+                    var causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{existente.Id}");
+                    foreach (var parte in causa?.Demandados ?? [])
+                    {
+                        Persona(parte.Nombre, parte.TipoPersona == 2 ? "Demandado / Razón social" : "Demandado");
+                        Persona(parte.RepresentanteLegal, $"Representante de {parte.Nombre}");
+                        foreach (var aval in parte.Avales) { Persona(aval.Nombre, "Aval solidario"); Persona(aval.RepresentanteLegal, $"Representante de {aval.Nombre}"); }
+                    }
+                    var diligencias = await ApiClient.GetAsync<List<DiligenciaResumen>>($"/api/Diligencias/causa/{existente.Id}") ?? new();
+                    foreach (var diligencia in diligencias) Direccion(diligencia.Direccion, diligencia.Comuna);
+                }
+            }
+            _personasMembrete = _personasMembrete.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            _direccionesMembrete = _direccionesMembrete.Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+            _mostrarMembrete = true;
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _mensajeGestion = "No fue posible cargar las partes y direcciones para el membrete."; }
+        finally { _cargandoMembrete = false; }
+    }
+
+    private List<MateriaItem> _materias = new();
+    private bool _mostrarMateria;
+    private string _nuevaMateria = string.Empty;
+    private sealed class MateriaItem { public Guid Id { get; set; } public string Nombre { get; set; } = string.Empty; }
+    private async Task AgregarMateriaAsync()
+    {
+        if (_guardandoCatalogo) return;
+        if (string.IsNullOrWhiteSpace(_nuevaMateria)) { _mensajeGestion = "Ingrese el nombre de la materia."; return; }
+        _guardandoCatalogo = true;
+        try
+        {
+            using var respuesta = await ApiClient.PostAsync("/api/Catalogos/materias", JsonContent.Create(new { nombre = _nuevaMateria.Trim() }));
+            if (!respuesta.IsSuccessStatusCode) throw new InvalidOperationException(await respuesta.Content.ReadAsStringAsync());
+            var creada = await respuesta.Content.ReadFromJsonAsync<MateriaItem>();
+            if (creada is null) throw new InvalidOperationException("No se recibió la materia creada.");
+            _materias.Add(creada); _nuevaGestion.MateriaId = creada.Id;
+            _nuevaMateria = string.Empty; _mostrarMateria = false;
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException) { _mensajeGestion = ex.Message; }
+        finally { _guardandoCatalogo = false; }
+    }
+
     private async Task CargarCatalogosAsync()
     {
+        _materias = await ApiClient.GetAsync<List<MateriaItem>>("/api/Catalogos/materias") ?? new();
         await CargarTiposCausaAsync();
         await CargarTribunalesAsync();
         await CargarAbogadosAsync();
@@ -779,7 +1003,7 @@ private string _nuevoAbogado =
 
             var caratula =
                 $"{_nuevaGestion.Demandante.Trim()} / " +
-                $"{_nuevaGestion.Demandado.Trim()}";
+                $"{_nuevaGestion.DemandadoCaratula.Trim()}";
 
             using var respuestaCausa =
                 await ApiClient.PostAsync(
@@ -803,6 +1027,38 @@ private string _nuevoAbogado =
                             descripcion =
                                 caratula,
 
+                            demandados = new[]
+                            {
+                                new
+                                {
+                                    nombre = _nuevaGestion.Demandado.Trim(),
+                                    tipoPersona = _nuevaGestion.TipoPersonaDemandado,
+                                    esPrincipal = true,
+                                    rut = _nuevaGestion.RutDemandado.Trim(),
+                                    representanteLegal = _nuevaGestion.TipoPersonaDemandado == 2 ? _nuevaGestion.RepresentanteLegalDemandado.Trim() : null,
+                                    rutRepresentanteLegal = _nuevaGestion.TipoPersonaDemandado == 2 ? _nuevaGestion.RutRepresentanteLegalDemandado.Trim() : null,
+                                    avales = _nuevaGestion.AvalesSolidarios.Select(a => new {
+                                        nombre = a.Nombre.Trim(), tipoPersona = a.TipoPersona, rut = a.Rut.Trim(),
+                                        representanteLegal = a.TipoPersona == 2 ? a.RepresentanteLegal.Trim() : null,
+                                        rutRepresentanteLegal = a.TipoPersona == 2 ? a.RutRepresentanteLegal.Trim() : null
+                                    }).ToArray()
+                                }
+                            }.Concat(_nuevaGestion.OtrosDemandados.Select(d => new
+                            {
+                                nombre = d.Nombre.Trim(),
+                                tipoPersona = d.TipoPersona,
+                                esPrincipal = false,
+                                rut = d.Rut.Trim(),
+                                representanteLegal = d.TipoPersona == 2 ? d.RepresentanteLegal.Trim() : null,
+                                rutRepresentanteLegal = d.TipoPersona == 2 ? d.RutRepresentanteLegal.Trim() : null,
+                                avales = _nuevaGestion.AvalesSolidarios.Take(0).Select(a => new {
+                                    nombre = a.Nombre.Trim(), tipoPersona = a.TipoPersona, rut = a.Rut.Trim(),
+                                    representanteLegal = a.TipoPersona == 2 ? a.RepresentanteLegal.Trim() : null,
+                                    rutRepresentanteLegal = a.TipoPersona == 2 ? a.RutRepresentanteLegal.Trim() : null
+                                }).ToArray()
+                            })).ToArray(),
+
+                            materiaId = _nuevaGestion.MateriaId,
                             fechaEncargoCausa =
                                 _nuevaGestion
                                     .FechaEncargoCausa!
@@ -900,13 +1156,20 @@ private string _nuevoAbogado =
                             observacion =
                                 $"Abogado responsable: " +
                                 $"{_nuevaGestion.Abogado}. " +
-                                $"Fecha de retiro: {retiro}."
+                                $"Fecha de retiro: {retiro}." +
+                                (string.IsNullOrWhiteSpace(_observaciones) ? string.Empty : $"\nObservaciones: {_observaciones.Trim()}")
                         }));
 
             await VerificarRespuestaAsync(
                 respuestaObservacion,
                 "registrar los datos del encargo");
 
+            foreach (var vehiculo in _vehiculosGestion)
+            {
+                using var respuestaVehiculo = await ApiClient.PostAsync($"/api/diligencias/{diligenciaId}/vehiculos", JsonContent.Create(vehiculo));
+                await VerificarRespuestaAsync(respuestaVehiculo, "guardar el vehículo");
+            }
+            _vehiculosGestion.Clear();
             _gestionGuardada =
                 true;
 
@@ -914,6 +1177,7 @@ private string _nuevoAbogado =
                 $"La gestión {ritResultante} fue guardada " +
                 "correctamente en Jurigest Enterprise.";
 
+            _observaciones = string.Empty;
             _nuevaGestion =
                 CrearModeloGestion();
 
@@ -1309,6 +1573,8 @@ private string _nuevoAbogado =
                 {
                     _nuevaGestion.AbogadoId =
                         creado.Id;
+
+                    AsociarDemandanteConAbogado();
                 }
 
                 _nuevoAbogado =
@@ -1446,6 +1712,15 @@ private string _nuevoAbogado =
         _mensajeGestion =
             null;
 
+        if (_mostrarAgregarDiligencia &&
+            !_nuevoCodigoTipoDiligencia.HasValue)
+        {
+            _nuevoCodigoTipoDiligencia =
+                _tiposDiligencia
+                    .FirstOrDefault(x => x.CodigoSistema.HasValue)?
+                    .CodigoSistema;
+        }
+
         if (!_mostrarAgregarDiligencia)
         {
             _nuevaDiligencia =
@@ -1465,6 +1740,14 @@ private string _nuevoAbogado =
         {
             _mensajeGestion =
                 "Debe indicar el nombre de la diligencia.";
+
+            return;
+        }
+
+        if (!_nuevoCodigoTipoDiligencia.HasValue)
+        {
+            _mensajeGestion =
+                "Debe seleccionar el tipo de diligencia.";
 
             return;
         }
@@ -1600,7 +1883,52 @@ private string _nuevoAbogado =
         {
             _nuevaGestion.AbogadoId =
                 _abogados[0].Id;
+
+            AsociarDemandanteConAbogado();
         }
+    }
+
+    private void AsociarDemandanteConAbogado()
+    {
+        var abogado = _abogados.FirstOrDefault(
+            x => x.Id == _nuevaGestion.AbogadoId);
+
+        var demandanteAsociado = abogado is null
+            ? null
+            : ObtenerDemandanteAsociado(abogado.Nombre);
+
+        if (string.IsNullOrWhiteSpace(_nuevaGestion.Demandante) ||
+            string.Equals(
+                _nuevaGestion.Demandante,
+                _demandanteAsociadoAnterior,
+                StringComparison.Ordinal))
+        {
+            _nuevaGestion.Demandante =
+                demandanteAsociado ?? string.Empty;
+        }
+
+        _demandanteAsociadoAnterior =
+            demandanteAsociado;
+    }
+
+    private static string? ObtenerDemandanteAsociado(
+        string nombreAbogado)
+    {
+        var inicio = nombreAbogado.IndexOf('(');
+
+        if (inicio < 0)
+        {
+            return null;
+        }
+
+        var fin = nombreAbogado.IndexOf(')', inicio + 1);
+
+        if (fin <= inicio + 1)
+        {
+            return null;
+        }
+
+        return nombreAbogado[(inicio + 1)..fin].Trim();
     }
 
     // =========================================================

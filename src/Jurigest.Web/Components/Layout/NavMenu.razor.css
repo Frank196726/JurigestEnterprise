@@ -15,30 +15,12 @@
     text-decoration: none;
 }
 
-.brand-mark {
-    display: grid;
-    width: 2.6rem;
-    height: 2.6rem;
-    border-radius: 0.8rem;
-    background: #2c5be7;
-    font-size: 1.15rem;
-    font-weight: 750;
-    place-items: center;
-}
-
-.brand > span:last-child {
-    display: grid;
-}
-
-.brand strong {
-    font-size: 1rem;
-}
-
-.brand small {
-    color: #9fb0d7;
-    font-size: 0.64rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+.brand-logo {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
 }
 
 .nav-section {

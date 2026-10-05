@@ -85,6 +85,21 @@ public sealed class CrearCausaCommandHandler
                 request.FechaEncargoCausa);
         }
 
+        if (request.MateriaId.HasValue) causa.AsignarMateria(request.MateriaId.Value, request.Materia!);
+
+        if (request.Demandados.Count > 0 && request.Demandados.Count(x => x.EsPrincipal) != 1)
+            throw new ArgumentException("Debe indicar exactamente un demandado principal.");
+        foreach (var item in request.Demandados.OrderByDescending(x => x.EsPrincipal))
+        {
+            var demandado = causa.AgregarDemandado(item.Nombre, item.TipoPersona, item.EsPrincipal,
+                item.Rut, item.RepresentanteLegal, item.RutRepresentanteLegal);
+            if (!item.EsPrincipal && item.Avales.Count > 0)
+                throw new ArgumentException("Solo el demandado principal puede tener avales solidarios.");
+            foreach (var aval in item.Avales)
+                demandado.AgregarAval(aval.Nombre, aval.TipoPersona,
+                    aval.Rut, aval.RepresentanteLegal, aval.RutRepresentanteLegal);
+        }
+
         var existentes = await _causaRepository.GetAllAsync(cancellationToken);
         if (existentes.Any(x =>
             Jurigest.Domain.Judicial.IdentificacionCausa.MismoRol(x.Rit, causa.Rit) &&

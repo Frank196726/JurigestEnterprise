@@ -5,7 +5,7 @@
 @using Microsoft.AspNetCore.Authorization
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
-@attribute [Authorize]
+@attribute [Authorize(Policy = "CausasLectura")]
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
 
@@ -33,14 +33,17 @@ else if (_causaEncontrada is not null)
 {
     <div class="search-result found">
 
-        <div>
-            <strong>
-                @_causaEncontrada.Rit · @_causaEncontrada.Tribunal
-            </strong>
-
-            <p>
-                @_causaEncontrada.Descripcion
-            </p>
+        <div class="found-details">
+            <strong>@_causaEncontrada.Rit · @_causaEncontrada.Tribunal</strong>
+            <div class="found-person">@(_causaEncontrada.NombreDemandado ?? "Demandado no registrado")</div>
+            <div class="found-address">
+                <span><b>Dirección:</b> @(_causaEncontrada.Direccion ?? "No registrada")</span>
+                <span><b>Comuna:</b> @(_causaEncontrada.Comuna ?? "No registrada")</span>
+            </div>
+            <div class="found-parties">
+                <span><b>Demandante:</b> @(_causaEncontrada.Demandante ?? "No registrado")</span>
+                <span><b>Demandado:</b> @(_causaEncontrada.Demandado ?? "No registrado")</span>
+            </div>
         </div>
 
         <div style="
@@ -163,4 +166,3 @@ else if (_causaEncontrada is not null)
                 "dddd, d 'de' MMMM",
         CultureInfo.GetCultureInfo("es-CL"));
     }
-}

@@ -22,11 +22,73 @@ public static class SeguridadWebEndpoints
             CerrarSesionAsync);
 
         endpoints.MapPost(
+            "/auth/password/cambio-inicial",
+            CambiarPasswordInicialAsync);
+
+        endpoints.MapPost(
             "/auth/password/recuperacion",
             SolicitarRecuperacionPasswordAsync);
 
         return endpoints;
 
+    }
+
+    private static async Task<IResult> CambiarPasswordInicialAsync(
+        HttpContext context,
+        IHttpClientFactory httpClientFactory,
+        ISesionWebStore sesionStore,
+        IAntiforgery antiforgery,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await antiforgery.ValidateRequestAsync(context);
+        }
+        catch (AntiforgeryValidationException)
+        {
+            return Results.Redirect("/password/cambio-inicial?error=sesion");
+        }
+
+        var formulario = await context.Request.ReadFormAsync(cancellationToken);
+        var nuevaPassword = formulario["nuevaPassword"].ToString();
+        var confirmacion = formulario["confirmacion"].ToString();
+
+        if (string.IsNullOrWhiteSpace(nuevaPassword) || string.IsNullOrWhiteSpace(confirmacion))
+            return Results.Redirect("/password/cambio-inicial?error=campos");
+        if (nuevaPassword.Length < 12)
+            return Results.Redirect("/password/cambio-inicial?error=longitud");
+        if (!string.Equals(nuevaPassword, confirmacion, StringComparison.Ordinal))
+            return Results.Redirect("/password/cambio-inicial?error=coincidencia");
+
+        if (!context.Request.Cookies.TryGetValue(CookieName, out var identificador))
+            return Results.Redirect("/login?error=sesion");
+
+        var sesion = sesionStore.Obtener(identificador);
+        if (sesion is null)
+            return Results.Redirect("/login?error=sesion");
+
+        var client = httpClientFactory.CreateClient("JurigestApi");
+        using var request = new HttpRequestMessage(HttpMethod.Post, "/api/seguridad/password/cambio-inicial")
+        {
+            Content = JsonContent.Create(new { nuevaPassword })
+        };
+        request.Headers.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", sesion.AccessToken);
+        using var response = await client.SendAsync(request, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+            return Results.Redirect("/password/cambio-inicial?error=sesion");
+
+        sesionStore.Eliminar(identificador);
+        context.Response.Cookies.Delete(CookieName, new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = context.Request.IsHttps,
+            SameSite = SameSiteMode.Strict,
+            IsEssential = true,
+            Path = "/"
+        });
+
+        return Results.Redirect("/login?claveActualizada=true");
     }
 
     private static async Task<IResult> IniciarSesionAsync(
@@ -110,7 +172,9 @@ public static class SeguridadWebEndpoints
             resultado.UsuarioId,
             resultado.Nombre,
             resultado.Email,
-            resultado.Rol);
+            resultado.Rol,
+            resultado.RolAsignado,
+            resultado.DebeCambiarPassword);
 
         var identificador =
             sesionStore.Crear(sesion);
@@ -129,7 +193,10 @@ public static class SeguridadWebEndpoints
                     resultado.RefreshTokenExpiresAtUtc)
             });
 
-        return Results.Redirect("/");
+        return Results.Redirect(
+            resultado.DebeCambiarPassword
+                ? "/password/cambio-inicial"
+                : "/");
     }
     private static async Task<IResult> CerrarSesionAsync(
         HttpContext context,

@@ -1,6 +1,6 @@
 @page "/auditoria"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "Administrador")]
+@attribute [Authorize(Policy = "Administracion")]
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
 @inject IJurigestApiClient ApiClient

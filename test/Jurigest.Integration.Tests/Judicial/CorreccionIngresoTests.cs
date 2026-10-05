@@ -33,7 +33,8 @@ public sealed class CorreccionIngresoTests
 
         var payload = new { tribunal = "Tribunal corregido", descripcion = "Demandante / Demandado",
             diligenciaId = primera.Id, diligenciaEncargadaId = encargo.Id,
-            fechaProgramada = new DateTime(2026, 9, 15), rit = "C-NO-CAMBIAR" };
+            fechaProgramada = new DateTime(2026, 9, 15), receptorJudicial = "Receptor de prueba",
+            rit = "C-NO-CAMBIAR" };
         using var guardar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
             $"/api/Causas/{causa.Id}", admin.Token, payload);
         Assert.Equal(HttpStatusCode.OK, guardar.StatusCode);
@@ -45,6 +46,7 @@ public sealed class CorreccionIngresoTests
         Assert.Equal("Embargo de prueba", detalle.GetProperty("diligenciaEncargada").GetString());
         Assert.Equal(payload.fechaProgramada, detalle.GetProperty("fechaProgramada").GetDateTime());
         Assert.Equal(payload.descripcion, detalle.GetProperty("descripcion").GetString());
+        Assert.Equal(payload.receptorJudicial, detalle.GetProperty("receptorJudicial").GetString());
 
         using var crearSegunda = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
             $"/api/Causas/{causa.Id}/diligencias", admin.Token, new { descripcion = "Segunda" });
@@ -78,6 +80,7 @@ public sealed class CorreccionIngresoTests
         var persistida = await verificacion.ServiceProvider.GetRequiredService<JurigestDbContext>()
             .Diligencias.AsNoTracking().SingleAsync(d => d.Id == primera.Id);
         Assert.Equal(3, (int)persistida.Tipo);
+        Assert.Equal(payload.receptorJudicial, persistida.ReceptorJudicial);
     }
 
     [Theory]

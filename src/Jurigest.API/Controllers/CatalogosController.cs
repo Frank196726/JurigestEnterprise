@@ -448,6 +448,58 @@ public sealed class CatalogosController : ControllerBase
     // ABOGADOS
     // ============================================================
 
+    [HttpGet("vehiculos/{categoria}")]
+    [Authorize(Policy = "DiligenciasLectura")]
+    public async Task<IActionResult> OpcionesVehiculo(string categoria, [FromServices] Jurigest.Persistence.Context.JurigestDbContext db, CancellationToken ct)
+    {
+        if (!CategoriaVehiculo(categoria)) return BadRequest();
+        return Ok(await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(db.VehiculoOpciones.Where(x => x.Categoria == categoria).OrderBy(x => x.Nombre), ct));
+    }
+    [HttpPost("vehiculos/{categoria}")]
+    [Authorize(Policy = "DiligenciasGestion")]
+    public async Task<IActionResult> AgregarOpcionVehiculo(string categoria, CrearCatalogoRequest request, [FromServices] Jurigest.Persistence.Context.JurigestDbContext db, CancellationToken ct)
+    {
+        if (!CategoriaVehiculo(categoria) || string.IsNullOrWhiteSpace(request.Nombre) || request.Nombre.Trim().Length > 200) return BadRequest(new { mensaje = "Revise categoría y nombre." });
+        var nombre = request.Nombre.Trim();
+        if (await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(db.VehiculoOpciones, x => x.Categoria == categoria && x.Nombre == nombre, ct)) return Conflict(new { mensaje = "La opción ya existe." });
+        var opcion = new Jurigest.Domain.Judicial.Catalogos.VehiculoOpcion { Id = Guid.NewGuid(), Categoria = categoria, Nombre = nombre };
+        db.VehiculoOpciones.Add(opcion);
+        try { await db.SaveChangesAsync(ct); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sql && sql.Number is 2601 or 2627)
+        { return Conflict(new { mensaje = "La opción ya existe." }); }
+        return Ok(opcion);
+    }
+    private static bool CategoriaVehiculo(string categoria) => categoria is "tipos" or "marcas" or "adquisiciones" or "alzamientos" or "limitaciones" or "documentos";
+
+    [HttpGet("materias")]
+    [Authorize(Policy = "CausasLectura")]
+    public async Task<IActionResult> ObtenerMaterias([FromServices] Jurigest.Persistence.Context.JurigestDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var materias = await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.ToListAsync(
+            db.Materias.OrderBy(x => x.Nombre), cancellationToken);
+        return Ok(materias.Select(x => new { x.Id, x.Nombre }));
+    }
+
+    [HttpPost("materias")]
+    [Authorize(Policy = "CausasEscritura")]
+    public async Task<IActionResult> CrearMateria([FromBody] CrearCatalogoRequest request,
+        [FromServices] Jurigest.Persistence.Context.JurigestDbContext db, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(request.Nombre) || request.Nombre.Trim().Length > 200)
+            return BadRequest(new { mensaje = "Ingrese una materia de hasta 200 caracteres." });
+        var nombre = request.Nombre.Trim();
+        if (await Microsoft.EntityFrameworkCore.EntityFrameworkQueryableExtensions.AnyAsync(db.Materias,
+            x => x.Nombre == nombre, cancellationToken))
+            return Conflict(new { mensaje = "Ya existe una materia con ese nombre." });
+        var materia = new Jurigest.Domain.Judicial.Catalogos.MateriaCatalogo(nombre);
+        db.Materias.Add(materia);
+        try { await db.SaveChangesAsync(cancellationToken); }
+        catch (Microsoft.EntityFrameworkCore.DbUpdateException ex) when (ex.InnerException is Microsoft.Data.SqlClient.SqlException sql && sql.Number is 2601 or 2627)
+        { return Conflict(new { mensaje = "Ya existe una materia con ese nombre." }); }
+        return Ok(new { materia.Id, materia.Nombre });
+    }
+
     [HttpGet("abogados")]
     [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> ObtenerAbogados(
@@ -545,12 +597,14 @@ public sealed class CatalogosController : ControllerBase
         CancellationToken cancellationToken)
     {
         if (request is null ||
-            string.IsNullOrWhiteSpace(request.Nombre))
+            string.IsNullOrWhiteSpace(request.Nombre) ||
+            !request.CodigoTipoDiligencia.HasValue ||
+            request.CodigoTipoDiligencia.Value <= 0)
         {
             return BadRequest(new
             {
                 mensaje =
-                    "Debe indicar el nombre de la diligencia encargada."
+                    "Debe indicar el nombre y un tipo de diligencia válido."
             });
         }
 
@@ -613,8 +667,34 @@ public sealed class CatalogosController : ControllerBase
                 {
                     x.Id,
                     x.Nombre,
-                    x.CodigoTipoDiligencia
+                    x.CodigoTipoDiligencia,
+                    x.Arancel
                 }));
+    }
+
+    [HttpPost("diligencias-realizadas")]
+    [Authorize(Policy = "DiligenciasGestion")]
+    public async Task<IActionResult> CrearDiligenciaRealizada(
+        [FromBody] CrearDiligenciaRealizadaRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.Nombre) ||
+            request.Nombre.Trim().Length > 200 || request.CodigoTipoDiligencia <= 0)
+        {
+            return BadRequest(new { mensaje = "Indique un nombre de hasta 200 caracteres y un tipo de diligencia válido." });
+        }
+
+        var nombre = request.Nombre.Trim();
+        if (await _diligenciaRealizadaRepository.ExisteNombreAsync(
+                nombre, request.CodigoTipoDiligencia, cancellationToken))
+        {
+            return Conflict(new { mensaje = "Ya existe una diligencia realizada con ese nombre para este tipo." });
+        }
+
+        var diligencia = new DiligenciaRealizadaCatalogo(
+            Guid.NewGuid(), nombre, request.CodigoTipoDiligencia);
+        await _diligenciaRealizadaRepository.AddAsync(diligencia, cancellationToken);
+        return Ok(new { diligencia.Id, diligencia.Nombre, diligencia.CodigoTipoDiligencia });
     }
 
     // ============================================================
@@ -625,6 +705,12 @@ public sealed class CatalogosController : ControllerBase
     {
         public string Nombre { get; set; } =
             string.Empty;
+    }
+
+    public sealed class CrearDiligenciaRealizadaRequest
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public int CodigoTipoDiligencia { get; set; }
     }
 
     public sealed class CrearTipoCausaRequest

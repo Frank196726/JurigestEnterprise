@@ -1,4 +1,4 @@
-﻿using Jurigest.Application.Abstractions.Persistence;
+using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Persistence.Context;
 using Jurigest.Persistence.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -24,11 +24,14 @@ public static class DependencyInjection
                 configuration.GetConnectionString("DefaultConnection")));
 
         services.AddScoped(typeof(MediatR.IPipelineBehavior<,>), typeof(CorreccionIngresoTransactionBehavior<,>));
+        services.AddScoped<IRolCatalogoRepository, RolCatalogoRepository>();
         services.AddScoped<ICausaRepository, CausaRepository>();
 
         services.AddScoped<IDiligenciaRepository, DiligenciaRepository>();
 
         services.AddScoped<IReciboRepository, ReciboRepository>();
+
+        services.AddScoped<IModeloEstampeRepository, ModeloEstampeRepository>();
 
         services.AddScoped<
             ITipoDiligenciaCatalogoRepository,

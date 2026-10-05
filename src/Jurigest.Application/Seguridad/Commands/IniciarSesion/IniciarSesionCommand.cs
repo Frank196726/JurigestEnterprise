@@ -18,4 +18,6 @@ public sealed record IniciarSesionResponse(
     Guid UsuarioId,
     string Nombre,
     string Email,
-    string Rol);
+    string Rol,
+    string RolAsignado,
+    bool DebeCambiarPassword);

@@ -116,7 +116,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(descripcion) || descripcion.Trim().Length > 500)
             throw new ArgumentException("La diligencia encargada es obligatoria y admite hasta 500 caracteres.");
-        if (!Enum.IsDefined(tipo))
+        if ((int)tipo <= 0)
             throw new ArgumentException("El tipo de diligencia no es válido.");
         if (!fechaProgramada.HasValue || fechaProgramada.Value == default)
             throw new ArgumentException("La fecha programada es obligatoria.");
@@ -262,7 +262,7 @@ public sealed class Diligencia : Entity<Guid>
         Guid diligenciaRealizadaId,
         string diligenciaRealizada,
         ResultadoDiligencia resultado,
-        string resultadoDetalle,
+        string? resultadoDetalle,
         string estampe,
         DateTime fechaGestion)
     {
@@ -295,14 +295,7 @@ public sealed class Diligencia : Entity<Guid>
                 nameof(resultado));
         }
 
-        if (string.IsNullOrWhiteSpace(resultadoDetalle))
-        {
-            throw new ArgumentException(
-                "Debe indicar el resultado de la diligencia.",
-                nameof(resultadoDetalle));
-        }
-
-        if (resultadoDetalle.Trim().Length > 500)
+        if (resultadoDetalle?.Trim().Length > 500)
         {
             throw new ArgumentException(
                 "El resultado de la diligencia no puede superar 500 caracteres.",
@@ -337,7 +330,9 @@ public sealed class Diligencia : Entity<Guid>
 
         Resultado = resultado;
 
-        ResultadoDetalle = resultadoDetalle.Trim();
+        ResultadoDetalle = string.IsNullOrWhiteSpace(resultadoDetalle)
+            ? null
+            : resultadoDetalle.Trim();
 
         Estampe = estampe.Trim();
 

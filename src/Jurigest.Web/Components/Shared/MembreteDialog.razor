@@ -1,0 +1,131 @@
+@using Microsoft.JSInterop
+@inject IJSRuntime JS
+@inject Microsoft.AspNetCore.Components.Authorization.AuthenticationStateProvider AuthenticationState
+<div class="membrete-overlay" role="dialog" aria-modal="true" aria-label="Imprimir membrete">
+    <div class="membrete-dialog">
+        <h2>Imprimir membrete — @Rol</h2>
+        <fieldset><legend>Listado de notificados</legend>
+            <select class="form-select" @bind="_persona"><option value="">Seleccione demandado...</option>
+                @foreach (var persona in Personas) { <option value="@persona">@persona</option> }
+            </select>
+        </fieldset>
+        <fieldset><legend>Listado de direcciones</legend>
+            @foreach (var direccion in Direcciones)
+            {
+                <label class="d-block"><input type="checkbox" checked="@_direcciones.Contains(direccion)" @onchange="e => SeleccionarDireccion(direccion, e.Value is true)" /> @direccion</label>
+            }
+            @if (Direcciones.Count == 0) { <p>Ingrese una dirección y comuna en los antecedentes del demandado.</p> }
+        </fieldset>
+        <fieldset><legend>Posición del membrete en la hoja</legend>
+            <select class="form-select" @bind="_posicion"><option value="1">1 — Arriba a la izquierda</option><option value="2">2 — Arriba a la derecha</option></select>
+            <label class="d-block mt-2">Tamaño impresión <select @bind="_tamano"><option value="oficio">Oficio</option><option value="carta">Carta</option></select></label>
+            <label class="d-block mt-2">Observaciones <input class="form-control" @bind="_observaciones" /></label>
+            <label class="d-block mt-2"><input type="checkbox" @bind="_hojaRuta" /> Agregar hoja de ruta (dos domicilios por hoja)</label>
+        </fieldset>
+        @if (!string.IsNullOrWhiteSpace(_error)) { <p class="text-danger" role="alert">@_error</p> }
+        <div class="d-flex gap-2 my-3">
+            <button type="button" class="btn btn-primary" @onclick="Generar">Generar documento</button>
+            <button type="button" class="btn btn-secondary" @onclick="Cerrar">Cerrar</button>
+        </div>
+        @if (_generado)
+        {
+            <h3>Vista previa</h3>
+            <div id="membrete-documento">
+                @foreach (var direccion in _direccionesGeneradas)
+                {
+                    <section class="membrete-hoja" style="min-height:@(_tamanoGenerado == "oficio" ? "330mm" : "279.4mm");">
+                        <div class="membrete-texto" style="margin-left:@(_posicionGenerada == 2 ? "auto" : "0");width:48%;">
+                            <div>@_personaGenerada.ToUpperInvariant()</div>
+                            <div>@(_direccionesGeneradas.IndexOf(direccion) + 1).-@direccion</div>
+                            <div>ROL: @Rol — @Tribunal</div>
+                            <div>@Caratula</div><div>@Abogado</div>
+                            <div>NOTIFICO A UD. LO SIGUIENTE:</div>
+                            @if (!string.IsNullOrWhiteSpace(_observacionesGeneradas)) { <div>@_observacionesGeneradas</div> }
+                        </div>
+                    </section>
+
+                }
+                @if (_rutaGenerada)
+                {
+                    @for (var inicio = 0; inicio < _direccionesGeneradas.Count; inicio += 2)
+                    {
+                        var domicilios = _direccionesGeneradas.Skip(inicio).Take(2).ToList();
+                        <section class="membrete-hoja" style="min-height:@(_tamanoGenerado == "oficio" ? "330mm" : "279.4mm");">
+                            <div style="width:100%;font:9pt Arial,sans-serif;line-height:1.3;">
+                                <strong>@_receptor</strong><div style="font-size:8pt;">Receptor judicial</div>
+                                <hr style="border:0;border-top:1px solid #000;margin:3mm 0;" />
+                                <table style="width:100%;border-collapse:collapse;font-size:8pt;">
+                                    <tbody>
+                                        <tr><td style="width:32%;">CAUSA</td><td>@Rol — @Tribunal</td></tr>
+                                        <tr><td>CARATULADO</td><td>@Caratula</td></tr>
+                                        <tr><td>FECHA ENCARGO</td><td>@FechaEncargo?.ToString("dd-MM-yyyy")</td></tr>
+                                        <tr><td>FECHA PROGRAMADA</td><td>@FechaProgramada?.ToString("dd-MM-yyyy")</td></tr>
+                                        <tr><td>ABOGADO</td><td>@Abogado</td></tr>
+                                        <tr><td>ENCARGO</td><td>@Encargo</td></tr>
+                                        <tr><td>NOMBRE NOTIFICADO</td><td>@_personaGenerada</td></tr>
+                                        <tr><td>OBSERVACIONES</td><td>@_observacionesGeneradas</td></tr>
+                                    </tbody>
+                                </table>
+                                <div style="border:1px solid #777;margin-top:4mm;">
+                                    @for (var indice = 0; indice < 2; indice++)
+                                    {
+                                        <div style="padding:3mm;min-height:70mm;border-top:@(indice == 1 ? "1px solid #777" : "0");">
+                                            <strong>DOMICILIO @(indice + 1): @(indice < domicilios.Count ? domicilios[indice] : "________________________________________________")</strong>
+                                            <p style="margin:5mm 0;">FECHA NOTIFICACIÓN: __________________ HORA: __________</p>
+                                            <p style="margin:5mm 0;">FORMA NOTIFICACIÓN: PERSONAL ______ CÉDULA ______</p>
+                                            <p style="margin:5mm 0;">RECIBE: __________________________ RUT: ______________</p>
+                                            <p style="margin:5mm 0;">POR IDENTIDAD: ______ EFECTIVA: ______ ADULTO: ______</p>
+                                            <hr style="border:0;border-top:1px solid #777;margin:4mm 0;" />
+                                            <p style="margin:5mm 0;">BÚSQUEDA POSITIVA: FECHA __________ HORA __________</p>
+                                        </div>
+                                    }
+                                </div>
+                            </div>
+                        </section>
+                    }
+                }
+            </div>
+            <button type="button" class="btn btn-primary" @onclick="Imprimir">Imprimir / Guardar PDF</button>
+        }
+    </div>
+</div>
+@code {
+    [Parameter] public List<string> Personas { get; set; } = new();
+    [Parameter] public List<string> Direcciones { get; set; } = new();
+    [Parameter] public string Rol { get; set; } = "";
+    [Parameter] public string Tribunal { get; set; } = "";
+    [Parameter] public string Caratula { get; set; } = "";
+    [Parameter] public string Abogado { get; set; } = "";
+    [Parameter] public EventCallback Cerrar { get; set; }
+    [Parameter] public DateTime? FechaEncargo { get; set; }
+    [Parameter] public DateTime? FechaProgramada { get; set; }
+    [Parameter] public string Encargo { get; set; } = "";
+    private string _receptor = "";
+    protected override async Task OnInitializedAsync()
+    {
+        var estado = await AuthenticationState.GetAuthenticationStateAsync();
+        _receptor = estado.User.Identity?.Name ?? "";
+    }
+    private string _persona = "", _tamano = "oficio", _observaciones = "";
+    private int _posicion = 1, _posicionGenerada;
+    private bool _hojaRuta = true, _generado, _rutaGenerada;
+    private string? _error;
+    private HashSet<string> _direcciones = new();
+    private List<string> _direccionesGeneradas = new();
+    private string _personaGenerada = "", _tamanoGenerado = "", _observacionesGeneradas = "";
+    private void SeleccionarDireccion(string direccion, bool seleccionar) { if (seleccionar) _direcciones.Add(direccion); else _direcciones.Remove(direccion); }
+    private void Generar()
+    {
+        _error = null;
+        if (string.IsNullOrWhiteSpace(_persona) || _direcciones.Count == 0) { _error = "Seleccione un notificado y al menos una dirección."; return; }
+        if (string.IsNullOrWhiteSpace(Rol) || string.IsNullOrWhiteSpace(Tribunal)) { _error = "Complete el ROL y el tribunal antes de generar el documento."; return; }
+        _personaGenerada = _persona.Split(" — ", 2)[0]; _direccionesGeneradas = Direcciones.Where(_direcciones.Contains).ToList();
+        _posicionGenerada = _posicion; _tamanoGenerado = _tamano; _observacionesGeneradas = _observaciones;
+        _rutaGenerada = _hojaRuta; _generado = true;
+    }
+    private async Task Imprimir()
+    {
+        await using var modulo = await JS.InvokeAsync<IJSObjectReference>("import", "./js/imprimir-documento.js");
+        await modulo.InvokeVoidAsync("imprimirDocumento", "Membrete", "", "membrete-documento", _tamanoGenerado);
+    }
+}

@@ -8,6 +8,46 @@ namespace Jurigest.Integration.Tests.Judicial;
 public sealed class NormalizacionCausaTests
 {
     [Fact]
+    public async Task BusquedaRapida_EntregaPartesYDireccionDeLaDiligencia()
+    {
+        await using var factory = new JurigestApiFactory();
+        using var client = factory.CreateClient();
+        await SeguridadTestHelper.CrearAdministradorAsync(client);
+        var admin = await SeguridadTestHelper.IniciarSesionAsync(client,
+            SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
+
+        using var crear = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
+            "/api/Causas", admin.Token, new
+            {
+                rit = "C-44551-26", tribunal = "3° Juzgado Civil de Santiago",
+                descripcion = "Banco de Prueba / Apellido anterior", fechaEncargoCausa = DateTime.Today,
+                demandados = new[] { new { nombre = "María Elena Leiva Soto", tipoPersona = 1, esPrincipal = true } }
+            });
+        Assert.Equal(HttpStatusCode.OK, crear.StatusCode);
+        var causaId = (await crear.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        using var crearDiligencia = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
+            $"/api/Causas/{causaId}/diligencias", admin.Token,
+            new { descripcion = "Notificación de demanda", tipo = 1 });
+        Assert.Equal(HttpStatusCode.OK, crearDiligencia.StatusCode);
+        var diligenciaId = (await crearDiligencia.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        using var actualizar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
+            $"/api/Diligencias/{diligenciaId}", admin.Token,
+            new { descripcion = "Notificación de demanda", tipo = 1,
+                direccion = "Los Magnolios 6945", comuna = "Peñalolén" });
+        Assert.Equal(HttpStatusCode.OK, actualizar.StatusCode);
+
+        using var buscar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get,
+            "/api/Causas/rit/C-44551-26", admin.Token);
+        Assert.Equal(HttpStatusCode.OK, buscar.StatusCode);
+        var resultado = await buscar.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("María Elena Leiva Soto", resultado.GetProperty("nombreDemandado").GetString());
+        Assert.Equal("Los Magnolios 6945", resultado.GetProperty("direccion").GetString());
+        Assert.Equal("Peñalolén", resultado.GetProperty("comuna").GetString());
+        Assert.Equal("Banco de Prueba", resultado.GetProperty("demandante").GetString());
+        Assert.Equal("María Elena Leiva Soto", resultado.GetProperty("demandado").GetString());
+    }
+
+    [Fact]
     public async Task CrearYBuscarRolNumerico_NormalizaYRechazaTribunalEquivalente()
     {
         await using var factory = new JurigestApiFactory();

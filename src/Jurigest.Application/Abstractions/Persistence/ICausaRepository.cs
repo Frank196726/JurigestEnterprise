@@ -4,6 +4,8 @@ namespace Jurigest.Application.Abstractions.Persistence;
 
 public interface ICausaRepository
 {
+    Task AddDemandadoAsync(Demandado demandado, CancellationToken cancellationToken);
+    Task AddAvalSolidarioAsync(AvalSolidario aval, CancellationToken cancellationToken);
     Task AddAsync(
         Causa causa,
         CancellationToken cancellationToken);

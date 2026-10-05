@@ -10,4 +10,10 @@ public sealed record DiligenciaResumen(
     DateTime? FechaRealizada,
     string? ReceptorJudicial,
     string? Direccion,
-    string? Comuna);
+    string? Comuna)
+{
+    public int Resultado { get; init; }
+    public string? Estampe { get; init; }
+    public string? DiligenciaRealizada { get; init; }
+    public DateTime? FechaGestion { get; init; }
+}

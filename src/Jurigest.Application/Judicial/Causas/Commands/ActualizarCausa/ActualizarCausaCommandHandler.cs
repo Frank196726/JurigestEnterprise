@@ -56,6 +56,14 @@ public sealed class ActualizarCausaCommandHandler
         causa.CorregirIngreso(request.Tribunal, request.Descripcion,
             request.DiligenciaId, nombre, tipo, request.FechaProgramada);
 
+        if (!string.IsNullOrWhiteSpace(request.ReceptorJudicial) &&
+            request.ReceptorJudicial.Trim() != causa.PrimeraDiligencia?.ReceptorJudicial)
+        {
+            if (!request.DiligenciaId.HasValue)
+                throw new ArgumentException("La causa no tiene una diligencia inicial para asignar receptor.");
+            causa.PrimeraDiligencia!.AsignarReceptor(request.ReceptorJudicial);
+        }
+
 
         await _repository.SaveChangesAsync(cancellationToken);
 

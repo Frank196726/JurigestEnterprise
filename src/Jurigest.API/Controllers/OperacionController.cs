@@ -8,7 +8,7 @@ namespace Jurigest.API.Controllers;
 
 [ApiController]
 [Route("api/operacion")]
-[Authorize(Roles = "Administrador")]
+[Authorize(Policy = "Administracion")]
 public sealed class OperacionController(JurigestDbContext db) : ControllerBase
 {
     [HttpGet("respaldo-judicial")]

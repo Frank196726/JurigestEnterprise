@@ -10,9 +10,17 @@ public sealed record CrearUsuarioCommand(
     RolUsuario Rol,
     Guid UsuarioActorId,
     string? DireccionIp)
-    : IRequest<CrearUsuarioResult>;
+    : IRequest<CrearUsuarioResult>
+{
+    public Guid? RolCatalogoId { get; init; }
+    public string Rut { get; init; } = string.Empty;
+    public string Telefono { get; init; } = string.Empty;
+    public string Direccion { get; init; } = string.Empty;
+    public string NumeroOficina { get; init; } = string.Empty;
+}
 
 public sealed record CrearUsuarioResult(
     bool Creado,
     bool EmailDuplicado,
+    bool RutDuplicado,
     Guid? UsuarioId);

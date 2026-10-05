@@ -1,4 +1,4 @@
-﻿using Jurigest.Domain.Judicial.Entities;
+using Jurigest.Domain.Judicial.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,6 +11,21 @@ public sealed class ReciboConfiguration : IEntityTypeConfiguration<Recibo>
         builder.ToTable("Recibos");
 
         builder.HasKey(x => x.Id);
+        builder.Property(x => x.Numero).UseIdentityColumn();
+        builder.HasIndex(x => x.Numero).IsUnique();
+        builder.Property(x => x.Abogado).HasMaxLength(200);
+        builder.Property(x => x.Receptor).HasMaxLength(200);
+        builder.Property(x => x.Rol).HasMaxLength(100);
+        builder.Property(x => x.Tribunal).HasMaxLength(200);
+        builder.Property(x => x.Caratulado).HasMaxLength(500);
+        builder.Property(x => x.DiligenciaEncargada).HasMaxLength(500);
+        builder.Property(x => x.NumeroOperacion).HasMaxLength(100);
+        builder.Property(x => x.Observacion).HasMaxLength(1000);
+        builder.Property(x => x.DetalleAdicionales).HasMaxLength(1000);
+        builder.Property(x => x.Cuantia).HasPrecision(18, 0);
+        builder.Property(x => x.ValorGestion).HasPrecision(18, 0);
+        builder.Property(x => x.TotalAdicionales).HasPrecision(18, 0);
+
 
         builder.Property(x => x.CausaId)
             .IsRequired();

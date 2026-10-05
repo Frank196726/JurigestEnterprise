@@ -64,7 +64,7 @@ internal static class SeguridadTestHelper
 
         var raiz = documento.RootElement;
 
-        return new LoginResult(
+        var resultado = new LoginResult(
             raiz.GetProperty("accessToken").GetString()
                 ?? throw new InvalidOperationException(
                     "La respuesta no contiene accessToken."),
@@ -72,6 +72,21 @@ internal static class SeguridadTestHelper
                 ?? throw new InvalidOperationException(
                     "La respuesta no contiene refreshToken."),
             raiz.GetProperty("usuarioId").GetGuid());
+
+        if (raiz.TryGetProperty("debeCambiarPassword", out var cambio) && cambio.GetBoolean())
+        {
+            var nuevaPassword = password + ".Nueva";
+            using var actualizado = await EnviarAutorizadoAsync(
+                client,
+                HttpMethod.Post,
+                "/api/seguridad/password/cambio-inicial",
+                resultado.Token,
+                new { nuevaPassword });
+            actualizado.EnsureSuccessStatusCode();
+            return await IniciarSesionAsync(client, email, nuevaPassword);
+        }
+
+        return resultado;
     }
 
     internal static async Task<Guid> CrearProcuradorAsync(
@@ -88,7 +103,11 @@ internal static class SeguridadTestHelper
                 nombre = "Procurador de pruebas",
                 email = ProcuradorEmail,
                 password = ProcuradorPassword,
-                rol = 3
+                rol = 3,
+                rut = "15.003.942-8",
+                telefono = "+56 9 5555 0101",
+                direccion = "Avenida de Pruebas 123",
+                numeroOficina = "Oficina 7"
             });
 
         Assert.Equal(

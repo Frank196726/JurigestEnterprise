@@ -27,6 +27,16 @@ public sealed class ObtenerPanelEjecutivoHandler
         var causas = await _causas.GetAllAsync(cancellationToken);
         var diligencias = await _diligencias.GetAllAsync(cancellationToken);
 
+        if (!string.IsNullOrWhiteSpace(request.ReceptorAsignado))
+        {
+            diligencias = diligencias.Where(d => string.Equals(
+                d.ReceptorJudicial?.Trim(),
+                request.ReceptorAsignado.Trim(),
+                StringComparison.OrdinalIgnoreCase)).ToList();
+            var causaIds = diligencias.Select(d => d.CausaId).ToHashSet();
+            causas = causas.Where(c => causaIds.Contains(c.Id)).ToList();
+        }
+
         var ultimaGestionPorCausa = diligencias
             .Where(d => d.FechaRealizada.HasValue)
             .GroupBy(d => d.CausaId)

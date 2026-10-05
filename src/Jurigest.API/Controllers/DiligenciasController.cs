@@ -32,24 +32,24 @@ public sealed class DiligenciasController : ControllerBase
     public DiligenciasController(
         IMediator mediator,
         IDiligenciaRepository diligenciaRepository)
-{
+    {
         _mediator = mediator;
         _diligenciaRepository = diligenciaRepository;
-}
+    }
 
     [HttpGet("plazos")]
     public async Task<IActionResult> ObtenerPorPlazo(
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerDiligenciasPorPlazoQuery(),
+            new ObtenerDiligenciasPorPlazoQuery(ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
     }
 
     [HttpGet("{id:guid}")]
-        public async Task<IActionResult> Obtener(
+    public async Task<IActionResult> Obtener(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -69,7 +69,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpGet("causa/{causaId:guid}")]
-        public async Task<IActionResult> ObtenerPorCausa(
+    public async Task<IActionResult> ObtenerPorCausa(
         Guid causaId,
         CancellationToken cancellationToken)
     {
@@ -121,7 +121,7 @@ public sealed class DiligenciasController : ControllerBase
 
     [HttpPut("{id:guid}/iniciar")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> Iniciar(
+    public async Task<IActionResult> Iniciar(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -158,45 +158,46 @@ public sealed class DiligenciasController : ControllerBase
     public async Task<IActionResult> ObtenerUltima(
     Guid causaId,
     CancellationToken cancellationToken)
-{
-    var diligencia =
-        await _diligenciaRepository.GetUltimaByCausaAsync(
-            causaId,
-            cancellationToken);
-
-    if (diligencia is null)
     {
-        return NotFound(new
+        var diligencia =
+            await _diligenciaRepository.GetUltimaByCausaAsync(
+                causaId,
+                cancellationToken);
+
+        if (diligencia is null)
         {
-            mensaje =
-                "La causa no tiene diligencias registradas."
+            return NotFound(new
+            {
+                mensaje =
+                    "La causa no tiene diligencias registradas."
+            });
+        }
+
+        return Ok(new
+        {
+            diligencia.Id,
+            diligencia.CausaId,
+            diligencia.Descripcion,
+            diligencia.Tipo,
+            diligencia.Estado,
+            diligencia.Resultado,
+            diligencia.ResultadoDetalle,
+            diligencia.DiligenciaRealizadaId,
+            diligencia.DiligenciaRealizada,
+            diligencia.FechaProgramada,
+            diligencia.FechaGestion,
+            diligencia.ReceptorJudicial,
+            diligencia.Direccion,
+            diligencia.Comuna,
+            diligencia.Observaciones,
+            diligencia.Estampe,
+            diligencia.FechaCreacion
         });
     }
 
-    return Ok(new
-    {
-        diligencia.Id,
-        diligencia.CausaId,
-        diligencia.Descripcion,
-        diligencia.Tipo,
-        diligencia.Estado,
-        diligencia.Resultado,
-        diligencia.ResultadoDetalle,
-        diligencia.DiligenciaRealizadaId,
-        diligencia.DiligenciaRealizada,
-        diligencia.FechaProgramada,
-        diligencia.FechaGestion,
-        diligencia.ReceptorJudicial,
-        diligencia.Direccion,
-        diligencia.Comuna,
-        diligencia.Estampe,
-        diligencia.FechaCreacion
-    });
-}
-
     [HttpPut("{id:guid}/completar")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> Completar(
+    public async Task<IActionResult> Completar(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -230,7 +231,7 @@ public sealed class DiligenciasController : ControllerBase
 
     [HttpPut("{id:guid}/programar")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> Programar(
+    public async Task<IActionResult> Programar(
         Guid id,
         [FromBody] ProgramarDiligenciaRequest request,
         CancellationToken cancellationToken)
@@ -275,7 +276,7 @@ public sealed class DiligenciasController : ControllerBase
 
     [HttpPut("{id:guid}/asignar-receptor")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> AsignarReceptor(
+    public async Task<IActionResult> AsignarReceptor(
         Guid id,
         [FromBody] AsignarReceptorRequest request,
         CancellationToken cancellationToken)
@@ -321,7 +322,7 @@ public sealed class DiligenciasController : ControllerBase
 
     [HttpPut("{id:guid}/tipo")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> CambiarTipo(
+    public async Task<IActionResult> CambiarTipo(
         Guid id,
         [FromBody] CambiarTipoDiligenciaRequest request,
         CancellationToken cancellationToken)
@@ -366,7 +367,7 @@ public sealed class DiligenciasController : ControllerBase
 
     [HttpPut("{id:guid}/suspender")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> Suspender(
+    public async Task<IActionResult> Suspender(
         Guid id,
         CancellationToken cancellationToken)
     {
@@ -399,100 +400,100 @@ public sealed class DiligenciasController : ControllerBase
     }
     [HttpPut("{id:guid}/rechazar")]
     [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> Rechazar(
+    public async Task<IActionResult> Rechazar(
         Guid id,
         CancellationToken cancellationToken)
-{
-        try
     {
+        try
+        {
             var resultado = await _mediator.Send(
                 new RechazarDiligenciaCommand(id),
                 cancellationToken);
 
             if (!resultado)
-        {
-                return NotFound(new
             {
-                mensaje = "La diligencia no existe."
+                return NotFound(new
+                {
+                    mensaje = "La diligencia no existe."
+                });
+            }
+
+            return Ok(new
+            {
+                mensaje = "Diligencia rechazada correctamente."
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new
+            {
+                mensaje = ex.Message
             });
         }
 
-            return Ok(new
-        {
-                mensaje = "Diligencia rechazada correctamente."
-        });
     }
-        catch (InvalidOperationException ex)
-    {
-                return Conflict(new
-        {
-                mensaje = ex.Message
-        });
-    }
-
-}
     [HttpPut("{id:guid}/ubicacion")]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> AsignarUbicacion(
         Guid id,
         [FromBody] AsignarUbicacionRequest request,
         CancellationToken cancellationToken)
-{
-    if (request is null ||
-        string.IsNullOrWhiteSpace(request.Direccion) ||
-        string.IsNullOrWhiteSpace(request.Comuna))
     {
-        return BadRequest(new
+        if (request is null ||
+            string.IsNullOrWhiteSpace(request.Direccion) ||
+            string.IsNullOrWhiteSpace(request.Comuna))
         {
-            mensaje = "Debe indicar dirección y comuna."
-        });
-    }
-
-    try
-    {
-        var resultado = await _mediator.Send(
-            new AsignarUbicacionCommand(
-                id,
-                request.Direccion,
-                request.Comuna),
-            cancellationToken);
-
-        if (!resultado)
-        {
-            return NotFound(new
+            return BadRequest(new
             {
-                mensaje = "La diligencia no existe."
+                mensaje = "Debe indicar dirección y comuna."
             });
         }
 
-        return Ok(new
+        try
         {
-            mensaje = "Ubicación asignada correctamente."
-        });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return Conflict(new
+            var resultado = await _mediator.Send(
+                new AsignarUbicacionCommand(
+                    id,
+                    request.Direccion,
+                    request.Comuna),
+                cancellationToken);
+
+            if (!resultado)
+            {
+                return NotFound(new
+                {
+                    mensaje = "La diligencia no existe."
+                });
+            }
+
+            return Ok(new
+            {
+                mensaje = "Ubicación asignada correctamente."
+            });
+        }
+        catch (InvalidOperationException ex)
         {
-            mensaje = ex.Message
-        });
-    }
-    catch (ArgumentException ex)
-    {
-        return BadRequest(new
+            return Conflict(new
+            {
+                mensaje = ex.Message
+            });
+        }
+        catch (ArgumentException ex)
         {
-            mensaje = ex.Message
-        });
+            return BadRequest(new
+            {
+                mensaje = ex.Message
+            });
+        }
     }
-}
 
 
-        [HttpPut("{id:guid}/coordenadas")]
-        [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> RegistrarCoordenadas(
-            Guid id,
-            [FromBody] RegistrarCoordenadasRequest request,
-            CancellationToken cancellationToken)
+    [HttpPut("{id:guid}/coordenadas")]
+    [Authorize(Policy = "DiligenciasGestion")]
+    public async Task<IActionResult> RegistrarCoordenadas(
+        Guid id,
+        [FromBody] RegistrarCoordenadasRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null)
         {
@@ -540,12 +541,12 @@ public sealed class DiligenciasController : ControllerBase
         }
     }
 
-        [HttpPut("{id:guid}/observacion")]
-        [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> AgregarObservacion(
-            Guid id,
-            [FromBody] AgregarObservacionRequest request,
-            CancellationToken cancellationToken)
+    [HttpPut("{id:guid}/observacion")]
+    [Authorize(Policy = "DiligenciasGestion")]
+    public async Task<IActionResult> AgregarObservacion(
+        Guid id,
+        [FromBody] AgregarObservacionRequest request,
+        CancellationToken cancellationToken)
     {
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Observacion))
@@ -576,100 +577,105 @@ public sealed class DiligenciasController : ControllerBase
         });
     }
 
-        [HttpPut("{id:guid}/resultado")]
-        [Authorize(Policy = "DiligenciasGestion")]
-        public async Task<IActionResult> RegistrarResultado(
-        Guid id,
-        [FromBody] RegistrarResultadoDiligenciaRequest request,
-        CancellationToken cancellationToken)
-{
-    if (request is null)
+    [HttpPut("{id:guid}/resultado")]
+    [Authorize(Policy = "DiligenciasGestion")]
+    public async Task<IActionResult> RegistrarResultado(
+    Guid id,
+    [FromBody] RegistrarResultadoDiligenciaRequest request,
+    CancellationToken cancellationToken)
     {
-        return BadRequest(new
+        if (request is null)
         {
-            mensaje = "La solicitud no contiene datos."
-        });
+            return BadRequest(new
+            {
+                mensaje = "La solicitud no contiene datos."
+            });
+        }
+
+        if (request.DiligenciaRealizadaId == Guid.Empty)
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar la diligencia realizada."
+            });
+        }
+
+        if (request.Resultado == 0)
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar el resultado de la diligencia."
+            });
+        }
+
+        if (request.ResultadoDetalle?.Trim().Length > 500)
+        {
+            return BadRequest(new
+            {
+                mensaje = "El detalle del resultado no puede superar 500 caracteres."
+            });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Estampe))
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar el estampe de la diligencia."
+            });
+        }
+
+        if (request.FechaGestion == default)
+        {
+            return BadRequest(new
+            {
+                mensaje = "Debe indicar la fecha de gestión."
+            });
+        }
+
+        try
+        {
+            await _mediator.Send(
+                new RegistrarResultadoDiligenciaCommand(
+                    id,
+                    request.DiligenciaRealizadaId,
+                    request.Resultado,
+                    request.ResultadoDetalle,
+                    request.Estampe,
+                    request.FechaGestion,
+                    request.Monto)
+                { Abogado = request.Abogado, NumeroOperacion = request.NumeroOperacion, Cuantia = request.Cuantia, ObservacionRecibo = request.ObservacionRecibo, DetalleAdicionales = request.DetalleAdicionales, TotalAdicionales = request.TotalAdicionales },
+                cancellationToken);
+
+            return Ok(new
+            {
+                mensaje = "Resultado de diligencia registrado correctamente."
+            });
+        }
+        catch (Jurigest.Domain.Judicial.ReciboEmitidoException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new
+            {
+                mensaje = ex.Message
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new
+            {
+                mensaje = ex.Message
+            });
+        }
     }
 
-    if (request.DiligenciaRealizadaId == Guid.Empty)
+    private string? ObtenerFiltroReceptor()
     {
-        return BadRequest(new
-        {
-            mensaje = "Debe indicar la diligencia realizada."
-        });
+        var rolAsignado = User.FindFirst("rol_asignado")?.Value;
+        return string.Equals(rolAsignado, "Receptor", StringComparison.OrdinalIgnoreCase)
+            ? User.Identity?.Name
+            : null;
     }
-
-    if (request.Resultado == 0)
-    {
-        return BadRequest(new
-        {
-            mensaje = "Debe indicar el resultado de la diligencia."
-        });
-    }
-
-    if (string.IsNullOrWhiteSpace(request.ResultadoDetalle))
-{
-    return BadRequest(new
-    {
-        mensaje = "Debe indicar el detalle del resultado de la diligencia."
-    });
-}
-
-    if (request.ResultadoDetalle.Trim().Length > 500)
-{
-    return BadRequest(new
-    {
-        mensaje = "El detalle del resultado no puede superar 500 caracteres."
-    });
-}
-
-    if (string.IsNullOrWhiteSpace(request.Estampe))
-    {
-        return BadRequest(new
-        {
-            mensaje = "Debe indicar el estampe de la diligencia."
-        });
-    }
-
-    if (request.FechaGestion == default)
-    {
-        return BadRequest(new
-        {
-            mensaje = "Debe indicar la fecha de gestión."
-        });
-    }
-
-    try
-    {
-        await _mediator.Send(
-            new RegistrarResultadoDiligenciaCommand(
-                id,
-                request.DiligenciaRealizadaId,
-                request.Resultado,
-                request.ResultadoDetalle,
-                request.Estampe,
-                request.FechaGestion),
-            cancellationToken);
-
-        return Ok(new
-        {
-            mensaje = "Resultado de diligencia registrado correctamente."
-        });
-    }
-    catch (InvalidOperationException ex)
-    {
-        return NotFound(new
-        {
-            mensaje = ex.Message
-        });
-    }
-    catch (ArgumentException ex)
-    {
-        return BadRequest(new
-        {
-            mensaje = ex.Message
-        });
-    }
-}
-
 }

@@ -32,7 +32,11 @@ public sealed class ObtenerUsuarioHandler
             usuario.Id,
             usuario.Nombre,
             usuario.Email,
-            usuario.Rol.ToString(),
+            usuario.Rut,
+            usuario.Telefono,
+            usuario.Direccion,
+            usuario.NumeroOficina,
+            usuario.NombreRolPersonalizado ?? usuario.Rol.ToString(),
             usuario.Activo,
             usuario.FechaCreacion);
     }

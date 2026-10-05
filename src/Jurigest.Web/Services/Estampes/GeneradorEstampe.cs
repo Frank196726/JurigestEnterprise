@@ -1,4 +1,5 @@
 using System.Text;
+using System.Globalization;
 using Jurigest.Domain.Judicial.Enums;
 
 namespace Jurigest.Web.Services.Estampes;
@@ -18,7 +19,12 @@ public static class GeneradorEstampe
         string? receptorJudicial = null,
         string? direccion = null,
         string? comuna = null,
-        string? observaciones = null)
+        string? observaciones = null,
+        string? modelo = null,
+        decimal? monto = null,
+        string? abogado = null,
+        string? rutDemandado = null,
+        string? materia = null)
     {
         if (string.IsNullOrWhiteSpace(rit))
         {
@@ -55,13 +61,6 @@ public static class GeneradorEstampe
                 nameof(resultado));
         }
 
-        if (string.IsNullOrWhiteSpace(resultadoDetalle))
-        {
-            throw new ArgumentException(
-                "Debe indicar el resultado de la diligencia.",
-                nameof(resultadoDetalle));
-        }
-
         if (string.IsNullOrWhiteSpace(diligenciaRealizada))
         {
             throw new ArgumentException(
@@ -76,49 +75,74 @@ public static class GeneradorEstampe
                 nameof(fechaGestion));
         }
 
+        string? contenidoModelo = null;
+        if (!string.IsNullOrWhiteSpace(modelo))
+        {
+            var valores = new Dictionary<string, string>
+            {
+                ["{{TITULO}}"] = ObtenerTitulo(tipo),
+                ["{{ROL}}"] = rit.Trim(),
+                ["{{TRIBUNAL}}"] = tribunal.Trim(),
+                ["{{CARATULA}}"] = caratula.Trim(),
+                ["{{FECHA_GESTION}}"] = fechaGestion.ToString("dd-MM-yyyy HH:mm"),
+                ["{{RECEPTOR}}"] = receptorJudicial?.Trim() ?? string.Empty,
+                ["{{DIRECCION}}"] = direccion?.Trim() ?? string.Empty,
+                ["{{COMUNA}}"] = comuna?.Trim() ?? string.Empty,
+                ["{{DILIGENCIA_REALIZADA}}"] = diligenciaRealizada.Trim(),
+                ["{{CLASIFICACION}}"] = ObtenerNombreResultado(resultado),
+                ["{{RESULTADO_DETALLE}}"] = resultadoDetalle?.Trim() ?? string.Empty,
+                ["{{ABOGADO}}"] = abogado?.Trim() ?? string.Empty,
+                ["{{RUT_DEMANDADO}}"] = rutDemandado?.Trim() ?? string.Empty,
+                ["{{MATERIA}}"] = materia?.Trim() ?? string.Empty,
+                ["{{OBSERVACIONES}}"] = observaciones?.Trim() ?? string.Empty
+            };
+            contenidoModelo = modelo.Trim();
+            foreach (var valor in valores)
+                contenidoModelo = contenidoModelo.Replace(valor.Key, valor.Value, StringComparison.Ordinal);
+
+            var partesCaratula = caratula.Split('/', 2, StringSplitOptions.TrimEntries);
+            var nombreEjecutado = partesCaratula.Length == 2 ? partesCaratula[1] : caratula.Trim();
+            var cultura = CultureInfo.GetCultureInfo("es-CL");
+            var variablesLegadas = new Dictionary<string, string>
+            {
+                ["$fecha_palabras_diligencia"] = fechaGestion.ToString("dddd d 'de' MMMM 'de' yyyy", cultura),
+                ["$hora_diligencia"] = fechaGestion.ToString("HH:mm", cultura),
+                ["$direccion_ejecutado"] = direccion?.Trim() ?? string.Empty,
+                ["$nombre_ejecutado"] = nombreEjecutado,
+                ["$comuna_ejecutado"] = comuna?.Trim() ?? string.Empty,
+                ["$rut_ejecutado"] = rutDemandado?.Trim() ?? string.Empty,
+                ["$receptor_judicial"] = receptorJudicial?.Trim() ?? string.Empty
+            };
+            foreach (var variable in variablesLegadas)
+                contenidoModelo = contenidoModelo.Replace(variable.Key, variable.Value, StringComparison.OrdinalIgnoreCase);
+
+            if (contenidoModelo.StartsWith("CERTIFICO:", StringComparison.OrdinalIgnoreCase))
+                contenidoModelo = contenidoModelo["CERTIFICO:".Length..].TrimStart();
+            contenidoModelo = contenidoModelo.Trim();
+        }
+
         var texto = new StringBuilder();
 
-        texto.AppendLine(ObtenerTitulo(tipo));
+        texto.AppendLine(receptorJudicial?.Trim() ?? string.Empty);
+        texto.AppendLine("Receptor Judicial");
+        texto.AppendLine(new string('-', 72));
         texto.AppendLine();
-
+        texto.AppendLine($"Tribunal: {tribunal.Trim()}");
         texto.AppendLine($"ROL: {rit.Trim()}");
-        texto.AppendLine($"TRIBUNAL: {tribunal.Trim()}");
-        texto.AppendLine($"CARÁTULA: {caratula.Trim()}");
+        texto.AppendLine($"Caratulado: {caratula.Trim()}");
+        texto.AppendLine($"Abogado: {abogado?.Trim() ?? string.Empty}");
+        texto.AppendLine($"Materia: {materia?.Trim() ?? string.Empty}");
+        texto.AppendLine($"DILIGENCIA REALIZADA: {diligenciaRealizada.Trim()}");
+        texto.AppendLine($"Rut Demandado: {rutDemandado?.Trim() ?? string.Empty}");
         texto.AppendLine();
 
-        texto.AppendLine(
-            $"FECHA DE DILIGENCIA: {fechaGestion:dd-MM-yyyy HH:mm}");
+        texto.AppendLine("CERTIFICO:");
 
-        if (!string.IsNullOrWhiteSpace(receptorJudicial))
+        if (!string.IsNullOrWhiteSpace(contenidoModelo))
         {
-            texto.AppendLine(
-                $"RECEPTOR JUDICIAL: {receptorJudicial.Trim()}");
+            texto.AppendLine();
+            texto.AppendLine(contenidoModelo);
         }
-
-        if (!string.IsNullOrWhiteSpace(direccion))
-        {
-            texto.AppendLine(
-                $"DIRECCIÓN: {direccion.Trim()}");
-        }
-
-        if (!string.IsNullOrWhiteSpace(comuna))
-        {
-            texto.AppendLine(
-                $"COMUNA: {comuna.Trim()}");
-        }
-
-        texto.AppendLine();
-
-        texto.AppendLine(
-		$"DILIGENCIA REALIZADA: {diligenciaRealizada.Trim()}");
-
-	texto.AppendLine(
-		$"RESULTADO DE LA DILIGENCIA: {ObtenerNombreResultado(resultado)}");
-
-	texto.AppendLine();
-
-	texto.AppendLine(
-		$"CERTIFICO: {resultadoDetalle.Trim()}");
 
         if (!string.IsNullOrWhiteSpace(observaciones))
         {
@@ -127,9 +151,8 @@ public static class GeneradorEstampe
                 $"OBSERVACIONES: {observaciones.Trim()}");
         }
 
-        return texto
-            .ToString()
-            .Trim();
+        var estampe = texto.ToString().Trim();
+        return monto.HasValue ? Jurigest.Domain.Judicial.MontoEstampe.Aplicar(estampe, monto.Value) : estampe;
     }
 
     private static string ObtenerTitulo(
@@ -171,40 +194,40 @@ public static class GeneradorEstampe
 
     private static string ObtenerNombreDiligencia(
     TipoDiligencia tipo)
-{
-    return tipo switch
     {
-        TipoDiligencia.Notificacion =>
-            "NOTIFICACIÓN",
+        return tipo switch
+        {
+            TipoDiligencia.Notificacion =>
+                "NOTIFICACIÓN",
 
-        TipoDiligencia.RequerimientoPago =>
-            "REQUERIMIENTO DE PAGO",
+            TipoDiligencia.RequerimientoPago =>
+                "REQUERIMIENTO DE PAGO",
 
-        TipoDiligencia.Embargo =>
-            "EMBARGO",
+            TipoDiligencia.Embargo =>
+                "EMBARGO",
 
-        TipoDiligencia.Lanzamiento =>
-            "LANZAMIENTO",
+            TipoDiligencia.Lanzamiento =>
+                "LANZAMIENTO",
 
-        TipoDiligencia.RetiroExhorto =>
-            "RETIRO DE EXHORTO",
+            TipoDiligencia.RetiroExhorto =>
+                "RETIRO DE EXHORTO",
 
-        TipoDiligencia.RetiroExpediente =>
-            "RETIRO DE EXPEDIENTE",
+            TipoDiligencia.RetiroExpediente =>
+                "RETIRO DE EXPEDIENTE",
 
-        TipoDiligencia.Incautacion =>
-            "INCAUTACIÓN",
+            TipoDiligencia.Incautacion =>
+                "INCAUTACIÓN",
 
-        TipoDiligencia.Protesto =>
-            "PROTESTO",
+            TipoDiligencia.Protesto =>
+                "PROTESTO",
 
-        TipoDiligencia.Citacion =>
-            "CITACIÓN",
+            TipoDiligencia.Citacion =>
+                "CITACIÓN",
 
-        _ =>
-            "OTRA DILIGENCIA"
-    };
-}
+            _ =>
+                "OTRA DILIGENCIA"
+        };
+    }
 
     private static string ObtenerNombreResultado(
         ResultadoDiligencia resultado)

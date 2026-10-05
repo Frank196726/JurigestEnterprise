@@ -1,0 +1,5 @@
+.membrete-overlay{position:fixed;inset:0;background:#0008;z-index:2000;display:flex;justify-content:center;align-items:flex-start;overflow:auto;padding:2rem}
+.membrete-dialog{background:white;padding:1.5rem;border-radius:12px;width:min(100%,1000px)}
+fieldset{border:1px solid #ccc;padding:1rem;margin-top:1rem}legend{float:none;width:auto;font-size:1.1rem;padding:0 .4rem}
+.membrete-hoja{background:white;border:1px solid #ddd;padding:15mm;margin-bottom:1rem;box-sizing:border-box;font:11pt Arial,sans-serif;color:#000;white-space:normal}
+.membrete-texto{white-space:normal;overflow-wrap:anywhere;font:9pt Arial,sans-serif;line-height:1.15}.membrete-texto>div{margin:0;padding:0}

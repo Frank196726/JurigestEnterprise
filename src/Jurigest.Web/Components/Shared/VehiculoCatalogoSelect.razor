@@ -1,0 +1,44 @@
+@using System.Net.Http.Json
+@using Jurigest.Web.Security
+@inject IJurigestApiClient Api
+<label>@Etiqueta
+<div class="d-flex gap-2"><select class="form-select" value="@Value" @onchange="e => ValueChanged.InvokeAsync(e.Value?.ToString() ?? string.Empty)"><option value="">Seleccione...</option>
+@if (!string.IsNullOrWhiteSpace(Value) && !_opciones.Any(x => x.Nombre == Value)) { <option value="@Value">@Value</option> }
+@foreach (var opcion in _opciones) { <option value="@opcion.Nombre">@opcion.Nombre</option> }
+</select><button type="button" class="btn btn-secondary" title="Agregar @Etiqueta" @onclick="() => _agregar = !_agregar">+</button></div></label>
+@if (_agregar)
+{
+    <div><input class="form-control" maxlength="200" placeholder="Nueva opción" @bind="_nombre" /><button type="button" class="btn btn-primary" disabled="@_guardando" @onclick="Agregar">Agregar y seleccionar</button></div>
+}
+@if (_error is not null) { <span class="text-danger">@_error</span> }
+@code {
+    [Parameter] public string Categoria { get; set; } = "";
+    [Parameter] public string Etiqueta { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    private sealed class Opcion { public string Nombre { get; set; } = ""; }
+    private List<Opcion> _opciones = new();
+    private bool _agregar, _guardando;
+    private string _nombre = "";
+    private string? _error;
+    protected override async Task OnInitializedAsync()
+    {
+        try { _opciones = await Api.GetAsync<List<Opcion>>($"/api/Catalogos/vehiculos/{Categoria}") ?? new(); }
+        catch (Exception ex) when (ex is HttpRequestException or UnauthorizedAccessException) { _error = "No fue posible cargar el catálogo."; }
+    }
+    private async Task Agregar()
+    {
+        if (_guardando) return;
+        if (string.IsNullOrWhiteSpace(_nombre)) { _error = "Ingrese el nombre."; return; }
+        _guardando = true; _error = null;
+        try
+        {
+            using var respuesta = await Api.PostAsync($"/api/Catalogos/vehiculos/{Categoria}", JsonContent.Create(new { nombre = _nombre.Trim() }));
+            if (!respuesta.IsSuccessStatusCode) throw new InvalidOperationException(await respuesta.Content.ReadAsStringAsync());
+            var opcion = await respuesta.Content.ReadFromJsonAsync<Opcion>() ?? throw new InvalidOperationException("No se recibió la opción.");
+            _opciones.Add(opcion); await ValueChanged.InvokeAsync(opcion.Nombre); _nombre = ""; _agregar = false;
+        }
+        catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException or UnauthorizedAccessException) { _error = ex.Message; }
+        finally { _guardando = false; }
+    }
+}

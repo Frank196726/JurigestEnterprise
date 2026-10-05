@@ -1,0 +1,126 @@
+@page "/configuracion/modelos-estampe"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "DiligenciasLectura")]
+@using System.Net.Http.Json
+@using Jurigest.Web.Security
+@inject IJurigestApiClient ApiClient
+@inject IJSRuntime JS
+
+<PageTitle>Modelos de estampe | Jurigest Enterprise</PageTitle>
+
+<section class="diligencias-page">
+    <header class="page-heading">
+        <div><span class="eyebrow">Configuración</span><h1>Modelos de estampe</h1>
+            <p>Administra plantillas independientes para generar estampes.</p></div>
+        <button type="button" class="btn btn-secondary" @onclick="VolverAsync">← Volver</button>
+    </header>
+
+    <div class="table-card" style="padding:1.5rem;display:grid;gap:1rem;">
+        <h2>@(_editandoId.HasValue ? "Editar modelo" : "Nuevo modelo")</h2>
+        <div style="display:grid;grid-template-columns:2fr 1fr 1fr;gap:1rem;">
+            <label><span>Nombre *</span><input class="form-control" maxlength="200" @bind="_nombre" /></label>
+            <div><label><span>Tipo de diligencia *</span><select class="form-control" @bind="_tipo">
+                @foreach (var tipo in _tipos) { <option value="@tipo.CodigoSistema">@tipo.Nombre</option> }
+            </select></label>
+                <button type="button" class="btn btn-secondary" style="margin-top:.5rem;" @onclick="() => _mostrarNuevoTipo = !_mostrarNuevoTipo">+ Agregar diligencia</button>
+                @if (_mostrarNuevoTipo)
+                {
+                    <div style="display:flex;gap:.5rem;margin-top:.5rem;">
+                        <input class="form-control" maxlength="200" placeholder="Nombre del nuevo tipo" @bind="_nuevoTipo" />
+                        <button type="button" class="btn btn-primary" disabled="@_guardandoCatalogo" @onclick="AgregarTipoAsync">Agregar</button>
+                    </div>
+                }
+            </div>
+            <label><span>Clasificación</span><select class="form-control" @bind="_resultado">
+                <option value="">Cualquier resultado</option><option value="1">Positiva</option><option value="2">Negativa</option>
+            </select></label>
+            <label style="grid-column:1 / -1;"><span>Gestión realizada relacionada</span><select class="form-control" @bind="_diligenciaRealizadaId">
+                <option value="">Modelo general para el tipo de diligencia</option>
+                @foreach (var gestion in GestionesDisponibles) { <option value="@gestion.Id">@gestion.Nombre</option> }
+            </select></label>
+        </div>
+        <label><span>Contenido que se adjuntará en CERTIFICO *</span>
+            <textarea class="form-control" rows="14" maxlength="8000" @bind="_contenido"></textarea>
+        </label>
+        <small>Este contenido se agrega después del resultado escrito en CERTIFICO, conservando el encabezado y los datos del borrador. Variables disponibles: {{TITULO}}, {{ROL}}, {{TRIBUNAL}}, {{CARATULA}}, {{FECHA_GESTION}}, {{RECEPTOR}}, {{DIRECCION}}, {{COMUNA}}, {{DILIGENCIA_REALIZADA}}, {{CLASIFICACION}}, {{RESULTADO_DETALLE}}, {{OBSERVACIONES}}.</small>
+        <label><input type="checkbox" @bind="_activo" /> Modelo activo</label>
+        <div style="display:flex;gap:.75rem;">
+            <button class="btn btn-primary" disabled="@_guardando" @onclick="GuardarAsync">@(_guardando ? "Guardando..." : "Guardar modelo")</button>
+            @if (_editandoId.HasValue) { <button class="btn btn-secondary" @onclick="Limpiar">Cancelar edición</button> }
+        </div>
+        @if (!string.IsNullOrWhiteSpace(_mensaje)) { <div class="alert @(_exito ? "alert-success" : "alert-danger")">@_mensaje</div> }
+    </div>
+
+    <div class="table-card" style="margin-top:1rem;padding:1.5rem;">
+        <h2>Modelos registrados</h2>
+        @if (_cargando) { <p>Cargando modelos...</p> }
+        else if (_modelos.Count == 0) { <p>No hay modelos registrados.</p> }
+        else
+        {
+            <div style="display:grid;gap:.75rem;">
+            @foreach (var modelo in _modelos)
+            {
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1rem;border:1px solid #e2e8f0;border-radius:.75rem;">
+                    <div><strong>@modelo.Nombre</strong><div>@NombreTipo(modelo.TipoDiligencia) · @NombreGestion(modelo.DiligenciaRealizadaId) · @NombreResultado(modelo.Resultado) · @(modelo.Activo ? "Activo" : "Inactivo")</div></div>
+                    <div style="display:flex;gap:.5rem;"><button class="btn btn-secondary" @onclick="() => Editar(modelo)">Editar</button>
+                    @if (modelo.Activo) { <button class="btn btn-danger" @onclick="() => DesactivarAsync(modelo)">Desactivar</button> }</div>
+                </div>
+            }
+            </div>
+        }
+    </div>
+</section>
+
+@code {
+    private List<TipoItem> _tipos = [];
+    private List<ModeloItem> _modelos = [];
+    private List<GestionItem> _gestiones = [];
+    private Guid? _editandoId;
+    private string _nombre = string.Empty, _contenido = string.Empty;
+    private int _tipo = 1;
+    private int? _resultado;
+    private Guid? _diligenciaRealizadaId;
+    private bool _activo = true, _cargando = true, _guardando, _guardandoCatalogo, _mostrarNuevoTipo, _exito;
+    private string _nuevoTipo = string.Empty;
+    private string? _mensaje;
+
+    protected override async Task OnInitializedAsync() { await CargarTiposAsync(); await CargarGestionesAsync(); await CargarAsync(); }
+    private async Task VolverAsync() => await JS.InvokeVoidAsync("history.back");
+    private async Task CargarTiposAsync() { _tipos = await ApiClient.GetAsync<List<TipoItem>>("/api/Catalogos/tipos-diligencia") ?? []; if (_tipos.Count > 0 && !_tipos.Any(x => x.CodigoSistema == _tipo)) _tipo = _tipos[0].CodigoSistema; }
+    private async Task CargarGestionesAsync() { _gestiones = await ApiClient.GetAsync<List<GestionItem>>("/api/Catalogos/diligencias-realizadas") ?? []; }
+    private IEnumerable<GestionItem> GestionesDisponibles => _gestiones.Where(x => x.CodigoTipoDiligencia == _tipo);
+    private async Task AgregarTipoAsync()
+    {
+        if(string.IsNullOrWhiteSpace(_nuevoTipo)){_mensaje="Debe indicar el nombre de la nueva diligencia.";return;}
+        _guardandoCatalogo=true;_mensaje=null;
+        try { using var r=await ApiClient.PostAsync("/api/Catalogos/tipos-diligencia",JsonContent.Create(new{nombre=_nuevoTipo.Trim()}));await VerificarAsync(r);
+            var creado=await r.Content.ReadFromJsonAsync<TipoItem>()??throw new InvalidOperationException("La API no devolvió el tipo creado.");
+            await CargarTiposAsync();_tipo=creado.CodigoSistema;_nuevoTipo="";_mostrarNuevoTipo=false;_exito=true;_mensaje="Tipo de diligencia agregado correctamente."; }
+        catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException){_mensaje=ex.Message;}
+        finally{_guardandoCatalogo=false;}
+    }
+    private async Task CargarAsync() { _cargando = true; try { _modelos = await ApiClient.GetAsync<List<ModeloItem>>("/api/modelos-estampe?incluirInactivos=true") ?? []; } finally { _cargando = false; } }
+    private void Editar(ModeloItem x) { _editandoId=x.Id;_nombre=x.Nombre;_tipo=x.TipoDiligencia;_resultado=x.Resultado;_diligenciaRealizadaId=x.DiligenciaRealizadaId;_contenido=x.Contenido;_activo=x.Activo;_mensaje=null; }
+    private void Limpiar() { _editandoId=null;_nombre="";_tipo=_tipos.FirstOrDefault()?.CodigoSistema??1;_resultado=null;_diligenciaRealizadaId=null;_contenido="";_activo=true; }
+    private async Task GuardarAsync()
+    {
+        _mensaje=null;_exito=false;
+        if(string.IsNullOrWhiteSpace(_nombre)||string.IsNullOrWhiteSpace(_contenido)){_mensaje="Debe indicar nombre y contenido.";return;}
+        _guardando=true;
+        try { using var response = _editandoId.HasValue
+            ? await ApiClient.PutAsync($"/api/modelos-estampe/{_editandoId}", JsonContent.Create(new {nombre=_nombre.Trim(),tipoDiligencia=_tipo,resultado=_resultado,diligenciaRealizadaId=_diligenciaRealizadaId,contenido=_contenido.Trim(),activo=_activo}))
+            : await ApiClient.PostAsync("/api/modelos-estampe", JsonContent.Create(new {nombre=_nombre.Trim(),tipoDiligencia=_tipo,resultado=_resultado,diligenciaRealizadaId=_diligenciaRealizadaId,contenido=_contenido.Trim(),activo=_activo}));
+            await VerificarAsync(response); _exito=true;_mensaje="Modelo guardado correctamente.";Limpiar();await CargarAsync(); }
+        catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException){_mensaje=ex.Message;}
+        finally{_guardando=false;}
+    }
+    private async Task DesactivarAsync(ModeloItem x) { using var r=await ApiClient.DeleteAsync($"/api/modelos-estampe/{x.Id}");await VerificarAsync(r);await CargarAsync(); }
+    private static async Task VerificarAsync(HttpResponseMessage r){if(r.IsSuccessStatusCode)return;throw new InvalidOperationException($"No fue posible guardar el modelo. HTTP {(int)r.StatusCode}. {await r.Content.ReadAsStringAsync()}");}
+    private string NombreTipo(int id)=>_tipos.FirstOrDefault(x=>x.CodigoSistema==id)?.Nombre??"Otro";
+    private string NombreGestion(Guid? id)=>id.HasValue?(_gestiones.FirstOrDefault(x=>x.Id==id)?.Nombre??"Gestión no disponible"):"Modelo general";
+    private static string NombreResultado(int? id)=>id switch{1=>"Positiva",2=>"Negativa",_=>"Cualquier resultado"};
+    private sealed class ModeloItem { public Guid Id{get;set;} public string Nombre{get;set;}=""; public int TipoDiligencia{get;set;} public int? Resultado{get;set;} public Guid? DiligenciaRealizadaId{get;set;} public string Contenido{get;set;}=""; public bool Activo{get;set;} }
+    private sealed class TipoItem { public Guid Id{get;set;} public string Nombre{get;set;}=""; public int CodigoSistema{get;set;} }
+    private sealed class GestionItem { public Guid Id{get;set;} public string Nombre{get;set;}=""; public int CodigoTipoDiligencia{get;set;} }
+}
+

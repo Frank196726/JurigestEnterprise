@@ -158,83 +158,14 @@ builder.Services.AddRateLimiter(options =>
                 }));
 });
 
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<PermisosService>();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermisosAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy(
-        "DocumentosLectura",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador",
-            "Consulta"));
-
-    options.AddPolicy(
-        "DocumentosCarga",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador"));
-
-    options.AddPolicy(
-        "DocumentosEliminacion",
-        policy => policy.RequireRole(
-            "Administrador"));
-
-    options.AddPolicy(
-        "ResolucionesLectura",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador",
-            "Consulta"));
-
-    options.AddPolicy(
-        "ResolucionesRegistro",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador"));
-
-    options.AddPolicy(
-        "ResolucionesEliminacion",
-        policy => policy.RequireRole(
-            "Administrador"));
-
-    options.AddPolicy(
-        "CausasLectura",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador",
-            "Consulta"));
-
-    options.AddPolicy(
-        "CausasEscritura",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado"));
-
-    options.AddPolicy(
-        "CausasEliminacion",
-        policy => policy.RequireRole(
-            "Administrador"));
-
-    options.AddPolicy(
-        "DiligenciasLectura",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador",
-            "Consulta"));
-
-    options.AddPolicy(
-        "DiligenciasGestion",
-        policy => policy.RequireRole(
-            "Administrador",
-            "Abogado",
-            "Procurador"));
+    foreach (var permiso in Jurigest.Domain.Seguridad.PermisosSistema.Catalogo)
+        options.AddPolicy(permiso.Codigo, policy => policy.RequireAuthenticatedUser().AddRequirements(new PermisoRequirement(permiso.Codigo)));
 });
-
 var app = builder.Build();
 
 app.Use(async (context, next) =>
@@ -281,6 +212,27 @@ app.UseRouting();
 app.UseRateLimiter();
 
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    var cambioPendiente = context.User.FindFirst("debe_cambiar_password")?.Value == "true";
+    var rutaPermitida = context.Request.Path.StartsWithSegments("/api/seguridad/password/cambio-inicial") ||
+        context.Request.Path.StartsWithSegments("/api/seguridad/logout");
+
+    if (context.User.Identity?.IsAuthenticated == true && cambioPendiente && !rutaPermitida)
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        await context.Response.WriteAsJsonAsync(new
+        {
+            mensaje = "Debe cambiar la contraseña temporal antes de continuar.",
+            requiereCambioPassword = true
+        });
+        return;
+    }
+
+    await next(context);
+});
+
 app.UseAuthorization();
 
 app.MapControllers();

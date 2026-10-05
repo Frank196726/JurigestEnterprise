@@ -1,4 +1,4 @@
-﻿using Jurigest.Application.Abstractions.Persistence;
+using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Application.Judicial.Diligencias.Commands.RegistrarResultado;
 using Jurigest.Domain.Judicial.Catalogos;
 using Jurigest.Domain.Judicial.Entities;
@@ -496,6 +496,8 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
     private sealed class CausaRepositoryFake(Causa? causa)
         : ICausaRepository
     {
+        public Task AddDemandadoAsync(Demandado value, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task AddAvalSolidarioAsync(AvalSolidario value, CancellationToken cancellationToken) => Task.CompletedTask;
         public int SaveChangesCalls { get; private set; }
 
         public Task<Causa?> GetByIdAsync(

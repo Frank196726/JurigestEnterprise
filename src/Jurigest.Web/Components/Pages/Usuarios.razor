@@ -1,6 +1,6 @@
 @page "/usuarios"
 @rendermode InteractiveServer
-@attribute [Authorize(Roles = "Administrador")]
+@attribute [Authorize(Policy = "Administracion")]
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security
 @inject IJurigestApiClient ApiClient
@@ -10,36 +10,138 @@
 <section class="admin-page">
     <header class="page-heading"><div><span class="eyebrow">Administración</span><h1>Usuarios</h1><p>Administra accesos, roles y estado de las cuentas.</p></div><span class="count-badge">@_usuarios.Count usuarios</span></header>
     <section class="form-card">
-        <h2>Crear usuario</h2>
+        <a href="/permisos">Administrar permisos por rol</a><h2>Crear usuario</h2>
         <EditForm Model="_nuevo" OnValidSubmit="CrearAsync" FormName="crear-usuario">
             <DataAnnotationsValidator />
             <div class="form-grid">
-                <label><span>Nombre</span><InputText @bind-Value="_nuevo.Nombre" /></label>
-                <label><span>Correo</span><InputText type="email" @bind-Value="_nuevo.Email" /></label>
+                <label><span>Nombre completo *</span><InputText @bind-Value="_nuevo.Nombre" /></label>
+                <label><span>RUT *</span><InputText @bind-Value="_nuevo.Rut" placeholder="12.345.678-5" /></label>
+                <label><span>Teléfono *</span><InputText type="tel" @bind-Value="_nuevo.Telefono" /></label>
+                <label><span>Dirección *</span><InputText @bind-Value="_nuevo.Direccion" /></label>
+                <label><span>N° de oficina *</span><InputText @bind-Value="_nuevo.NumeroOficina" /></label>
+                <label><span>Correo electrónico *</span><InputText type="email" @bind-Value="_nuevo.Email" /></label>
                 <label><span>Contraseña temporal</span><InputText type="password" @bind-Value="_nuevo.Password" /></label>
-                <label><span>Rol</span><InputSelect @bind-Value="_nuevo.Rol"><option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="4">Consulta</option></InputSelect></label>
+                <div>
+                    <label><span>Rol</span><InputSelect @bind-Value="_seleccionRol" @bind-Value:after="SeleccionarRol">
+                        <option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="4">Consulta</option>
+                        @foreach (var rol in _roles) { <option value="@rol.Id">@rol.Nombre</option> }
+                    </InputSelect></label>
+                    <small>Perfil de acceso: @NombrePerfil(_nuevo.Rol)</small>
+                    <button type="button" class="btn btn-secondary" @onclick="() => _mostrarRol = !_mostrarRol">@(_mostrarRol ? "Cancelar nuevo rol" : "+ Agregar rol")</button>
+                </div>
             </div>
             <ValidationSummary class="error-text" />
-            <div class="form-actions"><button disabled="@_guardando">@(_guardando ? "Creando…" : "Crear usuario")</button></div>
+            <div class="form-actions"><button type="submit" class="btn btn-primary" disabled="@_guardando">@(_guardando ? "Creando…" : "Crear usuario")</button></div>
         </EditForm>
     </section>
+    @if (_mostrarRol)
+    {
+        <section class="form-card">
+            <h2>Agregar rol</h2>
+            <div class="form-grid">
+                <label><span>Nombre del rol *</span><input class="form-control" maxlength="80" @bind="_nombreRol" placeholder="Ej.: Coordinador" /></label>
+                <label><span>Perfil de acceso *</span><select class="form-control" @bind="_perfilRol">
+                    <option value="4">Consulta — solo lectura</option>
+                    <option value="3">Procurador — gestionar diligencias y documentos</option>
+                    <option value="2">Abogado — registrar causas y gestiones</option>
+
+                </select></label>
+            </div>
+            <button type="button" disabled="@_guardandoRol" @onclick="CrearRolAsync">@(_guardandoRol ? "Guardando…" : "Guardar rol")</button>
+        </section>
+    }
+    @if (_editandoId.HasValue)
+    {
+        <section class="form-card" aria-label="Modificar usuario">
+            <h2>Modificar usuario — @_edicion.Nombre</h2>
+            <EditForm Model="_edicion" OnValidSubmit="GuardarEdicionAsync" FormName="editar-usuario" @key="_editandoId">
+                <DataAnnotationsValidator />
+                <fieldset disabled="@_guardandoEdicion">
+                    <div class="form-grid">
+                        <label><span>Nombre completo *</span><InputText @bind-Value="_edicion.Nombre" maxlength="200" /></label>
+                        <label><span>RUT *</span><InputText @bind-Value="_edicion.Rut" /></label>
+                        <label><span>Teléfono *</span><InputText type="tel" @bind-Value="_edicion.Telefono" maxlength="30" /></label>
+                        <label><span>Dirección *</span><InputText @bind-Value="_edicion.Direccion" maxlength="250" /></label>
+                        <label><span>N° de oficina *</span><InputText @bind-Value="_edicion.NumeroOficina" maxlength="50" /></label>
+                        <label><span>Correo electrónico *</span><InputText type="email" @bind-Value="_edicion.Email" maxlength="200" /></label>
+                    </div>
+                    <ValidationSummary class="error-text" />
+                    <div class="form-actions"><button type="submit" class="btn btn-primary">@(_guardandoEdicion ? "Guardando…" : "Guardar cambios")</button><button type="button" class="btn btn-secondary" @onclick="() => _editandoId = null">Cancelar</button></div>
+                </fieldset>
+            </EditForm>
+        </section>
+    }
     @if (_mensaje is not null) { <div class="message @(_exito ? "success" : "error")">@_mensaje</div> }
     @if (_cargando) { <div class="state-card">Cargando usuarios…</div> }
-    else { <div class="table-card"><table><thead><tr><th>Usuario</th><th>Rol</th><th>Creación</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
-        @foreach (var usuario in _usuarios) { <tr @key="usuario.Id"><td><strong>@usuario.Nombre</strong><small>@usuario.Email</small></td><td>@usuario.Rol</td><td>@usuario.FechaCreacion.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td><td><span class="status @(usuario.Activo ? "active" : "inactive")">@(usuario.Activo ? "Activo" : "Inactivo")</span></td><td><button class="state-action" disabled="@(_procesando == usuario.Id)" @onclick="() => CambiarEstadoAsync(usuario)">@(usuario.Activo ? "Desactivar" : "Activar")</button></td></tr> }
+    else { <div class="table-card"><table><thead><tr><th>Usuario</th><th>Contacto</th><th>Rol</th><th>Creación</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+        @foreach (var usuario in _usuarios) { <tr @key="usuario.Id"><td><strong>@usuario.Nombre</strong><small>@(usuario.Rut ?? "RUT no registrado")</small></td><td><strong>@usuario.Email</strong><small>@(usuario.Telefono ?? "Teléfono no registrado") · @(usuario.Direccion ?? "Dirección no registrada") · @(usuario.NumeroOficina ?? "Oficina no registrada")</small></td><td>@usuario.Rol</td><td>@usuario.FechaCreacion.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td><td><span class="status @(usuario.Activo ? "active" : "inactive")">@(usuario.Activo ? "Activo" : "Inactivo")</span></td><td><div class="user-actions"><button type="button" class="btn btn-outline-primary" disabled="@_guardandoEdicion" @onclick="() => Editar(usuario)">Modificar</button><button class="state-action" disabled="@(_procesando == usuario.Id)" @onclick="() => CambiarEstadoAsync(usuario)">@(usuario.Activo ? "Desactivar" : "Activar")</button></div></td></tr> }
     </tbody></table></div> }
 </section>
 
 @code {
+    private Guid? _editandoId;
+    private EditarUsuarioModel _edicion = new();
+    private bool _guardandoEdicion;
+    private void Editar(UsuarioResumen usuario)
+    {
+        _mensaje = null;
+        _editandoId = usuario.Id;
+        _edicion = new() { Nombre = usuario.Nombre, Email = usuario.Email, Rut = usuario.Rut ?? "", Telefono = usuario.Telefono ?? "", Direccion = usuario.Direccion ?? "", NumeroOficina = usuario.NumeroOficina ?? "" };
+    }
+    private async Task GuardarEdicionAsync()
+    {
+        if (_editandoId is not Guid id) return;
+        _guardandoEdicion = true;
+        await SeguroAsync(async () => {
+            using var respuesta = await ApiClient.PutAsync($"/api/seguridad/usuarios/{id}", JsonContent.Create(_edicion));
+            await ValidarAsync(respuesta);
+            _editandoId = null;
+            await CargarAsync();
+            Mostrar("Usuario modificado correctamente.", true);
+        });
+        _guardandoEdicion = false;
+    }
+
+    private List<RolItem> _roles = [];
+    private string _seleccionRol = "3", _nombreRol = string.Empty;
+    private int _perfilRol = 4;
+    private bool _mostrarRol, _guardandoRol;
+    private sealed record RolItem(Guid Id, string Nombre, int Perfil);
+    private static string NombrePerfil(int perfil) => perfil switch { 1 => "Administrador", 2 => "Abogado", 3 => "Procurador", _ => "Consulta" };
+    private void SeleccionarRol()
+    {
+        if (Guid.TryParse(_seleccionRol, out var id))
+        {
+            var rol = _roles.Single(x => x.Id == id);
+            _nuevo.RolCatalogoId = id;
+            _nuevo.Rol = rol.Perfil;
+        }
+        else { _nuevo.RolCatalogoId = null; _nuevo.Rol = int.Parse(_seleccionRol); }
+    }
+    private async Task CrearRolAsync()
+    {
+        _guardandoRol = true;
+        await SeguroAsync(async () => {
+            if (string.IsNullOrWhiteSpace(_nombreRol)) throw new InvalidOperationException("Indica el nombre del rol.");
+            using var response = await ApiClient.PostAsync("/api/seguridad/roles", JsonContent.Create(new { nombre = _nombreRol.Trim(), perfil = _perfilRol }));
+            await ValidarAsync(response);
+            var creado = await response.Content.ReadFromJsonAsync<RolItem>() ?? throw new InvalidOperationException("No se recibió el rol creado.");
+            _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? [];
+            _seleccionRol = creado.Id.ToString(); SeleccionarRol();
+            _nombreRol = string.Empty; _perfilRol = 4; _mostrarRol = false;
+            Mostrar("Rol creado y seleccionado. Ya puedes asignarlo al usuario.", true);
+        });
+        _guardandoRol = false;
+    }
     private readonly List<UsuarioResumen> _usuarios = [];
     private CrearUsuarioModel _nuevo = new();
     private bool _cargando = true, _guardando, _exito;
     private Guid? _procesando;
     private string? _mensaje;
 
-    protected override async Task OnInitializedAsync() => await SeguroAsync(CargarAsync);
+    protected override async Task OnInitializedAsync() => await SeguroAsync(async () => { _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? []; await CargarAsync(); });
     private async Task CargarAsync() { var r = await ApiClient.GetAsync<UsuariosResponse>("/api/seguridad/usuarios"); _usuarios.Clear(); if (r?.Value is not null) _usuarios.AddRange(r.Value.OrderBy(x => x.Nombre)); _cargando = false; }
-    private async Task CrearAsync() { _guardando = true; await SeguroAsync(async () => { using var r = await ApiClient.PostAsync("/api/seguridad/usuarios", JsonContent.Create(_nuevo)); await ValidarAsync(r); _nuevo = new(); await CargarAsync(); Mostrar("Usuario creado correctamente.", true); }); _guardando = false; }
+    private async Task CrearAsync() { _guardando = true; await SeguroAsync(async () => { using var r = await ApiClient.PostAsync("/api/seguridad/usuarios", JsonContent.Create(_nuevo)); await ValidarAsync(r); _nuevo = new(); _seleccionRol = "3"; await CargarAsync(); Mostrar("Usuario creado correctamente.", true); }); _guardando = false; }
     private async Task CambiarEstadoAsync(UsuarioResumen u) { _procesando = u.Id; await SeguroAsync(async () => { using var r = await ApiClient.PutAsync($"/api/seguridad/usuarios/{u.Id}/estado", JsonContent.Create(new { activo = !u.Activo })); await ValidarAsync(r); await CargarAsync(); Mostrar(u.Activo ? "Usuario desactivado correctamente." : "Usuario activado correctamente.", true); }); _procesando = null; }
     private async Task SeguroAsync(Func<Task> accion) { _mensaje = null; try { await accion(); } catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); } catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException) { Mostrar(ex.Message, false); _cargando = false; } }
     private void Mostrar(string texto, bool exito) { _mensaje = texto; _exito = exito; }

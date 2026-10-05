@@ -1,6 +1,6 @@
 @page "/vencimientos"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "DiligenciasLectura")]
 
 @using Jurigest.Web.Models
 @using Jurigest.Web.Security

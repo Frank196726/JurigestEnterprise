@@ -120,9 +120,8 @@
                                     </td>
 
                                     <td>
-                                        <strong>
-                                            @diligencia.Descripcion
-                                        </strong>
+                                        <strong>@ObtenerNombreTipo(diligencia.Tipo)</strong>
+                                        <div style="white-space: pre-wrap; overflow-wrap: anywhere;">@diligencia.Descripcion</div>
 
                                         @if (!string.IsNullOrWhiteSpace(diligencia.Direccion))
                                         {
@@ -253,6 +252,8 @@ private bool busquedaInicialEjecutada;
 
     private Guid? diligenciaMostrarEstampe;
 
+    private List<TipoDiligenciaItem> tiposDiligencia = new();
+
     protected override async Task OnParametersSetAsync()
 {
     if (busquedaInicialEjecutada)
@@ -340,11 +341,50 @@ private bool busquedaInicialEjecutada;
 
             diligencias =
                 resultado ?? new List<DiligenciaResponse>();
+
+            // El catálogo complementa el historial; su indisponibilidad no oculta los encargos.
+            try
+            {
+                tiposDiligencia = await Api.GetAsync<List<TipoDiligenciaItem>>(
+                    "api/Catalogos/tipos-diligencia") ?? new();
+            }
+            catch (HttpRequestException)
+            {
+                tiposDiligencia.Clear();
+            }
         }
         finally
         {
             cargandoDiligencias = false;
         }
+    }
+
+    private string ObtenerNombreTipo(int tipo)
+    {
+        var nombre = tiposDiligencia.FirstOrDefault(x => x.CodigoSistema == tipo)?.Nombre;
+        if (!string.IsNullOrWhiteSpace(nombre))
+            return nombre;
+
+        return tipo switch
+        {
+            1 => "Notificación",
+            2 => "Requerimiento de pago",
+            3 => "Embargo",
+            4 => "Lanzamiento",
+            5 => "Retiro de exhorto",
+            6 => "Retiro de expediente",
+            7 => "Incautación",
+            8 => "Protesto",
+            9 => "Citación",
+            99 => "Otra diligencia",
+            _ => $"Diligencia (tipo {tipo})"
+        };
+    }
+
+    private sealed class TipoDiligenciaItem
+    {
+        public string Nombre { get; set; } = string.Empty;
+        public int? CodigoSistema { get; set; }
     }
 
     private static string ObtenerFechaHistorial(

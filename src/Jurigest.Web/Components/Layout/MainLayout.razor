@@ -22,8 +22,9 @@
                         <span class="account-data">
                             <strong>@sesion.User.Identity?.Name</strong>
                             <small>
-                                @sesion.User.FindFirst(
-                                    System.Security.Claims.ClaimTypes.Role)?.Value
+                                @(sesion.User.FindFirst("rol_asignado")?.Value
+                                    ?? sesion.User.FindFirst(
+                                        System.Security.Claims.ClaimTypes.Role)?.Value)
                             </small>
                         </span>
 

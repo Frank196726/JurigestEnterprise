@@ -21,6 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Jurigest.Web\Jurigest.Web.csproj" />
     <ProjectReference Include="..\..\src\Jurigest.API\Jurigest.API.csproj" />
     <ProjectReference Include="..\..\src\Jurigest.Persistence\Jurigest.Persistence.csproj" />
   </ItemGroup>

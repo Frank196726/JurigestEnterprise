@@ -61,7 +61,13 @@ public sealed class SesionAuthenticationStateProvider
 
             new Claim(
                 ClaimTypes.Role,
-                sesion.Rol)
+                sesion.Rol),
+
+            new Claim("rol_asignado", sesion.RolAsignado),
+
+            new Claim(
+                "debe_cambiar_password",
+                sesion.DebeCambiarPassword ? "true" : "false")
         };
 
         var identidad = new ClaimsIdentity(

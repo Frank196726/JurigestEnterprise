@@ -8,6 +8,7 @@ public sealed class Causa
         ['/', '\\', '?', '%', '*', ':', '|', '"', '<', '>'];
 
     private readonly List<Diligencia> _diligencias = new();
+    private readonly List<Demandado> _demandados = [];
 
     private Causa()
     {
@@ -55,6 +56,14 @@ public sealed class Causa
     }
 
     public Guid Id { get; private set; }
+    public Guid? MateriaId { get; private set; }
+    public string? Materia { get; private set; }
+    public void AsignarMateria(Guid id, string nombre)
+    {
+        if (id == Guid.Empty || string.IsNullOrWhiteSpace(nombre) || nombre.Length > 200)
+            throw new ArgumentException("La materia no es válida.");
+        MateriaId = id; Materia = nombre.Trim();
+    }
 
     public string Rit { get; private set; } =
         string.Empty;
@@ -89,6 +98,23 @@ public sealed class Causa
 
     public IReadOnlyCollection<Diligencia> Diligencias =>
         _diligencias.AsReadOnly();
+
+    public IReadOnlyCollection<Demandado> Demandados => _demandados.AsReadOnly();
+
+    public Demandado AgregarDemandado(string nombre, TipoPersonaDemandada tipoPersona, bool esPrincipal,
+        string? rut = null, string? representanteLegal = null, string? rutRepresentanteLegal = null)
+    {
+        if (esPrincipal && _demandados.Any(x => x.EsPrincipal))
+            throw new InvalidOperationException("La causa ya tiene un demandado principal.");
+        if (!esPrincipal && !_demandados.Any(x => x.EsPrincipal))
+            throw new InvalidOperationException("Debe registrar primero el demandado principal.");
+        if (_demandados.Any(x => string.Equals(x.Nombre, nombre?.Trim(), StringComparison.OrdinalIgnoreCase)))
+            throw new ArgumentException("El demandado ya está registrado.", nameof(nombre));
+        var demandado = new Demandado(Id, nombre, tipoPersona, esPrincipal,
+            rut, representanteLegal, rutRepresentanteLegal);
+        _demandados.Add(demandado);
+        return demandado;
+    }
 
     // La primera diligencia corresponde al ingreso inicial, incluso si ya tiene resultado.
     public bool PuedeCorregirIngreso => _diligencias.Count <= 1;

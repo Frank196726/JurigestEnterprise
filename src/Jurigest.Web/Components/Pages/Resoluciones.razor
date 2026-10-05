@@ -1,6 +1,6 @@
 @page "/resoluciones"
 @rendermode InteractiveServer
-@attribute [Authorize]
+@attribute [Authorize(Policy = "ResolucionesLectura")]
 
 @using System.Net
 @using System.Net.Http.Json
@@ -34,7 +34,7 @@
         </label>
     </section>
 
-    <AuthorizeView Roles="Administrador,Abogado,Procurador">
+    <AuthorizeView Policy="ResolucionesRegistro">
         <Authorized>
             <section class="form-card">
                 <div>
@@ -97,7 +97,7 @@
     {
         <div class="table-card">
             <table>
-                <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><AuthorizeView Roles="Administrador"><Authorized><th>Acciones</th></Authorized></AuthorizeView></tr></thead>
+                <thead><tr><th>Fecha</th><th>Tipo</th><th>Descripción</th><AuthorizeView Policy="ResolucionesEliminacion"><Authorized><th>Acciones</th></Authorized></AuthorizeView></tr></thead>
                 <tbody>
                     @foreach (var resolucion in _resoluciones)
                     {
@@ -105,7 +105,7 @@
                             <td>@resolucion.Fecha.ToString("dd-MM-yyyy")</td>
                             <td><span class="type-badge">@ObtenerTipo(resolucion.Tipo)</span></td>
                             <td>@resolucion.Descripcion</td>
-                            <AuthorizeView Roles="Administrador">
+                            <AuthorizeView Policy="ResolucionesEliminacion">
                                 <Authorized>
                                     <td><button type="button" class="delete-button" disabled="@(_eliminandoId == resolucion.Id)" @onclick="() => EliminarAsync(resolucion.Id)">@(_eliminandoId == resolucion.Id ? "Eliminando…" : "Eliminar")</button></td>
                                 </Authorized>

@@ -1,4 +1,4 @@
-﻿using Jurigest.Application.Abstractions.Persistence;
+using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Application.Judicial.Recibos.Queries.ObtenerRecibos;
 using MediatR;
 
@@ -38,6 +38,6 @@ public sealed class ObtenerReciboHandler
             recibo.Monto,
             recibo.Estado,
             recibo.FechaEmision,
-            recibo.FechaPago);
+            recibo.FechaPago) { Numero = recibo.Numero, Abogado = recibo.Abogado, Receptor = recibo.Receptor, Rol = recibo.Rol, Tribunal = recibo.Tribunal, Caratulado = recibo.Caratulado, DiligenciaEncargada = recibo.DiligenciaEncargada, NumeroOperacion = recibo.NumeroOperacion, Cuantia = recibo.Cuantia, ValorGestion = recibo.ValorGestion, Observacion = recibo.Observacion, DetalleAdicionales = recibo.DetalleAdicionales, TotalAdicionales = recibo.TotalAdicionales };
     }
 }

@@ -1,4 +1,4 @@
-﻿using Jurigest.Domain.Judicial.Enums;
+using Jurigest.Domain.Judicial.Enums;
 using Jurigest.Domain.Kernel.Common;
 
 namespace Jurigest.Domain.Judicial.Entities;
@@ -80,6 +80,7 @@ public sealed class Recibo : Entity<Guid>
         DiligenciaRealizadaId = diligenciaRealizadaId;
         DiligenciaRealizada = diligenciaRealizada.Trim();
         Monto = monto;
+        ValorGestion = monto;
         Estado = EstadoRecibo.Pendiente;
         FechaEmision = fechaEmision;
     }
@@ -99,6 +100,48 @@ public sealed class Recibo : Entity<Guid>
     public DateTime FechaEmision { get; private set; }
 
     public DateTime? FechaPago { get; private set; }
+
+    public long Numero { get; private set; }
+    public string? Abogado { get; private set; }
+    public string? Receptor { get; private set; }
+    public string? Rol { get; private set; }
+    public string? Tribunal { get; private set; }
+    public string? Caratulado { get; private set; }
+    public string? DiligenciaEncargada { get; private set; }
+    public string? NumeroOperacion { get; private set; }
+    public decimal? Cuantia { get; private set; }
+    public decimal ValorGestion { get; private set; }
+    public string? Observacion { get; private set; }
+    public string? DetalleAdicionales { get; private set; }
+    public decimal TotalAdicionales { get; private set; }
+
+    public void CompletarDatos(string? abogado, string? receptor, string? rol, string? tribunal,
+        string? caratulado, string? diligenciaEncargada, string? numeroOperacion, decimal? cuantia,
+        string? observacion, string? detalleAdicionales, decimal adicionales, decimal valorGestion)
+    {
+        Jurigest.Domain.Judicial.MontoEstampe.Validar(adicionales);
+        if (cuantia.HasValue) Jurigest.Domain.Judicial.MontoEstampe.Validar(cuantia.Value);
+        Jurigest.Domain.Judicial.MontoEstampe.Validar(valorGestion);
+        Jurigest.Domain.Judicial.MontoEstampe.Validar(valorGestion + adicionales);
+        string? Texto(string? valor, int maximo)
+        {
+            if (valor?.Trim().Length > maximo) throw new ArgumentException($"El texto supera {maximo} caracteres.");
+            return string.IsNullOrWhiteSpace(valor) ? null : valor.Trim();
+        }
+        Abogado = Texto(abogado, 200);
+        Receptor = Texto(receptor, 200);
+        Rol = Texto(rol, 100);
+        Tribunal = Texto(tribunal, 200);
+        Caratulado = Texto(caratulado, 500);
+        DiligenciaEncargada = Texto(diligenciaEncargada, 500);
+        NumeroOperacion = Texto(numeroOperacion, 100);
+        Cuantia = cuantia;
+        Observacion = Texto(observacion, 1000);
+        DetalleAdicionales = Texto(detalleAdicionales, 1000);
+        ValorGestion = valorGestion;
+        TotalAdicionales = adicionales;
+        Monto = valorGestion + adicionales;
+    }
 
     public void MarcarPagado(DateTime fechaPago)
     {

@@ -1,0 +1,73 @@
+@page "/permisos"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "Administracion")]
+@using Jurigest.Web.Security
+@inject IJurigestApiClient Api
+
+<PageTitle>Permisos por rol | Jurigest Enterprise</PageTitle>
+<section class="permisos-page">
+    <header><span>ADMINISTRACIÓN</span><h1>Permisos por rol</h1><p>Otorga o quita acceso a las funciones del sistema. Los cambios se aplican a todos los usuarios del rol.</p></header>
+    @if (_mensaje is not null) { <div role="status" class="notice">@_mensaje</div> }
+    @if (_datos is null) { <p>@(_cargando ? "Cargando permisos…" : "No se pudieron cargar los permisos.")</p><button @onclick="Cargar" disabled="@_cargando">Reintentar</button> }
+    else
+    {
+        <div class="selector"><label for="rol">Rol que deseas configurar</label><select id="rol" value="@_clave" @onchange="CambiarRol" disabled="@(_guardando || _modificado)">
+            @foreach (var rol in _datos.Roles) { <option value="@rol.Clave">@rol.Nombre</option> }
+        </select><p>Administrador mantiene todos los permisos. La administración de usuarios, roles y seguridad es exclusiva de ese rol.</p></div>
+        @if (_rol?.Bloqueado == true) { <div class="notice">Acceso completo protegido. Los permisos de Administrador no se pueden quitar.</div> }
+        @foreach (var grupo in _datos.Catalogo.GroupBy(x => x.Grupo))
+        {
+            <fieldset disabled="@(_guardando || _rol?.Bloqueado == true)"><legend>@grupo.Key</legend>
+                @foreach (var permiso in grupo)
+                {
+                    <label class="permission"><input type="checkbox" checked="@_seleccion.Contains(permiso.Codigo)" disabled="@permiso.ExclusivoAdministrador" @onchange="e => Seleccionar(permiso, e.Value is true)" /><span><strong>@permiso.Nombre</strong><small>@(permiso.ExclusivoAdministrador ? "Exclusivo de Administrador" : permiso.Requiere is not null ? "Requiere lectura; se selecciona automáticamente." : "Permite acceder a la información de este grupo.")</small></span></label>
+                }
+            </fieldset>
+        }
+        <footer><span>@_seleccion.Count permisos seleccionados @(_modificado ? "· Cambios sin guardar" : "")</span><button class="secondary" @onclick="Restablecer" disabled="@(!_modificado || _guardando)">Descartar cambios</button><button @onclick="Guardar" disabled="@(!_modificado || _guardando || _rol?.Bloqueado == true)">@(_guardando ? "Guardando…" : "Guardar permisos")</button></footer>
+        <p class="help">Al quitar lectura también se desmarcan las acciones que dependen de ella. Los filtros de causas asignadas al Receptor se mantienen.</p>
+        <a href="/usuarios">Volver a usuarios</a>
+    }
+</section>
+
+@code {
+    private Datos? _datos;
+    private string _clave = "Administrador";
+    private Rol? _rol => _datos?.Roles.FirstOrDefault(x => x.Clave == _clave);
+    private HashSet<string> _seleccion = [];
+    private bool _guardando, _modificado, _cargando = true;
+    private string? _mensaje;
+    protected override Task OnInitializedAsync() => Cargar();
+    private async Task Cargar()
+    {
+        _cargando = true;
+        try { _datos = await Api.GetAsync<Datos>("/api/seguridad/permisos"); Restablecer(); }
+        catch (Exception ex) when (ex is HttpRequestException or UnauthorizedAccessException or InvalidOperationException) { _mensaje = "No se pudieron cargar los permisos. Verifica tu sesión y vuelve a intentarlo."; }
+        finally { _cargando = false; }
+    }
+    private void CambiarRol(ChangeEventArgs e) { _clave = e.Value?.ToString() ?? "Administrador"; _mensaje = null; Restablecer(); }
+    private void Restablecer() { _seleccion = _rol?.Seleccion.ToHashSet() ?? []; _modificado = false; }
+    private void Seleccionar(Permiso permiso, bool activo)
+    {
+        if (_rol?.Bloqueado != false || permiso.ExclusivoAdministrador) return;
+        if (activo) { _seleccion.Add(permiso.Codigo); if (permiso.Requiere is not null) _seleccion.Add(permiso.Requiere); }
+        else { _seleccion.Remove(permiso.Codigo); foreach (var dependiente in _datos!.Catalogo.Where(x => x.Requiere == permiso.Codigo)) _seleccion.Remove(dependiente.Codigo); }
+        _modificado = !_seleccion.SetEquals(_rol.Seleccion);
+    }
+    private async Task Guardar()
+    {
+        _guardando = true; _mensaje = null;
+        try
+        {
+            using var response = await Api.PutAsync($"/api/seguridad/permisos/{_clave}", JsonContent.Create(new { seleccion = _seleccion.ToArray(), version = _rol!.Version }));
+            if (!response.IsSuccessStatusCode) { var error = await response.Content.ReadFromJsonAsync<Mensaje>(); _mensaje = error?.Texto ?? "No fue posible guardar los permisos."; if (response.StatusCode == System.Net.HttpStatusCode.Conflict) await Cargar(); return; }
+            await Cargar(); _mensaje = "Permisos guardados. Se aplican a todos los usuarios de este rol en su próxima operación.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or UnauthorizedAccessException or InvalidOperationException) { _mensaje = "No se pudieron guardar los permisos. Inténtalo nuevamente."; }
+        finally { _guardando = false; }
+    }
+    public sealed record Datos(Permiso[] Catalogo, Rol[] Roles);
+    public sealed record Permiso(string Codigo, string Nombre, string Grupo, string? Requiere, bool ExclusivoAdministrador);
+    public sealed record Rol(string Clave, string Nombre, bool Bloqueado, Guid Version, string[] Seleccion);
+    public sealed record Mensaje([property: System.Text.Json.Serialization.JsonPropertyName("mensaje")] string Texto);
+}

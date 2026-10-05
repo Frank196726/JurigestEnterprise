@@ -42,7 +42,13 @@ builder.Services.AddAuthentication(
             SesionAuthenticationHandler.SchemeName,
             options => { });
 
-builder.Services.AddAuthorization();
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermisosWebAuthorizationHandler>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationMiddlewareResultHandler, PermisosAuthorizationResultHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permiso in Jurigest.Domain.Seguridad.PermisosSistema.Catalogo)
+        options.AddPolicy(permiso.Codigo, policy => policy.RequireAuthenticatedUser().AddRequirements(new PermisoWebRequirement(permiso.Codigo)));
+});
 builder.Services.AddCascadingAuthenticationState();
 
 builder.Services.AddScoped<
@@ -82,7 +88,14 @@ if (!app.Environment.IsDevelopment())
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
-app.UseStatusCodePagesWithReExecute("/not-found", createScopeForStatusCodePages: true);
+app.UseStatusCodePages(async status =>
+{
+    if (status.HttpContext.Response.StatusCode == StatusCodes.Status404NotFound)
+    {
+        status.HttpContext.Response.ContentType = "text/html; charset=utf-8";
+        await status.HttpContext.Response.WriteAsync("<!doctype html><html lang=\"es\"><meta charset=\"utf-8\"><title>Página no encontrada</title><h1>Página no encontrada</h1><p>La dirección solicitada no existe.</p><a href=\"/\">Volver al inicio</a></html>");
+    }
+});
 app.UseHttpsRedirection();
 
 app.Use(async (context, next) =>
@@ -95,6 +108,26 @@ app.Use(async (context, next) =>
 });
 
 app.UseAuthentication();
+
+app.Use(async (context, next) =>
+{
+    var requiereCambio = context.User.FindFirst("debe_cambiar_password")?.Value == "true";
+    var aceptaHtml = context.Request.Headers.Accept.Any(x =>
+        x?.Contains("text/html", StringComparison.OrdinalIgnoreCase) == true);
+    var rutaPermitida = context.Request.Path.StartsWithSegments("/password/cambio-inicial") ||
+        context.Request.Path.StartsWithSegments("/auth/password/cambio-inicial") ||
+        context.Request.Path.StartsWithSegments("/auth/logout");
+
+    if (context.User.Identity?.IsAuthenticated == true && requiereCambio &&
+        aceptaHtml && !rutaPermitida)
+    {
+        context.Response.Redirect("/password/cambio-inicial");
+        return;
+    }
+
+    await next(context);
+});
+
 app.UseAuthorization();
 
 app.UseAntiforgery();

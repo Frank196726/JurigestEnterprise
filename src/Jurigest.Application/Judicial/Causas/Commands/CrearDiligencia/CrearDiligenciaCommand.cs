@@ -6,5 +6,6 @@ namespace Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
 public sealed record CrearDiligenciaCommand(
     Guid CausaId,
     string Descripcion,
-    TipoDiligencia Tipo)
+    TipoDiligencia Tipo,
+    string? ReceptorJudicial = null)
     : IRequest<Guid>;

@@ -2,6 +2,7 @@ using Jurigest.API.Contracts;
 using Jurigest.Application.Seguridad.Commands.CrearAdministradorInicial;
 using Jurigest.Application.Seguridad.Commands.IniciarSesion;
 using Jurigest.Application.Seguridad.Commands.CrearUsuario;
+using Jurigest.Application.Seguridad.Commands.CambiarPasswordInicial;
 using Jurigest.Domain.Seguridad.Enums;
 using Microsoft.AspNetCore.Authorization;
 using Jurigest.Application.Seguridad.Commands.RestablecerPassword;
@@ -256,6 +257,42 @@ public sealed class SeguridadController : ControllerBase
         return Ok(resultado);
     }
 
+    [Authorize]
+    [HttpPost("password/cambio-inicial")]
+    public async Task<IActionResult> CambiarPasswordInicial(
+        [FromBody] CambiarPasswordInicialRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || string.IsNullOrWhiteSpace(request.NuevaPassword))
+            return BadRequest(new { mensaje = "Debe indicar la nueva contraseña." });
+
+        var usuarioIdTexto = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
+            ?? User.FindFirst("sub")?.Value;
+        if (!Guid.TryParse(usuarioIdTexto, out var usuarioId))
+            return Unauthorized(new { mensaje = "El token no contiene un usuario válido." });
+
+        try
+        {
+            var actualizado = await _mediator.Send(
+                new CambiarPasswordInicialCommand(
+                    usuarioId,
+                    request.NuevaPassword,
+                    HttpContext.Connection.RemoteIpAddress?.ToString()),
+                cancellationToken);
+            return actualizado
+                ? Ok(new { mensaje = "Contraseña actualizada correctamente." })
+                : NotFound(new { mensaje = "El usuario no existe." });
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { mensaje = ex.Message });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
+    }
+
     [HttpPost("logout")]
     public async Task<IActionResult> CerrarSesion(
         [FromBody] CerrarSesionRequest request,
@@ -280,7 +317,7 @@ public sealed class SeguridadController : ControllerBase
             mensaje = "Sesion cerrada correctamente."
         });
     }
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Policy = "Administracion")]
     [HttpPost("usuarios")]
     public async Task<IActionResult> CrearUsuario(
         [FromBody] CrearUsuarioRequest request,
@@ -289,11 +326,15 @@ public sealed class SeguridadController : ControllerBase
         if (request is null ||
             string.IsNullOrWhiteSpace(request.Nombre) ||
             string.IsNullOrWhiteSpace(request.Email) ||
-            string.IsNullOrWhiteSpace(request.Password))
+            string.IsNullOrWhiteSpace(request.Password) ||
+            string.IsNullOrWhiteSpace(request.Rut) ||
+            string.IsNullOrWhiteSpace(request.Telefono) ||
+            string.IsNullOrWhiteSpace(request.Direccion) ||
+            string.IsNullOrWhiteSpace(request.NumeroOficina))
         {
             return BadRequest(new
             {
-                mensaje = "Debe indicar nombre, email, contraseña y rol."
+                mensaje = "Debe indicar nombre, RUT, teléfono, dirección, N° de oficina, correo, contraseña y rol."
             });
         }
 
@@ -331,7 +372,14 @@ public sealed class SeguridadController : ControllerBase
                     request.Password,
                     request.Rol,
                     usuarioActorId,
-                    direccionIp),
+                    direccionIp)
+                {
+                    RolCatalogoId = request.RolCatalogoId,
+                    Rut = request.Rut,
+                    Telefono = request.Telefono,
+                    Direccion = request.Direccion,
+                    NumeroOficina = request.NumeroOficina
+                },
                     cancellationToken);
 
             if (resultado.EmailDuplicado)
@@ -341,6 +389,9 @@ public sealed class SeguridadController : ControllerBase
                     mensaje = "Ya existe un usuario con ese email."
                 });
             }
+
+            if (resultado.RutDuplicado)
+                return Conflict(new { mensaje = "Ya existe un usuario con ese RUT." });
 
             return Created(
                 $"/api/usuarios/{resultado.UsuarioId}",
@@ -359,7 +410,7 @@ public sealed class SeguridadController : ControllerBase
         }
     }
 
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Policy = "Administracion")]
     [HttpPut("usuarios/password")]
     public async Task<IActionResult> RestablecerPassword(
         [FromBody] RestablecerPasswordRequest request,
@@ -423,7 +474,7 @@ public sealed class SeguridadController : ControllerBase
             });
         }
     }
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Policy = "Administracion")]
     [HttpGet("usuarios")]
     public async Task<IActionResult> ObtenerUsuarios(
         CancellationToken cancellationToken)
@@ -439,7 +490,17 @@ public sealed class SeguridadController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Administrador")]
+    [Authorize]
+    [HttpGet("mi-cuenta")]
+    public async Task<IActionResult> ObtenerMiCuenta(CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value, out var id))
+            return Unauthorized();
+        var usuario = await _mediator.Send(new ObtenerUsuarioQuery(id), cancellationToken);
+        return usuario is null ? NotFound() : Ok(usuario);
+    }
+
+    [Authorize(Policy = "Administracion")]
     [HttpGet("usuarios/{id:guid}")]
     public async Task<IActionResult> ObtenerUsuario(
         Guid id,
@@ -460,7 +521,40 @@ public sealed class SeguridadController : ControllerBase
         return Ok(usuario);
     }
 
-    [Authorize(Roles = "Administrador")]
+    public sealed record EditarUsuarioRequest(string Nombre, string Email, string Rut, string Telefono, string Direccion, string NumeroOficina);
+
+    [Authorize(Policy = "Administracion")]
+    [HttpPut("usuarios/{id:guid}")]
+    public async Task<IActionResult> EditarUsuario(Guid id, [FromBody] EditarUsuarioRequest request,
+        [FromServices] Jurigest.Application.Abstractions.Persistence.IUsuarioRepository repository,
+        [FromServices] Jurigest.Application.Abstractions.Persistence.IAuditoriaSeguridadRepository auditoria,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value, out var actorId))
+            return Unauthorized();
+        var usuario = await repository.GetByIdAsync(id, cancellationToken);
+        if (usuario is null) return NotFound(new { mensaje = "El usuario no existe." });
+        try
+        {
+            var rut = Jurigest.Domain.Judicial.RutChileno.Normalizar(request.Rut);
+            var correo = request.Email?.Trim().ToLowerInvariant();
+            var usuarios = await repository.GetAllAsync(cancellationToken);
+            if (usuarios.Any(x => x.Id != id && x.Email == correo))
+                return Conflict(new { mensaje = "Ya existe un usuario con ese correo." });
+            if (rut is not null && usuarios.Any(x => x.Id != id && x.Rut == rut))
+                return Conflict(new { mensaje = "Ya existe un usuario con ese RUT." });
+            usuario.ActualizarDatosPersonales(request.Rut, request.Telefono, request.Direccion, request.NumeroOficina);
+            usuario.ActualizarIdentidad(request.Nombre, request.Email!);
+            await repository.UpdateAsync(usuario, cancellationToken);
+            await auditoria.AddAsync(new Jurigest.Domain.Seguridad.Entities.AuditoriaSeguridad(
+                Guid.NewGuid(), actorId, "UsuarioModificado", id, "Se actualizaron los datos del usuario.",
+                HttpContext.Connection.RemoteIpAddress?.ToString()), cancellationToken);
+            return Ok(new { mensaje = "Usuario modificado correctamente." });
+        }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+    }
+
+    [Authorize(Policy = "Administracion")]
     [HttpPut("usuarios/{id:guid}/estado")]
     public async Task<IActionResult> CambiarEstadoUsuario(
         Guid id,
@@ -650,7 +744,7 @@ public sealed class SeguridadController : ControllerBase
         });
     }
 
-    [Authorize(Roles = "Administrador")]
+    [Authorize(Policy = "Administracion")]
     [HttpGet("auditorias")]
     public async Task<IActionResult> ObtenerAuditoriasSeguridad(
         [FromQuery] int cantidad = 100,

@@ -14,7 +14,7 @@ using Jurigest.Application.Abstractions.Notifications;
 namespace Jurigest.Integration.Tests.Infrastructure;
 
 public sealed class JurigestApiFactory
-    : WebApplicationFactory<Program>
+    : WebApplicationFactory<Jurigest.API.Security.JwtTokenService>
 {
     private const string JwtIssuer =
         "Jurigest.Tests";

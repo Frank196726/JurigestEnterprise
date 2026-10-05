@@ -20,31 +20,12 @@
     text-decoration: none;
 }
 
-.brand-mark {
-    width: 2.75rem;
-    height: 2.75rem;
-    display: grid;
-    place-items: center;
-    border-radius: 0.8rem;
-    background: #1d4ed8;
-    color: white;
-    font-size: 1.35rem;
-    font-weight: 700;
-    box-shadow: 0 0.6rem 1.5rem rgb(29 78 216 / 22%);
-}
-
-.brand strong,
-.brand small {
+.brand-logo {
     display: block;
-    line-height: 1.05;
-}
-
-.brand small {
-    margin-top: 0.2rem;
-    color: #64748b;
-    font-size: 0.72rem;
-    letter-spacing: 0.13em;
-    text-transform: uppercase;
+    width: 18rem;
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
 }
 
 .recovery-content {

@@ -5,4 +5,11 @@ public sealed record BuscarCausaPorRitResponse(
     string Rit,
     string Tribunal,
     string Descripcion,
-    DateTime FechaCreacion);
+    DateTime FechaCreacion)
+{
+    public string? NombreDemandado { get; init; }
+    public string? Direccion { get; init; }
+    public string? Comuna { get; init; }
+    public string? Demandante { get; init; }
+    public string? Demandado { get; init; }
+}

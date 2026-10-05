@@ -25,7 +25,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
     }
 
     [Fact]
-    public async Task RegistrarResultado_SinDetalle_Devuelve400()
+    public async Task RegistrarResultado_SinDetalle_AvanzaHastaValidarDiligencia()
     {
         await using var factory = new JurigestApiFactory();
         using var client = factory.CreateClient();
@@ -37,7 +37,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
             client, HttpMethod.Put, $"/api/Diligencias/{Guid.NewGuid()}/resultado", admin.Token,
             new { diligenciaRealizadaId = Guid.NewGuid(), resultado = 1, resultadoDetalle = "", estampe = "Estampe", fechaGestion = DateTime.UtcNow });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
@@ -186,6 +186,14 @@ public async Task Administrador_CompletaFlujo_GeneraReciboPendientePorNotificaci
     Assert.Equal(
         HttpStatusCode.OK,
         registrarResultado.StatusCode);
+
+    using var listadoDiligencias = await SeguridadTestHelper.EnviarAutorizadoAsync(
+        client, HttpMethod.Get, $"/api/Diligencias/causa/{causaId}", admin.Token);
+    listadoDiligencias.EnsureSuccessStatusCode();
+    var filas = await listadoDiligencias.Content.ReadFromJsonAsync<JsonElement>();
+    var fila = filas.EnumerateArray().Single(x => x.GetProperty("id").GetGuid() == diligenciaId);
+    Assert.False(string.IsNullOrWhiteSpace(fila.GetProperty("diligenciaRealizada").GetString()));
+    Assert.Equal(fechaGestion, fila.GetProperty("fechaGestion").GetDateTime());
 
     using var obtenerCausas =
         await SeguridadTestHelper.EnviarAutorizadoAsync(

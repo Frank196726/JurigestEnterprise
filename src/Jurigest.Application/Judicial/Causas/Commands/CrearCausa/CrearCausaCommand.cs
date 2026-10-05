@@ -20,5 +20,8 @@ public sealed class CrearCausaCommand
     public string Descripcion { get; init; } =
         string.Empty;
 
+    public Guid? MateriaId { get; init; }
+    public string? Materia { get; init; }
     public DateTime FechaEncargoCausa { get; init; }
+    public List<DemandadoInput> Demandados { get; init; } = [];
 }

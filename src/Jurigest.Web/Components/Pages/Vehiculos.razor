@@ -1,0 +1,49 @@
+@page "/diligencias/{DiligenciaId:guid}/vehiculos"
+@rendermode InteractiveServer
+@attribute [Authorize(Policy = "DiligenciasGestion")]
+@using Jurigest.Web.Models
+@using Jurigest.Web.Security
+@using Jurigest.Web.Components.Shared
+@inject IJurigestApiClient Api
+@inject NavigationManager Navigation
+<PageTitle>Gestionar vehículos | Jurigest Enterprise</PageTitle>
+@if (_error is not null) { <p class="alert alert-danger">@_error</p><button class="btn btn-secondary" @onclick="Volver">Volver</button> }
+else if (_causa is null) { <p>Cargando vehículos...</p> }
+else
+{
+    <VehiculosDialog Caratula="@_causa.Descripcion" Vehiculos="_vehiculos" Personas="_personas" Direcciones="_direcciones" Rol="@_causa.Rit" Tribunal="@_causa.Tribunal" DiligenciaId="DiligenciaId" Cerrar="Volver" />
+}
+@code {
+    [Parameter] public Guid DiligenciaId { get; set; }
+    private CausaResumen? _causa;
+    private List<VehiculoModel> _vehiculos = new();
+    private List<string> _personas = new(), _direcciones = new();
+    private string? _error;
+    private sealed class Encargo { public Guid CausaId { get; set; } }
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var encargo = await Api.GetAsync<Encargo>($"/api/diligencias/{DiligenciaId}");
+            if (encargo is null) { _error = "El encargo no existe."; return; }
+            _causa = await Api.GetAsync<CausaResumen>($"/api/Causas/{encargo.CausaId}");
+            if (_causa is null) { _error = "La causa no está disponible."; return; }
+            foreach (var parte in _causa.Demandados)
+            {
+                _personas.Add(parte.Nombre + " — Demandado");
+                if (!string.IsNullOrWhiteSpace(parte.RepresentanteLegal)) _personas.Add(parte.RepresentanteLegal + " — Representante");
+                foreach (var aval in parte.Avales)
+                {
+                    _personas.Add(aval.Nombre + " — Aval solidario");
+                    if (!string.IsNullOrWhiteSpace(aval.RepresentanteLegal)) _personas.Add(aval.RepresentanteLegal + " — Representante");
+                }
+            }
+            var diligencias = await Api.GetAsync<List<DiligenciaResumen>>($"/api/Diligencias/causa/{_causa.Id}") ?? new();
+            _direcciones = diligencias.Where(x => !string.IsNullOrWhiteSpace(x.Direccion)).Select(x => $"{x.Direccion}, {x.Comuna}").Distinct().ToList();
+            _vehiculos = await Api.GetAsync<List<VehiculoModel>>($"/api/diligencias/{DiligenciaId}/vehiculos") ?? new();
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _error = "No fue posible cargar los vehículos."; }
+    }
+    private void Volver() => Navigation.NavigateTo(_causa is null ? "/diligencias" : $"/diligencias?causaId={_causa.Id}");
+}
