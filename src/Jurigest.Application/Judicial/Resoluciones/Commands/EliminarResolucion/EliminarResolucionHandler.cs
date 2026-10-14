@@ -3,8 +3,8 @@ using MediatR;
 
 namespace Jurigest.Application.Judicial.Resoluciones.Commands.EliminarResolucion;
 
-    public sealed class EliminarResolucionHandler
-        : IRequestHandler<EliminarResolucionCommand, bool>
+public sealed class EliminarResolucionHandler
+    : IRequestHandler<EliminarResolucionCommand, bool>
 {
     private readonly IResolucionRepository _repository;
 
@@ -24,10 +24,10 @@ namespace Jurigest.Application.Judicial.Resoluciones.Commands.EliminarResolucion
         if (resolucion is null)
             return false;
 
-            await _repository.DeleteAsync(
-                resolucion,
-                cancellationToken);
+        await _repository.DeleteAsync(
+            resolucion,
+            cancellationToken);
 
-            return true;
+        return true;
     }
 }

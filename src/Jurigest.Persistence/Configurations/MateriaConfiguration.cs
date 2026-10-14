@@ -2,6 +2,7 @@ using Jurigest.Domain.Judicial.Catalogos;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Jurigest.Persistence.Configurations;
+
 public sealed class MateriaConfiguration : IEntityTypeConfiguration<MateriaCatalogo>
 {
     public void Configure(EntityTypeBuilder<MateriaCatalogo> builder)

@@ -47,11 +47,11 @@ public sealed class ActualizarCausaCommandHandler
             nombre = causa.PrimeraDiligencia?.Descripcion;
         }
 
-	if (request.FechaEncargoCausa.HasValue)
-	{
-    		causa.ActualizarFechaEncargo(
-        		request.FechaEncargoCausa.Value);
-	}
+        if (request.FechaEncargoCausa.HasValue)
+        {
+            causa.ActualizarFechaEncargo(
+                request.FechaEncargoCausa.Value);
+        }
 
         causa.CorregirIngreso(request.Tribunal, request.Descripcion,
             request.DiligenciaId, nombre, tipo, request.FechaProgramada);

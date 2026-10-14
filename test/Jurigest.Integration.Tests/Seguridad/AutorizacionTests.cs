@@ -182,9 +182,9 @@ public sealed class AutorizacionTests
         Assert.Equal(
             HttpStatusCode.Unauthorized,
             despues.StatusCode);
-        }
-        [Fact]
-        public async Task RestablecerPassword_RevocaTokenExistente()
+    }
+    [Fact]
+    public async Task RestablecerPassword_RevocaTokenExistente()
     {
         await using var factory =
             new JurigestApiFactory();
@@ -268,7 +268,7 @@ public sealed class AutorizacionTests
         Assert.Equal(
             HttpStatusCode.OK,
             conTokenNuevo.StatusCode);
-        }
+    }
 
     private static async Task<LoginResult>
         PrepararProcuradorAsync(HttpClient client)

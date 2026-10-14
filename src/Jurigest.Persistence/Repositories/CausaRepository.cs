@@ -78,23 +78,23 @@ public sealed class CausaRepository : ICausaRepository
     Causa causa,
     CancellationToken cancellationToken)
     {
-    _context.Causas.Remove(causa);
+        _context.Causas.Remove(causa);
 
-    await _context.SaveChangesAsync(
-        cancellationToken);
+        await _context.SaveChangesAsync(
+            cancellationToken);
     }
 
     public async Task<Causa?> GetByRitAsync(
     string rit,
     CancellationToken cancellationToken)
     {
-    var normalizado = Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(rit);
-    var legado = normalizado.StartsWith("C-", StringComparison.Ordinal) ? normalizado[2..] : normalizado;
-    return await _context.Causas
-        .Include(c => c.Demandados)
-        .Include(c => c.Diligencias)
-        .Where(c => c.Rit.Trim().ToUpper() == normalizado || c.Rit.Trim().ToUpper() == legado)
-        .OrderBy(c => c.FechaCreacion).ThenBy(c => c.Id)
-        .FirstOrDefaultAsync(cancellationToken);
+        var normalizado = Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(rit);
+        var legado = normalizado.StartsWith("C-", StringComparison.Ordinal) ? normalizado[2..] : normalizado;
+        return await _context.Causas
+            .Include(c => c.Demandados)
+            .Include(c => c.Diligencias)
+            .Where(c => c.Rit.Trim().ToUpper() == normalizado || c.Rit.Trim().ToUpper() == legado)
+            .OrderBy(c => c.FechaCreacion).ThenBy(c => c.Id)
+            .FirstOrDefaultAsync(cancellationToken);
     }
 }

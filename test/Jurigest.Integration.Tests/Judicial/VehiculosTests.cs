@@ -5,6 +5,7 @@ using Jurigest.Persistence.Context;
 using Jurigest.Integration.Tests.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 namespace Jurigest.Integration.Tests.Judicial;
+
 public sealed class VehiculosTests
 {
     [Fact]
@@ -19,10 +20,27 @@ public sealed class VehiculosTests
             var db = scope.ServiceProvider.GetRequiredService<JurigestDbContext>(); db.Causas.Add(causa); await db.SaveChangesAsync();
         }
         var ruta = $"/api/diligencias/{diligencia.Id}/vehiculos";
-        var datos = new VehiculoEncargo { Nombre = "Persona", Direccion = "Calle, Comuna", Patente = "ts0267-3", Marca = "Honda", Modelo = "SC125", Color = "Negro", TipoPropietario = 1, TipoVehiculo = "Moto", Serie = "VIN-123",
-            FechaDocumento = new DateTime(2026, 10, 2), TipoAdquisicion = "Resolución judicial", AlzamientoProhibicion = "Ninguno",
-            LimitacionDominio = "Embargo", LugarSolicitud = "Santiago", NumeroSolicitud = "123-26", TipoDocumento = "Resolución",
-            DerechosInscripcion = 6140m, RutTitular = "19995588-8" };
+        var datos = new VehiculoEncargo
+        {
+            Nombre = "Persona",
+            Direccion = "Calle, Comuna",
+            Patente = "ts0267-3",
+            Marca = "Honda",
+            Modelo = "SC125",
+            Color = "Negro",
+            TipoPropietario = 1,
+            TipoVehiculo = "Moto",
+            Serie = "VIN-123",
+            FechaDocumento = new DateTime(2026, 10, 2),
+            TipoAdquisicion = "Resolución judicial",
+            AlzamientoProhibicion = "Ninguno",
+            LimitacionDominio = "Embargo",
+            LugarSolicitud = "Santiago",
+            NumeroSolicitud = "123-26",
+            TipoDocumento = "Resolución",
+            DerechosInscripcion = 6140m,
+            RutTitular = "19995588-8"
+        };
         using var creada = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, ruta, admin.Token, datos);
         Assert.Equal(HttpStatusCode.OK, creada.StatusCode);
         var vehiculo = await creada.Content.ReadFromJsonAsync<VehiculoEncargo>();

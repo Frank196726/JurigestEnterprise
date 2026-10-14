@@ -27,9 +27,9 @@ public interface IDiligenciaRepository
         Diligencia diligencia,
         CancellationToken cancellationToken);
 
-        Task<List<Diligencia>> GetByCausaIdAsync(
-    Guid causaId,
-    CancellationToken cancellationToken);
+    Task<List<Diligencia>> GetByCausaIdAsync(
+Guid causaId,
+CancellationToken cancellationToken);
 
     Task<Diligencia?> GetUltimaByCausaAsync(
     Guid causaId,

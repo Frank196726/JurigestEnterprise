@@ -68,6 +68,16 @@ jobs:
           --configuration Release
           --no-restore
 
+      - name: Verificar formato C#
+        shell: bash
+        run: |
+          for project in src/*/*.csproj test/*/*.csproj; do
+            if [[ "$project" == src/Jurigest.Mobile/* ]]; then
+              continue
+            fi
+            dotnet format whitespace "$project" --no-restore --verify-no-changes
+          done
+
       - name: Compilar Web
         run: >
           dotnet build

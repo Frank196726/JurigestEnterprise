@@ -39,7 +39,7 @@ public sealed class PantallaPermisosTests
         client.DefaultRequestHeaders.Add("Cookie", $"{SeguridadWebEndpoints.CookieName}={id}");
         using var response = await client.GetAsync("/permisos");
         var html = await response.Content.ReadAsStringAsync();
-                if (caso is "vencida" or "revocada")
+        if (caso is "vencida" or "revocada")
         {
             Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
             Assert.StartsWith("/login", response.Headers.Location!.OriginalString);
@@ -72,9 +72,9 @@ public sealed class PantallaPermisosTests
     }
     private sealed class ApiFactory(JurigestApiFactory api, string caso) : IHttpClientFactory
     {
-                public HttpClient CreateClient(string name) => caso is "sin-permiso" or "api-caida"
-            ? new HttpClient(new RespuestaSimulada(caso)) { BaseAddress = new Uri("http://localhost") }
-            : api.CreateClient();
+        public HttpClient CreateClient(string name) => caso is "sin-permiso" or "api-caida"
+    ? new HttpClient(new RespuestaSimulada(caso)) { BaseAddress = new Uri("http://localhost") }
+    : api.CreateClient();
     }
 }
 

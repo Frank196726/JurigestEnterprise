@@ -39,7 +39,8 @@ public sealed class ObtenerDiligenciasPorCausaHandler
                 d.ReceptorJudicial,
                 d.Direccion,
                 d.Comuna,
-                d.Estampe) { DiligenciaRealizada = d.DiligenciaRealizada })
+                d.Estampe)
+            { DiligenciaRealizada = d.DiligenciaRealizada })
             .ToList();
     }
 }

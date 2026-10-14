@@ -31,10 +31,16 @@ public sealed class CorreccionIngresoTests
             await db.SaveChangesAsync();
         }
 
-        var payload = new { tribunal = "Tribunal corregido", descripcion = "Demandante / Demandado",
-            diligenciaId = primera.Id, diligenciaEncargadaId = encargo.Id,
-            fechaProgramada = new DateTime(2026, 9, 15), receptorJudicial = "Receptor de prueba",
-            rit = "C-NO-CAMBIAR" };
+        var payload = new
+        {
+            tribunal = "Tribunal corregido",
+            descripcion = "Demandante / Demandado",
+            diligenciaId = primera.Id,
+            diligenciaEncargadaId = encargo.Id,
+            fechaProgramada = new DateTime(2026, 9, 15),
+            receptorJudicial = "Receptor de prueba",
+            rit = "C-NO-CAMBIAR"
+        };
         using var guardar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
             $"/api/Causas/{causa.Id}", admin.Token, payload);
         Assert.Equal(HttpStatusCode.OK, guardar.StatusCode);
@@ -104,11 +110,14 @@ public sealed class CorreccionIngresoTests
             await db.SaveChangesAsync();
         }
         using var response = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
-            $"/api/Causas/{causa.Id}", admin.Token, new {
-                tribunal = "Otro", descripcion = caso == "caratula-larga" ? new string('X', 501) : "X / Y",
+            $"/api/Causas/{causa.Id}", admin.Token, new
+            {
+                tribunal = "Otro",
+                descripcion = caso == "caratula-larga" ? new string('X', 501) : "X / Y",
                 diligenciaId = caso == "otra-diligencia" ? Guid.NewGuid() : primera.Id,
                 diligenciaEncargadaId = caso == "catalogo-invalido" ? (Guid?)Guid.NewGuid() : null,
-                fechaProgramada = caso == "sin-fecha" ? (DateTime?)null : DateTime.Today });
+                fechaProgramada = caso == "sin-fecha" ? (DateTime?)null : DateTime.Today
+            });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         await using var comprobacion = factory.Services.CreateAsyncScope();
         var actual = await comprobacion.ServiceProvider.GetRequiredService<JurigestDbContext>()

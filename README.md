@@ -67,6 +67,26 @@ dotnet test test/Jurigest.Application.Tests
 dotnet test test/Jurigest.Integration.Tests
 ```
 
+La compilación completa incluye MAUI y requiere las cargas de trabajo y SDK de las plataformas móviles. Para validar solamente el servidor y la Web, como en CI:
+
+```powershell
+dotnet build src/Jurigest.API -c Release
+dotnet build src/Jurigest.Web -c Release
+```
+
+El formato C# usa cuatro espacios y se comprueba en CI. Para verificar o corregir un proyecto:
+
+```powershell
+dotnet format whitespace src/Jurigest.Application --no-restore --verify-no-changes
+dotnet format whitespace src/Jurigest.Application --no-restore
+```
+
+Para auditar también las dependencias transitivas:
+
+```powershell
+dotnet list src/Jurigest.API package --vulnerable --include-transitive
+```
+
 El flujo judicial crítico cubierto por pruebas es:
 
 ```text

@@ -17,16 +17,16 @@ public interface ICausaRepository
     Task<List<Causa>> GetAllAsync(
         CancellationToken cancellationToken);
 
-        Task UpdateAsync(
-    Causa causa,
-    CancellationToken cancellationToken);
+    Task UpdateAsync(
+Causa causa,
+CancellationToken cancellationToken);
 
     Task<bool> ExistsAsync(
         Guid id,
         CancellationToken cancellationToken);
 
-        Task SaveChangesAsync(
-    CancellationToken cancellationToken);
+    Task SaveChangesAsync(
+CancellationToken cancellationToken);
 
     Task DeleteAsync(
         Causa causa,

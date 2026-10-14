@@ -17,8 +17,14 @@ public sealed class ModelosEstampeTests
             SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
 
         using var crear = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
-            "/api/modelos-estampe", admin.Token, new { nombre = "Modelo integración",
-                tipoDiligencia = 1, resultado = 1, contenido = "ROL {{ROL}}", activo = true });
+            "/api/modelos-estampe", admin.Token, new
+            {
+                nombre = "Modelo integración",
+                tipoDiligencia = 1,
+                resultado = 1,
+                contenido = "ROL {{ROL}}",
+                activo = true
+            });
         Assert.Equal(HttpStatusCode.OK, crear.StatusCode);
         var id = (await crear.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
 
@@ -28,8 +34,14 @@ public sealed class ModelosEstampeTests
             x => x.GetProperty("id").GetGuid() == id);
 
         using var editar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
-            $"/api/modelos-estampe/{id}", admin.Token, new { nombre = "Modelo integración editado",
-                tipoDiligencia = 1, resultado = 2, contenido = "CERTIFICO {{RESULTADO_DETALLE}}", activo = true });
+            $"/api/modelos-estampe/{id}", admin.Token, new
+            {
+                nombre = "Modelo integración editado",
+                tipoDiligencia = 1,
+                resultado = 2,
+                contenido = "CERTIFICO {{RESULTADO_DETALLE}}",
+                activo = true
+            });
         Assert.Equal(HttpStatusCode.OK, editar.StatusCode);
 
         using var eliminar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Delete,
@@ -60,9 +72,14 @@ public sealed class ModelosEstampeTests
         Assert.Equal(HttpStatusCode.OK, gestion.StatusCode);
         var gestionId = (await gestion.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         using var modelo = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
-            "/api/modelos-estampe", admin.Token, new { nombre = "Modelo personalizado",
-                tipoDiligencia = codigo, diligenciaRealizadaId = gestionId,
-                contenido = "ROL {{ROL}}", activo = true });
+            "/api/modelos-estampe", admin.Token, new
+            {
+                nombre = "Modelo personalizado",
+                tipoDiligencia = codigo,
+                diligenciaRealizadaId = gestionId,
+                contenido = "ROL {{ROL}}",
+                activo = true
+            });
         Assert.Equal(HttpStatusCode.OK, modelo.StatusCode);
         var creado = await modelo.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(codigo, creado.GetProperty("tipoDiligencia").GetInt32());

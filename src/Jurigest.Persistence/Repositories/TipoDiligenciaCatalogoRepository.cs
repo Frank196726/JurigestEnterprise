@@ -58,11 +58,11 @@ public sealed class TipoDiligenciaCatalogoRepository
 
         await _context.SaveChangesAsync(
             cancellationToken);
-}
+    }
 
     public async Task<int> ObtenerSiguienteCodigoPersonalizadoAsync(
         CancellationToken cancellationToken)
-{
+    {
         var maximo = await _context.TiposDiligencia
             .Where(x =>
             x.CodigoSistema.HasValue &&

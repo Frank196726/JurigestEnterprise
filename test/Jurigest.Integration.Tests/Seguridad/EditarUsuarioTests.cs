@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Jurigest.Integration.Tests.Infrastructure;
 namespace Jurigest.Integration.Tests.Seguridad;
+
 public sealed class EditarUsuarioTests
 {
     [Fact]

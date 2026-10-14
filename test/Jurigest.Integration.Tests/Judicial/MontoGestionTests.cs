@@ -29,9 +29,20 @@ public sealed class MontoGestionTests
             var db = scope.ServiceProvider.GetRequiredService<JurigestDbContext>();
             db.Causas.Add(causa); db.DiligenciasRealizadas.Add(gestion); await db.SaveChangesAsync();
         }
-        var datos = new { diligenciaRealizadaId = gestion.Id, resultado = 1, fechaGestion = DateTime.UtcNow,
-            estampe = "Texto", monto = 30000, totalAdicionales = 27000, abogado = "Abogada",
-            numeroOperacion = "OP-123", cuantia = 100000, observacionRecibo = "Not. Rvm.", detalleAdicionales = "Traslado" };
+        var datos = new
+        {
+            diligenciaRealizadaId = gestion.Id,
+            resultado = 1,
+            fechaGestion = DateTime.UtcNow,
+            estampe = "Texto",
+            monto = 30000,
+            totalAdicionales = 27000,
+            abogado = "Abogada",
+            numeroOperacion = "OP-123",
+            cuantia = 100000,
+            observacionRecibo = "Not. Rvm.",
+            detalleAdicionales = "Traslado"
+        };
         for (var i = 0; i < 2; i++)
         {
             using var guardado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,

@@ -32,10 +32,10 @@ public sealed class DiligenciaRealizadaCatalogoConfiguration
             .IsRequired();
 
         builder.HasIndex(x => new
-            {
-                x.CodigoTipoDiligencia,
-                x.Nombre
-            })
+        {
+            x.CodigoTipoDiligencia,
+            x.Nombre
+        })
             .IsUnique();
 
         builder.HasIndex(x =>
