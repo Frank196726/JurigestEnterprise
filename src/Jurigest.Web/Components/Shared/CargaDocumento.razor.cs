@@ -1,13 +1,17 @@
+using Microsoft.AspNetCore.Components;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using Microsoft.AspNetCore.Components.Forms;
 
-namespace Jurigest.Web.Components.Pages;
+namespace Jurigest.Web.Components.Shared;
 
-public partial class Documentos
+public partial class CargaDocumento
 {
+    [Parameter] public Guid CausaId { get; set; }
+    [Parameter] public EventCallback DocumentoCargado { get; set; }
+
     private const long MaximoArchivoBytes =
         10 * 1024 * 1024;
 
@@ -41,7 +45,7 @@ public partial class Documentos
         _mensajeCarga = null;
         _errorCarga = null;
 
-        if (_causaSeleccionadaId == Guid.Empty ||
+        if (CausaId == Guid.Empty ||
             _archivoSeleccionado is null ||
             string.IsNullOrWhiteSpace(_nombreDocumento))
         {
@@ -118,7 +122,7 @@ public partial class Documentos
 
             using var response =
                 await ApiClient.PostAsync(
-                    $"/api/Causas/{_causaSeleccionadaId}" +
+                    $"/api/Causas/{CausaId}" +
                     "/documentos/archivo",
                     formulario);
 
@@ -152,7 +156,7 @@ public partial class Documentos
             _nombreDocumento = string.Empty;
             _tipoDocumento = 6;
 
-            await CargarDocumentosAsync();
+            await DocumentoCargado.InvokeAsync();
         }
         catch (UnauthorizedAccessException)
         {

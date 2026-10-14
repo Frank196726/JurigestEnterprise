@@ -57,6 +57,8 @@ public sealed class ReciboRepository : IReciboRepository
         CancellationToken cancellationToken)
     {
         _context.Recibos.Update(recibo);
+        // SQL Server genera el correlativo al insertar; nunca debe actualizarse.
+        _context.Entry(recibo).Property(x => x.Numero).IsModified = false;
 
         await _context.SaveChangesAsync(
             cancellationToken);
