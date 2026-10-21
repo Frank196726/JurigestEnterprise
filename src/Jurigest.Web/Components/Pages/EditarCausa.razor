@@ -396,7 +396,7 @@
         }
 
         Navigation.NavigateTo(
-            $"/causas/buscar?rit={Uri.EscapeDataString(_causa.Rit)}");
+            $"/causas/buscar?rit={Uri.EscapeDataString(_causa.Rit)}&causa={CausaId}");
     }
 
     private static async Task VerificarRespuestaAsync(
@@ -410,9 +410,30 @@
         var detalle =
             await response.Content.ReadAsStringAsync();
 
+        if (ExtraerMensajeApi(detalle) is { } mensajeApi)
+            throw new InvalidOperationException(mensajeApi);
+
         throw new InvalidOperationException(
             "No fue posible actualizar la causa. " +
             $"HTTP {(int)response.StatusCode}. " +
             detalle);
+    }
+
+    // La API devuelve los errores de negocio como { "mensaje": "..." }.
+    private static string? ExtraerMensajeApi(string detalle)
+    {
+        try
+        {
+            using var json = System.Text.Json.JsonDocument.Parse(detalle);
+            return json.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                   json.RootElement.TryGetProperty("mensaje", out var mensaje) &&
+                   mensaje.ValueKind == System.Text.Json.JsonValueKind.String
+                ? mensaje.GetString()
+                : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 }

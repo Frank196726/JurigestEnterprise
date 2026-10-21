@@ -1,4 +1,5 @@
 namespace Jurigest.Domain.Judicial.Catalogos;
+
 public sealed class MateriaCatalogo
 {
     public Guid Id { get; private set; }

@@ -1,4 +1,4 @@
-export function imprimirDocumento(titulo, contenido, elementoId, tamano) {
+﻿export function imprimirDocumento(titulo, contenido, elementoId, tamano) {
     document.getElementById('documento-impresion')?.remove();
     const documento = elementoId ? document.getElementById(elementoId)?.cloneNode(true) : null;
     const marco = document.createElement('iframe');
@@ -15,7 +15,17 @@ export function imprimirDocumento(titulo, contenido, elementoId, tamano) {
         }
         pagina.querySelector('h1').textContent = titulo;
         if (documento) pagina.querySelector('main').appendChild(documento);
-        else pagina.querySelector('main').textContent = contenido;
+        else {
+            const main = pagina.querySelector('main');
+            for (const linea of (contenido ?? '').replaceAll('\r\n', '\n').split('\n')) {
+                if (linea.startsWith('DILIGENCIA REALIZADA:')) {
+                    const destacado = pagina.createElement('strong');
+                    destacado.textContent = linea;
+                    main.appendChild(destacado);
+                } else main.appendChild(pagina.createTextNode(linea));
+                main.appendChild(pagina.createTextNode('\n'));
+            }
+        }
         marco.contentWindow.addEventListener('afterprint', () => marco.remove(), { once: true });
         marco.contentWindow.requestAnimationFrame(() => {
             marco.contentWindow.focus();

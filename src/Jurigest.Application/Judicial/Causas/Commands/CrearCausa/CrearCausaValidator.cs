@@ -23,7 +23,7 @@ public sealed class CrearCausaValidator
                     .Must(rit =>
                         rit is null ||
                         rit.IndexOfAny(
-                            ['/','\\','?','%','*',':','|','"','<','>']) < 0)
+                            ['/', '\\', '?', '%', '*', ':', '|', '"', '<', '>']) < 0)
                     .WithMessage(
                         "El RIT contiene caracteres no permitidos.");
             });

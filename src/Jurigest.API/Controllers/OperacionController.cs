@@ -1,8 +1,8 @@
-using System.Text.Json;
 using Jurigest.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Text.Json;
 
 namespace Jurigest.API.Controllers;
 

@@ -1,11 +1,11 @@
-using System.Net;
 using Jurigest.Integration.Tests.Infrastructure;
-using Jurigest.Web.Security;
 using Jurigest.Web.Endpoints;
+using Jurigest.Web.Security;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using System.Net;
 
 namespace Jurigest.Integration.Tests.Seguridad;
 
@@ -39,7 +39,7 @@ public sealed class PantallaPermisosTests
         client.DefaultRequestHeaders.Add("Cookie", $"{SeguridadWebEndpoints.CookieName}={id}");
         using var response = await client.GetAsync("/permisos");
         var html = await response.Content.ReadAsStringAsync();
-                if (caso is "vencida" or "revocada")
+        if (caso is "vencida" or "revocada")
         {
             Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
             Assert.StartsWith("/login", response.Headers.Location!.OriginalString);
@@ -72,9 +72,9 @@ public sealed class PantallaPermisosTests
     }
     private sealed class ApiFactory(JurigestApiFactory api, string caso) : IHttpClientFactory
     {
-                public HttpClient CreateClient(string name) => caso is "sin-permiso" or "api-caida"
-            ? new HttpClient(new RespuestaSimulada(caso)) { BaseAddress = new Uri("http://localhost") }
-            : api.CreateClient();
+        public HttpClient CreateClient(string name) => caso is "sin-permiso" or "api-caida"
+    ? new HttpClient(new RespuestaSimulada(caso)) { BaseAddress = new Uri("http://localhost") }
+    : api.CreateClient();
     }
 }
 

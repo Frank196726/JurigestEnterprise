@@ -1,7 +1,7 @@
+using Jurigest.Integration.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Jurigest.Integration.Tests.Infrastructure;
 
 namespace Jurigest.Integration.Tests.Judicial;
 
@@ -19,8 +19,10 @@ public sealed class NormalizacionCausaTests
         using var crear = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
             "/api/Causas", admin.Token, new
             {
-                rit = "C-44551-26", tribunal = "3° Juzgado Civil de Santiago",
-                descripcion = "Banco de Prueba / Apellido anterior", fechaEncargoCausa = DateTime.Today,
+                rit = "C-44551-26",
+                tribunal = "3° Juzgado Civil de Santiago",
+                descripcion = "Banco de Prueba / Apellido anterior",
+                fechaEncargoCausa = DateTime.Today,
                 demandados = new[] { new { nombre = "María Elena Leiva Soto", tipoPersona = 1, esPrincipal = true } }
             });
         Assert.Equal(HttpStatusCode.OK, crear.StatusCode);
@@ -32,8 +34,13 @@ public sealed class NormalizacionCausaTests
         var diligenciaId = (await crearDiligencia.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         using var actualizar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
             $"/api/Diligencias/{diligenciaId}", admin.Token,
-            new { descripcion = "Notificación de demanda", tipo = 1,
-                direccion = "Los Magnolios 6945", comuna = "Peñalolén" });
+            new
+            {
+                descripcion = "Notificación de demanda",
+                tipo = 1,
+                direccion = "Los Magnolios 6945",
+                comuna = "Peñalolén"
+            });
         Assert.Equal(HttpStatusCode.OK, actualizar.StatusCode);
 
         using var buscar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get,
@@ -55,8 +62,13 @@ public sealed class NormalizacionCausaTests
         await SeguridadTestHelper.CrearAdministradorAsync(client);
         var admin = await SeguridadTestHelper.IniciarSesionAsync(client,
             SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
-        object Cuerpo(string rol, string tribunal) => new { rit = rol, tribunal,
-            descripcion = "Prueba normalización", fechaEncargoCausa = DateTime.Today };
+        object Cuerpo(string rol, string tribunal) => new
+        {
+            rit = rol,
+            tribunal,
+            descripcion = "Prueba normalización",
+            fechaEncargoCausa = DateTime.Today
+        };
         using var crear = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
             "/api/Causas", admin.Token, Cuerpo("11573-26", "1 Juzgado Civil de Santiago"));
         Assert.Equal(HttpStatusCode.OK, crear.StatusCode);

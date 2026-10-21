@@ -1,5 +1,4 @@
 using Jurigest.Application.Abstractions.Persistence;
-using Jurigest.Domain.Judicial.Entities;
 using MediatR;
 
 namespace Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;

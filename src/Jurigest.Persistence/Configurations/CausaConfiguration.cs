@@ -69,6 +69,18 @@ public sealed class CausaConfiguration
                 x => x.Estado)
             .HasConversion<int>();
 
+        // Una causa por ROL y tribunal. Tribunal se guarda normalizado
+        // (NormalizarTribunal) y la colación CI_AS de la columna compara
+        // igual que IdentificacionCausa.MismoTribunal.
+        builder.HasIndex(
+                x => new
+                {
+                    x.Rit,
+                    x.Tribunal
+                })
+            .IsUnique()
+            .HasDatabaseName("UX_Causas_Rit_Tribunal");
+
         builder.HasIndex(
             x => x.TipoCausaId);
 

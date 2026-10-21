@@ -1,4 +1,4 @@
-using Jurigest.Application.Abstractions.Persistence;
+﻿using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Judicial.Enums;
 using Microsoft.AspNetCore.Authorization;
@@ -100,6 +100,8 @@ public sealed class ModelosEstampeController(IModeloEstampeRepository repository
     private async Task<IActionResult?> ValidarRelacionAsync(
         GuardarModeloEstampeRequest request, CancellationToken cancellationToken)
     {
+        if (request.TipoDiligencia == 112 && !request.Resultado.HasValue)
+            return BadRequest(new { mensaje = "Para Búsqueda seleccione clasificación positiva o negativa." });
         if (!request.DiligenciaRealizadaId.HasValue) return null;
         var gestion = await diligenciasRealizadas.GetByIdAsync(
             request.DiligenciaRealizadaId.Value, cancellationToken);

@@ -25,24 +25,30 @@
             <label><span class="sr-only">Número de ROL o RIT</span><input @bind="_rit" placeholder="Ej. C-1234-2026" maxlength="50" /></label>
             <button type="submit" disabled="@_buscando">@(_buscando ? "Buscando…" : "Buscar")</button>
         </form>
-        @if (_busquedaRealizada && _causaEncontrada is null)
+        @if (_busquedaRealizada && _causasEncontradas.Count == 0)
         {
             <div class="search-result warning"><div><strong>El ROL/RIT no está registrado</strong><p>Crea la causa para ingresar el nuevo encargo.</p></div><button class="action secondary" @onclick="CrearRol">Crear ROL</button></div>
         }
-else if (_causaEncontrada is not null)
+@if (_causasEncontradas.Count > 1)
+{
+    <p class="found-count" style="margin:.75rem 0 0;">
+        El ROL @_causasEncontradas[0].Rit está registrado en @_causasEncontradas.Count tribunales.
+    </p>
+}
+@foreach (var causaEncontrada in _causasEncontradas)
 {
     <div class="search-result found">
 
         <div class="found-details">
-            <strong>@_causaEncontrada.Rit · @_causaEncontrada.Tribunal</strong>
-            <div class="found-person">@(_causaEncontrada.NombreDemandado ?? "Demandado no registrado")</div>
+            <strong>@causaEncontrada.Rit · @causaEncontrada.Tribunal</strong>
+            <div class="found-person">@(causaEncontrada.NombreDemandado ?? "Demandado no registrado")</div>
             <div class="found-address">
-                <span><b>Dirección:</b> @(_causaEncontrada.Direccion ?? "No registrada")</span>
-                <span><b>Comuna:</b> @(_causaEncontrada.Comuna ?? "No registrada")</span>
+                <span><b>Dirección:</b> @(causaEncontrada.Direccion ?? "No registrada")</span>
+                <span><b>Comuna:</b> @(causaEncontrada.Comuna ?? "No registrada")</span>
             </div>
             <div class="found-parties">
-                <span><b>Demandante:</b> @(_causaEncontrada.Demandante ?? "No registrado")</span>
-                <span><b>Demandado:</b> @(_causaEncontrada.Demandado ?? "No registrado")</span>
+                <span><b>Demandante:</b> @(causaEncontrada.Demandante ?? "No registrado")</span>
+                <span><b>Demandado:</b> @(causaEncontrada.Demandado ?? "No registrado")</span>
             </div>
         </div>
 
@@ -54,25 +60,34 @@ else if (_causaEncontrada is not null)
 
             <button type="button"
                     class="action secondary"
-                    @onclick="ModificarRol">
+                    @onclick="() => ModificarRol(causaEncontrada)">
                 Modificar ROL
             </button>
 
+            <AuthorizeView Policy="CausasEscritura" Context="permisoEscritura">
+                <button type="button"
+                        class="action secondary"
+                        title="Un mismo ROL puede existir en varios tribunales"
+                        @onclick="AgregarRolEnOtroTribunal">
+                    Mismo ROL en otro tribunal
+                </button>
+            </AuthorizeView>
+
             <button type="button"
                     class="action secondary"
-                    @onclick="NuevaDiligencia">
+                    @onclick="() => NuevaDiligencia(causaEncontrada)">
                 Nueva diligencia
             </button>
 
             <button type="button"
                     class="action"
-                    @onclick="RegistrarResultado">
+                    @onclick="() => RegistrarResultado(causaEncontrada)">
                 Registrar resultado
             </button>
 
             <button type="button"
                     class="action"
-                    @onclick="VerHistorial">
+                    @onclick="() => VerHistorial(causaEncontrada)">
                 Historial
             </button>
 
@@ -120,7 +135,8 @@ else if (_causaEncontrada is not null)
         private bool _cargando = true, _buscando, _busquedaRealizada;
         private string? _mensajeError;
         private PanelEjecutivoResumen? _panel;
-        private CausaEncontradaResumen? _causaEncontrada;
+        // Un mismo ROL puede estar en varios tribunales: una tarjeta por causa.
+        private List<CausaEncontradaResumen> _causasEncontradas = [];
 
         protected override async Task OnInitializedAsync()
     {
@@ -134,8 +150,8 @@ else if (_causaEncontrada is not null)
     {
         if (string.IsNullOrWhiteSpace(_rit)) return;
         _rit = IdentificacionCausa.NormalizarRol(_rit);
-        _buscando = true; _busquedaRealizada = false; _causaEncontrada = null; _mensajeError = null;
-        try { _causaEncontrada = await ApiClient.GetAsync<CausaEncontradaResumen>($"/api/Causas/rit/{Uri.EscapeDataString(_rit.Trim())}"); _busquedaRealizada = true; }
+        _buscando = true; _busquedaRealizada = false; _causasEncontradas = []; _mensajeError = null;
+        try { _causasEncontradas = await ApiClient.GetAsync<List<CausaEncontradaResumen>>($"/api/Causas/rit/{Uri.EscapeDataString(_rit.Trim())}/causas") ?? []; _busquedaRealizada = true; }
         catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
         catch (HttpRequestException) { _mensajeError = "No fue posible completar la búsqueda."; }
         finally { _buscando = false; }
@@ -145,21 +161,28 @@ else if (_causaEncontrada is not null)
             Navigation.NavigateTo(
                 $"/causas/nueva?rit={Uri.EscapeDataString(_rit.Trim())}");
 
-        private void ModificarRol() =>
+        private void ModificarRol(CausaEncontradaResumen causa) =>
             Navigation.NavigateTo(
-                $"/causas/{_causaEncontrada!.Id}/editar");
+                $"/causas/{causa.Id}/editar");
 
-        private void NuevaDiligencia() =>
+        // Envía todos los tribunales donde ya está el ROL para preseleccionar otro.
+        private void AgregarRolEnOtroTribunal() =>
             Navigation.NavigateTo(
-                $"/causas/{_causaEncontrada!.Id}/diligencias/nueva");
+                $"/causas/nueva?rit={Uri.EscapeDataString(_causasEncontradas[0].Rit)}" +
+                string.Concat(_causasEncontradas.Select(x =>
+                    $"&tribunalActual={Uri.EscapeDataString(x.Tribunal)}")));
 
-        private void RegistrarResultado() =>
+        private void NuevaDiligencia(CausaEncontradaResumen causa) =>
             Navigation.NavigateTo(
-                $"/causas/{_causaEncontrada!.Id}/diligencias/registrar");
+                $"/causas/{causa.Id}/diligencias/nueva");
 
-        private void VerHistorial() =>
+        private void RegistrarResultado(CausaEncontradaResumen causa) =>
             Navigation.NavigateTo(
-               $"/causas/{_causaEncontrada!.Id}/historial");
+                $"/causas/{causa.Id}/diligencias/registrar");
+
+        private void VerHistorial(CausaEncontradaResumen causa) =>
+            Navigation.NavigateTo(
+               $"/causas/{causa.Id}/historial");
 
         private static string FechaActual =>
             DateTime.Today.ToString(

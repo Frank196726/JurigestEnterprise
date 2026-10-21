@@ -1,5 +1,5 @@
-using Jurigest.Domain.Kernel.Common;
 using Jurigest.Domain.Judicial;
+using Jurigest.Domain.Kernel.Common;
 using Jurigest.Domain.Seguridad.Enums;
 
 namespace Jurigest.Domain.Seguridad.Entities;

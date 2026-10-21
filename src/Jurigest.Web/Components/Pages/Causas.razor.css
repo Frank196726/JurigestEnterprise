@@ -325,12 +325,37 @@ tbody tr:hover {
     }
 }
 
+/* La tabla es más ancha que el contenedor en pantallas medianas: la columna de
+   acciones queda fija a la derecha para que no haya que desplazarse para usarla.
+   En móvil ocuparía media pantalla, así que ahí se desplaza con el resto. */
+@media (min-width: 641px) {
+    thead th:last-child,
+    .actions-cell {
+        position: sticky;
+        right: 0;
+        box-shadow: -0.6rem 0 0.8rem -0.6rem rgb(15 23 42 / 18%);
+    }
+
+    .actions-cell {
+        background: #fff;
+    }
+
+    tbody tr:hover .actions-cell {
+        background: #f8faff;
+    }
+}
+
 .actions-cell {
     white-space: nowrap;
 }
 
+.manage-action + .manage-action {
+    margin-top: 0.4rem;
+}
+
 .manage-action {
-    display: inline-flex;
+    display: flex;
+    justify-content: center;
     min-height: 2.4rem;
     align-items: center;
     padding: 0.55rem 0.8rem;

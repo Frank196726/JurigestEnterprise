@@ -1,4 +1,5 @@
 namespace Jurigest.Domain.Judicial.Entities;
+
 public sealed class VehiculoEncargo
 {
     public Guid Id { get; set; }

@@ -4,6 +4,8 @@ namespace Jurigest.Domain.Judicial;
 
 public static class IdentificacionCausa
 {
+    public const string MensajeCausaDuplicada = "Ya existe una causa con ese ROL en el mismo tribunal.";
+
     public static string NormalizarRol(string? rol)
     {
         var valor = (rol ?? string.Empty).Trim().ToUpperInvariant();

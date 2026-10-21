@@ -102,5 +102,5 @@
     private static bool CumpleFiltro(int dias, string filtro) => filtro switch { "vencidas" => dias < 0, "hoy" => dias == 0, "proximos3" => dias is >= 1 and <= 3, "4a7" => dias is >= 4 and <= 7, "posteriores" => dias > 7, _ => true };
     private static string NormalizarFiltro(string? filtro) => filtro is "vencidas" or "hoy" or "proximos3" or "4a7" or "posteriores" ? filtro : "todas";
     private static string ClasePrioridad(int dias) => dias < 0 ? "critical" : dias == 0 ? "urgent" : dias <= 3 ? "attention" : "normal";
-    private static string TextoPlazo(int dias) => dias switch { < 0 => $"Vencida hace {Math.Abs(dias)} día(s)", 0 => "Vence hoy", 1 => "Vence mañana", _ => $"Vence en {dias} días" };
+    private static string TextoPlazo(int dias) => dias switch { -1 => "Venció ayer", < 0 => $"Vencida hace {Math.Abs(dias)} días", 0 => "Vence hoy", 1 => "Vence mañana", _ => $"Vence en {dias} días" };
 }

@@ -1,6 +1,6 @@
+using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausa;
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Persistence.Context;
-using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausa;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

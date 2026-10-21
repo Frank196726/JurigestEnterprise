@@ -66,11 +66,11 @@ public sealed class TipoCausaCatalogoRepository
     public async Task<TipoCausaCatalogo?> GetByIdAsync(
         Guid id,
         CancellationToken cancellationToken)
-{
-    return await _context.TiposCausa
-        .AsNoTracking()
-        .FirstOrDefaultAsync(
-            x => x.Id == id && x.Activo,
-            cancellationToken);
-}
+    {
+        return await _context.TiposCausa
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                x => x.Id == id && x.Activo,
+                cancellationToken);
+    }
 }

@@ -1,4 +1,3 @@
-using Jurigest.Application.Abstractions.Security;
 using MediatR;
 
 namespace Jurigest.Application.Seguridad.Commands.IniciarSesion;

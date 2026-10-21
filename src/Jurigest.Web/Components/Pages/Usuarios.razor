@@ -8,7 +8,7 @@
 
 <PageTitle>Usuarios | Jurigest Enterprise</PageTitle>
 <section class="admin-page">
-    <header class="page-heading"><div><span class="eyebrow">Administración</span><h1>Usuarios</h1><p>Administra accesos, roles y estado de las cuentas.</p></div><span class="count-badge">@_usuarios.Count usuarios</span></header>
+    <header class="page-heading"><div><span class="eyebrow">Administración</span><h1>Usuarios</h1><p>Administra accesos, roles y estado de las cuentas.</p></div><span class="count-badge">@_usuarios.Count @(_usuarios.Count == 1 ? "usuario" : "usuarios")</span></header>
     <section class="form-card">
         <a href="/permisos">Administrar permisos por rol</a><h2>Crear usuario</h2>
         <EditForm Model="_nuevo" OnValidSubmit="CrearAsync" FormName="crear-usuario">

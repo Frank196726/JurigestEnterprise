@@ -17,22 +17,27 @@ public interface ICausaRepository
     Task<List<Causa>> GetAllAsync(
         CancellationToken cancellationToken);
 
-        Task UpdateAsync(
-    Causa causa,
-    CancellationToken cancellationToken);
+    Task UpdateAsync(
+Causa causa,
+CancellationToken cancellationToken);
 
     Task<bool> ExistsAsync(
         Guid id,
         CancellationToken cancellationToken);
 
-        Task SaveChangesAsync(
-    CancellationToken cancellationToken);
+    Task SaveChangesAsync(
+CancellationToken cancellationToken);
 
     Task DeleteAsync(
         Causa causa,
         CancellationToken cancellationToken);
 
     Task<Causa?> GetByRitAsync(
+        string rit,
+        CancellationToken cancellationToken);
+
+    // Un mismo ROL puede existir en varios tribunales.
+    Task<List<Causa>> GetAllByRitAsync(
         string rit,
         CancellationToken cancellationToken);
 }

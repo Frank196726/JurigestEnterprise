@@ -1,18 +1,18 @@
 using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarCausa;
-using Jurigest.Application.Judicial.Causas.Commands.CrearCausa;
-using Jurigest.Application.Judicial.Causas.Commands.AgregarDemandado;
-using Jurigest.Application.Judicial.Causas.Commands.AgregarAvalSolidario;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarIdentificacionParte;
+using Jurigest.Application.Judicial.Causas.Commands.AgregarAvalSolidario;
+using Jurigest.Application.Judicial.Causas.Commands.AgregarDemandado;
+using Jurigest.Application.Judicial.Causas.Commands.CrearCausa;
 using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
 using Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
-using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
 using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausa;
+using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
+using Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
 using Jurigest.Application.Judicial.Panel.Queries.ObtenerPanelEjecutivo;
 using Jurigest.Application.Judicial.Reportes.Queries.ObtenerReporteCausas;
-using Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
-using Microsoft.AspNetCore.Authorization;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jurigest.API.Controllers;
@@ -192,6 +192,20 @@ public sealed class CausasController : ControllerBase
                 mensaje = "No existe una causa con ese RIT."
             });
         }
+
+        return Ok(resultado);
+    }
+
+    // Un mismo ROL puede estar en varios tribunales: devuelve todas (lista vacía si no hay).
+    [HttpGet("rit/{rit}/causas")]
+    [Authorize(Policy = "CausasLectura")]
+    public async Task<IActionResult> BuscarTodasPorRit(
+        string rit,
+        CancellationToken cancellationToken)
+    {
+        var resultado = await _mediator.Send(
+            new BuscarCausasPorRitQuery(rit, ObtenerFiltroReceptor()),
+            cancellationToken);
 
         return Ok(resultado);
     }

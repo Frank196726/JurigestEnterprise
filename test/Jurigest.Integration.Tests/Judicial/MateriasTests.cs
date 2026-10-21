@@ -1,7 +1,8 @@
+using Jurigest.Integration.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
-using Jurigest.Integration.Tests.Infrastructure;
 namespace Jurigest.Integration.Tests.Judicial;
+
 public sealed class MateriasTests
 {
     [Fact]

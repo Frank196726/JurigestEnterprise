@@ -24,21 +24,21 @@ public sealed class ObtenerDiligenciaHandler
         if (diligencia is null)
             return null;
 
-    return new ObtenerDiligenciaResponse(
-        diligencia.Id,
-        diligencia.CausaId,
-        diligencia.Descripcion,
-        diligencia.Tipo,
-        diligencia.Estado,
-        diligencia.FechaCreacion,
-        diligencia.FechaProgramada,
-        diligencia.FechaRealizada,
-        diligencia.ReceptorJudicial,
-        diligencia.Direccion,
-        diligencia.Comuna,
-        diligencia.Observaciones,
-        diligencia.Latitud,
-        diligencia.Longitud)
+        return new ObtenerDiligenciaResponse(
+            diligencia.Id,
+            diligencia.CausaId,
+            diligencia.Descripcion,
+            diligencia.Tipo,
+            diligencia.Estado,
+            diligencia.FechaCreacion,
+            diligencia.FechaProgramada,
+            diligencia.FechaRealizada,
+            diligencia.ReceptorJudicial,
+            diligencia.Direccion,
+            diligencia.Comuna,
+            diligencia.Observaciones,
+            diligencia.Latitud,
+            diligencia.Longitud)
         {
             Resultado = diligencia.Resultado,
             ResultadoDetalle = diligencia.ResultadoDetalle,

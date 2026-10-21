@@ -1,4 +1,4 @@
-using System.Text;
+using Jurigest.Application.Abstractions.Notifications;
 using Jurigest.Persistence.Context;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Hosting;
@@ -9,7 +9,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.IdentityModel.Tokens;
-using Jurigest.Application.Abstractions.Notifications;
+using System.Text;
 
 namespace Jurigest.Integration.Tests.Infrastructure;
 

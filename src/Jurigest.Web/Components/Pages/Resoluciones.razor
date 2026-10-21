@@ -19,7 +19,7 @@
             <h1>Resoluciones</h1>
             <p>Consulta y registra las resoluciones asociadas a cada causa.</p>
         </div>
-        <span class="count-badge">@_resoluciones.Count resoluciones</span>
+        <span class="count-badge">@_resoluciones.Count @(_resoluciones.Count == 1 ? "resolución" : "resoluciones")</span>
     </header>
 
     <section class="toolbar">

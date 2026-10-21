@@ -1,8 +1,8 @@
 using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Domain.Seguridad.Entities;
 using Jurigest.Persistence.Context;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace Jurigest.Persistence.Repositories;
 

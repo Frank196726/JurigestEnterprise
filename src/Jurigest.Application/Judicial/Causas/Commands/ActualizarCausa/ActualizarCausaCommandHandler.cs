@@ -47,11 +47,11 @@ public sealed class ActualizarCausaCommandHandler
             nombre = causa.PrimeraDiligencia?.Descripcion;
         }
 
-	if (request.FechaEncargoCausa.HasValue)
-	{
-    		causa.ActualizarFechaEncargo(
-        		request.FechaEncargoCausa.Value);
-	}
+        if (request.FechaEncargoCausa.HasValue)
+        {
+            causa.ActualizarFechaEncargo(
+                request.FechaEncargoCausa.Value);
+        }
 
         causa.CorregirIngreso(request.Tribunal, request.Descripcion,
             request.DiligenciaId, nombre, tipo, request.FechaProgramada);
@@ -64,6 +64,11 @@ public sealed class ActualizarCausaCommandHandler
             causa.PrimeraDiligencia!.AsignarReceptor(request.ReceptorJudicial);
         }
 
+        var existentes = await _repository.GetAllAsync(cancellationToken);
+        if (existentes.Any(x => x.Id != causa.Id &&
+            Jurigest.Domain.Judicial.IdentificacionCausa.MismoRol(x.Rit, causa.Rit) &&
+            Jurigest.Domain.Judicial.IdentificacionCausa.MismoTribunal(x.Tribunal, causa.Tribunal)))
+            throw new InvalidOperationException(Jurigest.Domain.Judicial.IdentificacionCausa.MensajeCausaDuplicada);
 
         await _repository.SaveChangesAsync(cancellationToken);
 

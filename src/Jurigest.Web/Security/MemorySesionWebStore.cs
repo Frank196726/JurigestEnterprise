@@ -1,6 +1,6 @@
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Caching.Memory;
+using System.Security.Cryptography;
 
 namespace Jurigest.Web.Security;
 

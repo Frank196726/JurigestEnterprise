@@ -1,7 +1,7 @@
+using Jurigest.Integration.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Jurigest.Integration.Tests.Infrastructure;
 
 namespace Jurigest.Integration.Tests.Judicial;
 
@@ -18,7 +18,9 @@ public sealed class DemandadosCausaTests
         using var crear = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
             "/api/Causas", admin.Token, new
             {
-                rit = "C-98766-26", tribunal = "Tribunal", descripcion = "Prueba / Empresa",
+                rit = "C-98766-26",
+                tribunal = "Tribunal",
+                descripcion = "Prueba / Empresa",
                 fechaEncargoCausa = DateTime.Today,
                 demandados = new[] { new { nombre = "Empresa SpA", tipoPersona = 2, esPrincipal = true,
                     rut = "76.192.083-9", representanteLegal = "Ana", rutRepresentanteLegal = "12.345.678-5",
@@ -84,7 +86,9 @@ public sealed class DemandadosCausaTests
             SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
         var body = new
         {
-            rit = "C-98765-26", tribunal = "Tribunal", descripcion = "Prueba / Empresa",
+            rit = "C-98765-26",
+            tribunal = "Tribunal",
+            descripcion = "Prueba / Empresa",
             fechaEncargoCausa = DateTime.Today,
             demandados = new object[]
             {

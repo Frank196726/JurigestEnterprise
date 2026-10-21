@@ -1,4 +1,5 @@
 namespace Jurigest.Domain.Judicial.Catalogos;
+
 public sealed class VehiculoOpcion
 {
     public Guid Id { get; set; }

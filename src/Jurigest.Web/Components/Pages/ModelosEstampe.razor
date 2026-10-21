@@ -1,4 +1,4 @@
-@page "/configuracion/modelos-estampe"
+﻿@page "/configuracion/modelos-estampe"
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "DiligenciasLectura")]
 @using System.Net.Http.Json
@@ -35,7 +35,7 @@
                 <option value="">Cualquier resultado</option><option value="1">Positiva</option><option value="2">Negativa</option>
             </select></label>
             <label style="grid-column:1 / -1;"><span>Gestión realizada relacionada</span><select class="form-control" @bind="_diligenciaRealizadaId">
-                <option value="">Modelo general para el tipo de diligencia</option>
+                <option value="">Crear o vincular diligencia realizada con el nombre del modelo</option>
                 @foreach (var gestion in GestionesDisponibles) { <option value="@gestion.Id">@gestion.Nombre</option> }
             </select></label>
         </div>
@@ -88,7 +88,7 @@
     private async Task VolverAsync() => await JS.InvokeVoidAsync("history.back");
     private async Task CargarTiposAsync() { _tipos = await ApiClient.GetAsync<List<TipoItem>>("/api/Catalogos/tipos-diligencia") ?? []; if (_tipos.Count > 0 && !_tipos.Any(x => x.CodigoSistema == _tipo)) _tipo = _tipos[0].CodigoSistema; }
     private async Task CargarGestionesAsync() { _gestiones = await ApiClient.GetAsync<List<GestionItem>>("/api/Catalogos/diligencias-realizadas") ?? []; }
-    private IEnumerable<GestionItem> GestionesDisponibles => _gestiones.Where(x => x.CodigoTipoDiligencia == _tipo);
+    private IEnumerable<GestionItem> GestionesDisponibles => _gestiones.Where(x => x.CodigoTipoDiligencia == _tipo && (_tipo != 112 || x.Nombre == "Búsqueda"));
     private async Task AgregarTipoAsync()
     {
         if(string.IsNullOrWhiteSpace(_nuevoTipo)){_mensaje="Debe indicar el nombre de la nueva diligencia.";return;}
@@ -106,11 +106,12 @@
     {
         _mensaje=null;_exito=false;
         if(string.IsNullOrWhiteSpace(_nombre)||string.IsNullOrWhiteSpace(_contenido)){_mensaje="Debe indicar nombre y contenido.";return;}
+        if (_tipo == 112 && !_resultado.HasValue) { _mensaje="Para Búsqueda seleccione clasificación positiva o negativa."; return; }
         _guardando=true;
         try { using var response = _editandoId.HasValue
             ? await ApiClient.PutAsync($"/api/modelos-estampe/{_editandoId}", JsonContent.Create(new {nombre=_nombre.Trim(),tipoDiligencia=_tipo,resultado=_resultado,diligenciaRealizadaId=_diligenciaRealizadaId,contenido=_contenido.Trim(),activo=_activo}))
             : await ApiClient.PostAsync("/api/modelos-estampe", JsonContent.Create(new {nombre=_nombre.Trim(),tipoDiligencia=_tipo,resultado=_resultado,diligenciaRealizadaId=_diligenciaRealizadaId,contenido=_contenido.Trim(),activo=_activo}));
-            await VerificarAsync(response); _exito=true;_mensaje="Modelo guardado correctamente.";Limpiar();await CargarAsync(); }
+            await VerificarAsync(response); _exito=true;_mensaje="Modelo guardado correctamente.";Limpiar();await CargarGestionesAsync();await CargarAsync(); }
         catch(Exception ex) when(ex is HttpRequestException or InvalidOperationException){_mensaje=ex.Message;}
         finally{_guardando=false;}
     }
