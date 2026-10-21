@@ -1,5 +1,3 @@
-using System.Security.Claims;
-using System.Text.Json;
 using Jurigest.API.Security;
 using Jurigest.Domain.Seguridad;
 using Jurigest.Domain.Seguridad.Entities;
@@ -8,6 +6,8 @@ using Jurigest.Persistence.Context;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
+using System.Text.Json;
 
 namespace Jurigest.API.Controllers;
 

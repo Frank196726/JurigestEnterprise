@@ -1,8 +1,8 @@
 using Jurigest.Web.Components;
-using Jurigest.Web.Security;
 using Jurigest.Web.Endpoints;
-using Microsoft.AspNetCore.Components.Authorization;
+using Jurigest.Web.Security;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Components.Authorization;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Net;
 

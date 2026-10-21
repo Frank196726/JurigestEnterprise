@@ -1,9 +1,9 @@
-using System.Net;
-using System.Text.Json;
 using Jurigest.Integration.Tests.Infrastructure;
 using Jurigest.Persistence.Context;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
+using System.Text.Json;
 
 namespace Jurigest.Integration.Tests.Seguridad;
 

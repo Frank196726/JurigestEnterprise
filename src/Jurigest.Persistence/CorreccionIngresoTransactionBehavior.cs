@@ -1,4 +1,3 @@
-using System.Data;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarCausa;
 using Jurigest.Application.Judicial.Diligencias.Commands.ActualizarDiligencia;
 using Jurigest.Application.Judicial.Diligencias.Commands.CambiarTipoDiligencia;
@@ -7,6 +6,7 @@ using Jurigest.Application.Judicial.Diligencias.Commands.ProgramarDiligencia;
 using Jurigest.Persistence.Context;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 
 namespace Jurigest.Persistence;
 

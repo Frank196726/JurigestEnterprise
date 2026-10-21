@@ -1,10 +1,10 @@
-using System.Net;
 using Jurigest.Application.Abstractions.Notifications;
 using MailKit.Net.Smtp;
 using MailKit.Security;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using MimeKit;
+using System.Net;
 
 namespace Jurigest.Persistence.Notifications;
 

@@ -1,15 +1,15 @@
+using Jurigest.Application.Abstractions.Notifications;
 using Jurigest.Application.Abstractions.Persistence;
+using Jurigest.Application.Abstractions.Security;
+using Jurigest.Application.Abstractions.Storage;
 using Jurigest.Persistence.Context;
+using Jurigest.Persistence.Notifications;
 using Jurigest.Persistence.Repositories;
+using Jurigest.Persistence.Security;
+using Jurigest.Persistence.Storage;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Jurigest.Application.Abstractions.Storage;
-using Jurigest.Persistence.Storage;
-using Jurigest.Application.Abstractions.Security;
-using Jurigest.Persistence.Security;
-using Jurigest.Application.Abstractions.Notifications;
-using Jurigest.Persistence.Notifications;
 
 namespace Jurigest.Persistence;
 

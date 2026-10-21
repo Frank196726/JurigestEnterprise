@@ -1,7 +1,7 @@
+using Jurigest.Domain.Judicial.Catalogos;
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Seguridad.Entities;
 using Microsoft.EntityFrameworkCore;
-using Jurigest.Domain.Judicial.Catalogos;
 
 namespace Jurigest.Persistence.Context;
 

@@ -1,5 +1,5 @@
-using System.Collections.Concurrent;
 using Jurigest.Application.Abstractions.Notifications;
+using System.Collections.Concurrent;
 
 namespace Jurigest.Integration.Tests.Infrastructure;
 

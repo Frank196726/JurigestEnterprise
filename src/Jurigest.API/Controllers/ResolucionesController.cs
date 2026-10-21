@@ -1,11 +1,11 @@
 using Jurigest.API.Contracts;
-using Jurigest.Application.Judicial.Resoluciones.Commands.RegistrarResolucion;
-using Jurigest.Application.Judicial.Resoluciones.Queries.ObtenerResolucionesPorCausa;
 using Jurigest.Application.Judicial.Resoluciones.Commands.EliminarResolucion;
-using Jurigest.Domain.Judicial.Enums;
+using Jurigest.Application.Judicial.Resoluciones.Commands.RegistrarResolucion;
 using Jurigest.Application.Judicial.Resoluciones.Queries.ObtenerResolucion;
-using Microsoft.AspNetCore.Authorization;
+using Jurigest.Application.Judicial.Resoluciones.Queries.ObtenerResolucionesPorCausa;
+using Jurigest.Domain.Judicial.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jurigest.API.Controllers;

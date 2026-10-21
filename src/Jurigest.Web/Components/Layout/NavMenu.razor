@@ -1,86 +1,133 @@
 <nav class="navigation"
      aria-label="Navegación principal">
-    <a class="brand" href="/">
-        <img class="brand-logo" src="@Assets["images/jurigest-enterprise-logo.png"]" alt="Jurigest Enterprise" width="1664" height="928" />
-    </a>
+    <div class="nav-header">
+        <a class="brand" href="/">
+            <img class="brand-logo" src="@Assets["images/jurigest-enterprise-logo.png"]" alt="Jurigest Enterprise" width="1664" height="928" />
+        </a>
 
-    <div class="nav-section">
-        <span class="section-label">General</span>
-
-        <NavLink class="nav-link"
-                 href=""
-                 Match="NavLinkMatch.All">
-            <span class="nav-icon">⌂</span>
-            Inicio
-        </NavLink>
+        <label class="nav-toggle"
+               for="nav-toggle"
+               aria-label="Abrir o cerrar menú">
+            <span></span>
+            <span></span>
+            <span></span>
+        </label>
     </div>
 
-    <div class="nav-section">
-    <span class="section-label">Gestión judicial</span>
+    <input type="checkbox"
+           id="nav-toggle"
+           class="nav-toggle-check"
+           aria-hidden="true" />
 
-    <NavLink class="nav-link"
-             href="causas">
-        <span class="nav-icon">C</span>
-        Causas
-    </NavLink>
+    @* Cierra el menú desplegable del móvil al elegir una opción. *@
+    <div class="nav-sections"
+         onclick="document.getElementById('nav-toggle').checked = false">
+        <div class="nav-section">
+            <span class="section-label">General</span>
 
-    <NavLink class="nav-link"
-         href="diligencias">
-    <span class="nav-icon">D</span>
-    Diligencias
-    </NavLink>
+            <NavLink class="nav-link"
+                     href=""
+                     Match="NavLinkMatch.All">
+                <NavIcon Nombre="inicio" />
+                Inicio
+            </NavLink>
+        </div>
 
-   <NavLink class="nav-link"
-         href="documentos">
-    <span class="nav-icon">A</span>
-    Documentos
-    </NavLink>
+        <div class="nav-section">
+            <span class="section-label">Gestión judicial</span>
 
-    <NavLink class="nav-link"
-             href="resoluciones">
-        <span class="nav-icon">R</span>
-        Resoluciones
-    </NavLink>
+            <AuthorizeView Policy="CausasLectura">
+                <NavLink class="nav-link"
+                         href="causas"
+                         Match="NavLinkMatch.All">
+                    <NavIcon Nombre="causas" />
+                    Causas
+                </NavLink>
 
-    <NavLink class="nav-link"
-             href="reportes">
-        <span class="nav-icon">E</span>
-        Reportes
-    </NavLink>
+                <NavLink class="nav-link"
+                         href="causas/buscar">
+                    <NavIcon Nombre="buscar" />
+                    Buscar ROL
+                </NavLink>
+            </AuthorizeView>
 
-    <NavLink class="nav-link"
-             href="recibos">
-        <span class="nav-icon">$</span>
-        Gestionar recibos
-    </NavLink>
-    <NavLink class="nav-link"
-             href="vencimientos">
-        <span class="nav-icon">!</span>
-        Alertas y plazos
-    </NavLink>
-</div>
+            <AuthorizeView Policy="DiligenciasLectura">
+                <NavLink class="nav-link"
+                         href="diligencias">
+                    <NavIcon Nombre="diligencias" />
+                    Diligencias
+                </NavLink>
+            </AuthorizeView>
 
-    <AuthorizeView Policy="Administracion">
-        <Authorized>
+            <AuthorizeView Policy="DocumentosLectura">
+                <NavLink class="nav-link"
+                         href="documentos">
+                    <NavIcon Nombre="documentos" />
+                    Documentos
+                </NavLink>
+            </AuthorizeView>
+
+            <AuthorizeView Policy="ResolucionesLectura">
+                <NavLink class="nav-link"
+                         href="resoluciones">
+                    <NavIcon Nombre="resoluciones" />
+                    Resoluciones
+                </NavLink>
+            </AuthorizeView>
+
+            <AuthorizeView Policy="CausasLectura">
+                <NavLink class="nav-link"
+                         href="reportes">
+                    <NavIcon Nombre="reportes" />
+                    Reportes
+                </NavLink>
+            </AuthorizeView>
+
+            <AuthorizeView Policy="DiligenciasLectura">
+                <NavLink class="nav-link"
+                         href="recibos">
+                    <NavIcon Nombre="recibos" />
+                    Gestionar recibos
+                </NavLink>
+
+                <NavLink class="nav-link"
+                         href="vencimientos">
+                    <NavIcon Nombre="alertas" />
+                    Alertas y plazos
+                </NavLink>
+
+                <NavLink class="nav-link"
+                         href="configuracion/modelos-estampe">
+                    <NavIcon Nombre="estampes" />
+                    Modelos de estampe
+                </NavLink>
+            </AuthorizeView>
+        </div>
+
+        <AuthorizeView Policy="Administracion">
             <div class="nav-section">
                 <span class="section-label">Administración</span>
 
                 <NavLink class="nav-link" href="usuarios">
-                    <span class="nav-icon">U</span>
+                    <NavIcon Nombre="usuarios" />
                     Usuarios
                 </NavLink>
 
-                <NavLink class="nav-link" href="permisos"><span class="nav-icon">P</span>Permisos por rol</NavLink>
+                <NavLink class="nav-link" href="permisos">
+                    <NavIcon Nombre="permisos" />
+                    Permisos por rol
+                </NavLink>
+
                 <NavLink class="nav-link" href="auditoria">
-                    <span class="nav-icon">S</span>
+                    <NavIcon Nombre="auditoria" />
                     Auditoría
                 </NavLink>
 
                 <NavLink class="nav-link" href="sistema">
-                    <span class="nav-icon">O</span>
+                    <NavIcon Nombre="sistema" />
                     Estado del sistema
                 </NavLink>
             </div>
-        </Authorized>
-    </AuthorizeView>
+        </AuthorizeView>
+    </div>
 </nav>

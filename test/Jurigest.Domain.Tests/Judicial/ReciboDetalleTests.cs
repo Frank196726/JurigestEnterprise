@@ -1,5 +1,5 @@
-using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Judicial;
+using Jurigest.Domain.Judicial.Entities;
 
 namespace Jurigest.Domain.Tests.Judicial;
 

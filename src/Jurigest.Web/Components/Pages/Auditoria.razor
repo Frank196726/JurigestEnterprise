@@ -14,7 +14,7 @@
     else if (_cargando) { <div class="state-card">Cargando auditoría…</div> }
     else if (!EventosFiltrados.Any()) { <div class="state-card">No se encontraron eventos.</div> }
     else { <div class="table-card"><table><thead><tr><th>Fecha</th><th>Acción</th><th>Detalle</th><th>Actor</th><th>Afectado</th><th>IP</th></tr></thead><tbody>
-        @foreach (var evento in EventosFiltrados) { <tr @key="evento.Id"><td class="date">@evento.FechaUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")</td><td><strong>@TextoAccion(evento.Accion)</strong></td><td>@(evento.Detalle ?? "—")</td><td class="identifier">@IdCorto(evento.UsuarioActorId)</td><td class="identifier">@IdCorto(evento.UsuarioAfectadoId)</td><td>@(evento.DireccionIp ?? "—")</td></tr> }
+        @foreach (var evento in EventosFiltrados) { <tr @key="evento.Id"><td class="date">@evento.FechaUtc.ToLocalTime().ToString("dd-MM-yyyy HH:mm:ss")</td><td><strong>@TextoAccion(evento.Accion)</strong></td><td>@TextoDetalle(evento.Detalle)</td><td>@NombreUsuario(evento.UsuarioActorId)</td><td>@NombreUsuario(evento.UsuarioAfectadoId, "—")</td><td>@(evento.DireccionIp ?? "—")</td></tr> }
     </tbody></table></div> }
 </section>
 
@@ -26,7 +26,40 @@
     private string? _mensaje;
     private IEnumerable<AuditoriaResumen> EventosFiltrados => string.IsNullOrWhiteSpace(_filtro) ? _eventos : _eventos.Where(x => $"{x.Accion} {x.Detalle} {x.DireccionIp}".Contains(_filtro.Trim(), StringComparison.OrdinalIgnoreCase));
     protected override async Task OnInitializedAsync() => await CargarAsync();
-    private async Task CargarAsync() { _cargando = true; _mensaje = null; try { var r = await ApiClient.GetAsync<AuditoriasResponse>($"/api/seguridad/auditorias?cantidad={_cantidad}"); _eventos.Clear(); if (r?.Value is not null) _eventos.AddRange(r.Value.OrderByDescending(x => x.FechaUtc)); } catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); } catch (HttpRequestException) { _mensaje = "No fue posible cargar la auditoría."; } finally { _cargando = false; } }
-    private static string IdCorto(Guid? id) => id.HasValue ? id.Value.ToString()[..8] : "Sistema";
+    private async Task CargarAsync() { _cargando = true; _mensaje = null; try { var r = await ApiClient.GetAsync<AuditoriasResponse>($"/api/seguridad/auditorias?cantidad={_cantidad}"); await CargarNombresAsync(); _eventos.Clear(); if (r?.Value is not null) _eventos.AddRange(r.Value.OrderByDescending(x => x.FechaUtc)); } catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); } catch (HttpRequestException) { _mensaje = "No fue posible cargar la auditoría."; } finally { _cargando = false; } }
+    private Dictionary<Guid, string> _usuarios = [];
+    private Dictionary<Guid, string> _roles = [];
+
+    // Los eventos guardan identificadores; se traducen a nombres para que el registro sea legible.
+    // Si los catálogos no cargan, se mantiene el identificador corto en lugar de fallar la página.
+    private async Task CargarNombresAsync()
+    {
+        if (_usuarios.Count > 0) return;
+        try
+        {
+            var usuarios = await ApiClient.GetAsync<UsuariosResponse>("/api/seguridad/usuarios");
+            _usuarios = usuarios?.Value.ToDictionary(x => x.Id, x => x.Nombre) ?? [];
+            var roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles");
+            _roles = roles?.ToDictionary(x => x.Id, x => x.Nombre) ?? [];
+        }
+        catch (HttpRequestException) { }
+    }
+
+    private string NombreUsuario(Guid? id, string sinUsuario = "Sistema") =>
+        !id.HasValue ? sinUsuario
+        : _usuarios.TryGetValue(id.Value, out var nombre) ? nombre
+        : id.Value.ToString()[..8];
+
+    private string TextoDetalle(string? detalle)
+    {
+        if (string.IsNullOrWhiteSpace(detalle)) return "—";
+        foreach (var (id, nombre) in _roles)
+            detalle = detalle.Replace(id.ToString(), nombre, StringComparison.OrdinalIgnoreCase);
+        foreach (var (id, nombre) in _usuarios)
+            detalle = detalle.Replace(id.ToString(), nombre, StringComparison.OrdinalIgnoreCase);
+        return detalle;
+    }
+
+    private sealed record RolItem(Guid Id, string Nombre);
     private static string TextoAccion(string accion) => accion.Replace('_', ' ');
 }

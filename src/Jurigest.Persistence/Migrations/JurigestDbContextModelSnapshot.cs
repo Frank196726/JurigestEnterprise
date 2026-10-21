@@ -489,6 +489,10 @@ namespace Jurigest.Persistence.Migrations
 
                     b.HasIndex("TipoCausaId");
 
+                    b.HasIndex("Rit", "Tribunal")
+                        .IsUnique()
+                        .HasDatabaseName("UX_Causas_Rit_Tribunal");
+
                     b.HasIndex("TipoCausaId", "NumeroRol");
 
                     b.ToTable("Causas", (string)null);

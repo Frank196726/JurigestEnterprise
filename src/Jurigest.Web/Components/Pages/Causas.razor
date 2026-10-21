@@ -27,7 +27,7 @@
 
         <div class="heading-actions">
             <span class="count-badge">
-                @_causas.Count causas
+                @_causas.Count @(_causas.Count == 1 ? "causa" : "causas")
             </span>
 
             <AuthorizeView Policy="CausasEscritura">
@@ -188,18 +188,18 @@
                 </span>
             </td>
 
-            <AuthorizeView Policy="DiligenciasGestion">
-                <td class="actions-cell">
-                    <a class="manage-action"
-                       href="@($"/causas/{causa.Id}/historial")">
-                        Ver historial
-                    </a>
+            <td class="actions-cell">
+                <a class="manage-action"
+                   href="@($"/causas/{causa.Id}/historial")">
+                    Ver historial
+                </a>
+                <AuthorizeView Policy="DiligenciasGestion">
                     <a class="manage-action"
                        href="@($"/causas/{causa.Id}/diligencias/registrar")">
                         Gestionar diligencia
                     </a>
-                </td>
-            </AuthorizeView>
+                </AuthorizeView>
+            </td>
 
         </tr>
     }

@@ -1,10 +1,10 @@
+using Jurigest.Application.Abstractions.Security;
+using Jurigest.Domain.Seguridad.Entities;
+using Microsoft.IdentityModel.Tokens;
 using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Jurigest.Application.Abstractions.Security;
-using Jurigest.Domain.Seguridad.Entities;
-using Microsoft.IdentityModel.Tokens;
 
 namespace Jurigest.API.Security;
 

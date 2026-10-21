@@ -1,79 +1,121 @@
 @using Jurigest.Domain.Judicial
 @page "/causas/buscar"
 @rendermode InteractiveServer
+@attribute [Authorize(Policy = "CausasLectura")]
 @using Jurigest.Web.Security
 @inject IJurigestApiClient Api
 @using Microsoft.AspNetCore.Components
 
-<PageTitle>Buscar ROL - Jurigest Enterprise</PageTitle>
+<PageTitle>Buscar ROL | Jurigest Enterprise</PageTitle>
 
-<h1>Buscar ROL</h1>
+<section class="search-page">
 
-<div class="mb-3">
-    <label class="form-label">
+<header class="page-heading">
+    <span class="eyebrow">Gestión judicial</span>
+
+    <h1>Buscar ROL</h1>
+
+    <p>
+        Encuentra una causa por su ROL y revisa su historial de diligencias.
+    </p>
+</header>
+
+<form class="search-card"
+      @onsubmit="BuscarAsync">
+    <label for="rol-busqueda">
         Número de ROL
     </label>
 
-    <input class="form-control"
-           @bind="rit"
-           placeholder="Ej: C-2000-2026" />
-</div>
+    <div class="search-row">
+        <input id="rol-busqueda"
+               class="form-control"
+               @bind="rit"
+               autocomplete="off"
+               placeholder="Ej: C-2000-2026" />
 
-<button class="btn btn-primary"
-        @onclick="BuscarAsync"
-        disabled="@buscando">
-    @(buscando ? "Buscando..." : "Buscar")
-</button>
+        <button class="btn btn-primary"
+                type="submit"
+                disabled="@buscando">
+            @(buscando ? "Buscando..." : "Buscar")
+        </button>
+    </div>
+</form>
 
 @if (!string.IsNullOrWhiteSpace(mensaje))
 {
-    <div class="alert alert-info mt-3">
+    <div class="alert alert-info mb-0">
         @mensaje
+    </div>
+}
+
+@if (causas.Count > 1)
+{
+    <div class="alert alert-info mb-0">
+        <p class="mb-2">El ROL @causas[0].Rit está registrado en @causas.Count tribunales. Seleccione la causa:</p>
+        <div class="d-flex flex-wrap gap-2">
+            @foreach (var opcion in causas)
+            {
+                <button type="button"
+                        class="btn @(opcion.Id == causa?.Id ? "btn-primary" : "btn-outline-primary") btn-sm"
+                        @onclick="() => SeleccionarCausaAsync(opcion)">
+                    @opcion.Tribunal
+                </button>
+            }
+        </div>
     </div>
 }
 
 @if (causa is not null)
 {
-    <div class="card mt-4">
-        <div class="card-body">
-
-            <h5 class="card-title">
-                @causa.Rit
-            </h5>
-
-            <p>
-                <strong>Tribunal:</strong>
-                @causa.Tribunal
-            </p>
-
-            <p>
-                <strong>Descripción:</strong>
-                @causa.Descripcion
-            </p>
-
-            <div class="d-flex flex-wrap gap-2">
-
-                <a class="btn btn-warning"
-                   href="@($"/causas/{causa.Id}/editar")">
-                    Modificar ROL
-                </a>
-
-                <a class="btn btn-success"
-                   href="@($"/causas/{causa.Id}/diligencias/nueva")">
-                    Nueva diligencia
-                </a>
-
-                <a class="btn btn-primary"
-                   href="@($"/causas/{causa.Id}/diligencias/registrar")">
-                    Registrar resultado
-                </a>
-
+    <div class="result-card">
+        <div class="result-heading">
+            <div>
+                <span class="eyebrow">Causa encontrada</span>
+                <h2>@causa.Rit</h2>
             </div>
 
+            <div class="result-actions">
+                <AuthorizeView Policy="CausasEscritura">
+                    <a class="btn btn-outline-primary"
+                       href="@($"/causas/{causa.Id}/editar")">
+                        Modificar ROL
+                    </a>
+
+                    <a class="btn btn-outline-primary"
+                       title="Un mismo ROL puede existir en varios tribunales"
+                       href="@UrlMismoRolEnOtroTribunal(causa)">
+                        Mismo ROL en otro tribunal
+                    </a>
+                </AuthorizeView>
+
+                <AuthorizeView Policy="DiligenciasGestion">
+                    <a class="btn btn-outline-primary"
+                       href="@($"/causas/{causa.Id}/diligencias/nueva")">
+                        Nueva diligencia
+                    </a>
+
+                    <a class="btn btn-primary"
+                       href="@($"/causas/{causa.Id}/diligencias/registrar")">
+                        Registrar resultado
+                    </a>
+                </AuthorizeView>
+            </div>
         </div>
+
+        <dl class="result-data">
+            <div>
+                <dt>Tribunal</dt>
+                <dd>@causa.Tribunal</dd>
+            </div>
+
+            <div>
+                <dt>Descripción</dt>
+                <dd>@causa.Descripcion</dd>
+            </div>
+        </dl>
     </div>
 
-    <div class="card mt-4">
+    <div class="card history-card">
         <div class="card-header">
             <strong>Historial de diligencias</strong>
         </div>
@@ -224,19 +266,27 @@
 }
 else if (busquedaRealizada && !buscando)
 {
-    <div class="mt-4">
-        <a class="btn btn-success"
-           href="@($"/causas/nueva?rit={Uri.EscapeDataString(rit)}")">
-            Crear ROL
-        </a>
-    </div>
+    <AuthorizeView Policy="CausasEscritura">
+        <div>
+            <a class="btn btn-primary"
+               href="@($"/causas/nueva?rit={Uri.EscapeDataString(rit)}")">
+                Crear ROL
+            </a>
+        </div>
+    </AuthorizeView>
 }
+
+</section>
 
 @code {
 
     private string rit = string.Empty;
     [SupplyParameterFromQuery(Name = "rit")]
 public string? RitQuery { get; set; }
+
+    // Causa a mostrar cuando el ROL está en varios tribunales.
+    [SupplyParameterFromQuery(Name = "causa")]
+    public Guid? CausaQuery { get; set; }
 
 private bool busquedaInicialEjecutada;
 
@@ -247,6 +297,22 @@ private bool busquedaInicialEjecutada;
     private string? mensaje;
 
     private CausaResponse? causa;
+    private List<CausaResponse> causas = new();
+
+    private async Task SeleccionarCausaAsync(CausaResponse seleccionada)
+    {
+        if (seleccionada.Id == causa?.Id)
+            return;
+
+        causa = seleccionada;
+        diligencias.Clear();
+        diligenciaMostrarEstampe = null;
+        await CargarDiligenciasAsync(seleccionada.Id);
+    }
+
+    private string UrlMismoRolEnOtroTribunal(CausaResponse actual) =>
+        $"/causas/nueva?rit={Uri.EscapeDataString(actual.Rit)}" +
+        string.Concat(causas.Select(x => $"&tribunalActual={Uri.EscapeDataString(x.Tribunal)}"));
 
     private List<DiligenciaResponse> diligencias = new();
 
@@ -277,6 +343,7 @@ private bool busquedaInicialEjecutada;
     {
         mensaje = null;
         causa = null;
+        causas.Clear();
 
         diligencias.Clear();
 
@@ -297,18 +364,21 @@ private bool busquedaInicialEjecutada;
             rit = IdentificacionCausa.NormalizarRol(rit);
             buscando = true;
 
-            causa = await Api.GetAsync<CausaResponse>(
-                $"api/Causas/rit/{Uri.EscapeDataString(rit.Trim())}");
+            // Un mismo ROL puede estar en varios tribunales.
+            causas = await Api.GetAsync<List<CausaResponse>>(
+                $"api/Causas/rit/{Uri.EscapeDataString(rit.Trim())}/causas") ?? new();
 
             busquedaRealizada = true;
 
-            if (causa is null)
+            if (causas.Count == 0)
             {
                 mensaje =
                     $"El ROL {rit.Trim()} no se encuentra registrado.";
 
                 return;
             }
+
+            causa = causas.FirstOrDefault(x => x.Id == CausaQuery) ?? causas[0];
 
             await CargarDiligenciasAsync(causa.Id);
         }

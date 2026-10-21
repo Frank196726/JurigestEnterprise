@@ -1,7 +1,7 @@
+using Jurigest.Integration.Tests.Infrastructure;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Jurigest.Integration.Tests.Infrastructure;
 
 namespace Jurigest.Integration.Tests.Seguridad;
 
@@ -22,8 +22,18 @@ public sealed class RolesCatalogoTests
         Assert.Equal(HttpStatusCode.OK, crearRol.StatusCode);
         var id = (await crearRol.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         using var creado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, "/api/seguridad/usuarios", admin.Token,
-            new { nombre, email = "operativo@jurigest.test", password = "Operativo.Test.2026!", rol = 1, rolCatalogoId = id,
-                rut = "15.003.942-8", telefono = "+56 9 5555 0202", direccion = "Calle Operativa 10", numeroOficina = "2" });
+            new
+            {
+                nombre,
+                email = "operativo@jurigest.test",
+                password = "Operativo.Test.2026!",
+                rol = 1,
+                rolCatalogoId = id,
+                rut = "15.003.942-8",
+                telefono = "+56 9 5555 0202",
+                direccion = "Calle Operativa 10",
+                numeroOficina = "2"
+            });
         Assert.Equal(HttpStatusCode.Created, creado.StatusCode);
         var usuario = await SeguridadTestHelper.IniciarSesionAsync(client, "operativo@jurigest.test", "Operativo.Test.2026!");
         using var lectura = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get, "/api/Causas", usuario.Token);
@@ -64,12 +74,32 @@ public sealed class RolesCatalogoTests
             new { nombre = "Administrador", perfil = 4 });
         Assert.Equal(HttpStatusCode.BadRequest, reservado.StatusCode);
         using var desconocido = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, "/api/seguridad/usuarios", admin.Token,
-            new { nombre = "Sin rol", email = "sinrol@jurigest.test", password = "Consulta.Test.2026!", rol = 4, rolCatalogoId = Guid.NewGuid(),
-                rut = "15.003.942-8", telefono = "+56 9 5555 0303", direccion = "Calle Consulta 20", numeroOficina = "3" });
+            new
+            {
+                nombre = "Sin rol",
+                email = "sinrol@jurigest.test",
+                password = "Consulta.Test.2026!",
+                rol = 4,
+                rolCatalogoId = Guid.NewGuid(),
+                rut = "15.003.942-8",
+                telefono = "+56 9 5555 0303",
+                direccion = "Calle Consulta 20",
+                numeroOficina = "3"
+            });
         Assert.Equal(HttpStatusCode.BadRequest, desconocido.StatusCode);
         using var usuarioCreado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, "/api/seguridad/usuarios", admin.Token,
-            new { nombre = "Coordinador de pruebas", email = "coordinador@jurigest.test", password = "Consulta.Test.2026!", rol = 1, rolCatalogoId = id,
-                rut = "15.003.942-8", telefono = "+56 9 5555 0303", direccion = "Calle Consulta 20", numeroOficina = "3" });
+            new
+            {
+                nombre = "Coordinador de pruebas",
+                email = "coordinador@jurigest.test",
+                password = "Consulta.Test.2026!",
+                rol = 1,
+                rolCatalogoId = id,
+                rut = "15.003.942-8",
+                telefono = "+56 9 5555 0303",
+                direccion = "Calle Consulta 20",
+                numeroOficina = "3"
+            });
         Assert.Equal(HttpStatusCode.Created, usuarioCreado.StatusCode);
         var usuario = await SeguridadTestHelper.IniciarSesionAsync(client, "coordinador@jurigest.test", "Consulta.Test.2026!");
         using var lectura = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get, "/api/Causas", usuario.Token);

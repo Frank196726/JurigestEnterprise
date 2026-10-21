@@ -1,6 +1,6 @@
-using System.Security.Claims;
 using Jurigest.Web.Endpoints;
 using Microsoft.AspNetCore.Components.Authorization;
+using System.Security.Claims;
 
 namespace Jurigest.Web.Security;
 

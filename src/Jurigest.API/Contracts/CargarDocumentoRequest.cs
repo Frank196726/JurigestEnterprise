@@ -1,5 +1,4 @@
 using Jurigest.Domain.Judicial.Enums;
-using Microsoft.AspNetCore.Http;
 
 namespace Jurigest.API.Contracts;
 

@@ -249,6 +249,17 @@
                             <ValidationMessage
                                 For="@(() => _nuevaGestion.TribunalId)" />
 
+                            @if (TribunalesConRol.Any())
+                            {
+                                var tribunalesConRol = string.Join(", ", TribunalesConRol);
+                                <div class="@(EsTribunalActualSeleccionado ? "validation-message" : "text-muted")"
+                                     style="margin-top:.35rem;font-size:.9rem;">
+                                    @(EsTribunalActualSeleccionado
+                                        ? $"El ROL ya está registrado en: {tribunalesConRol}. Seleccione otro tribunal."
+                                        : $"El ROL ya está registrado en: {tribunalesConRol}. Se creará en el tribunal seleccionado.")
+                                </div>
+                            }
+
                             <button type="button"
                                     class="btn btn-secondary"
                                     style="margin-top:.5rem;"
@@ -735,6 +746,20 @@
 
     [SupplyParameterFromQuery(Name = "rit")]
     public string? RitInicial { get; set; }
+
+    // Tribunales donde ya existe el ROL: se usan al registrar el mismo ROL en otro tribunal.
+    [SupplyParameterFromQuery(Name = "tribunalActual")]
+    public string[]? TribunalesActuales { get; set; }
+
+    private IEnumerable<string> TribunalesConRol =>
+        (TribunalesActuales ?? []).Where(x => !string.IsNullOrWhiteSpace(x));
+
+    private bool TieneRolEnTribunal(string? tribunal) =>
+        TribunalesConRol.Any(x => IdentificacionCausa.MismoTribunal(tribunal, x));
+
+    private bool EsTribunalActualSeleccionado =>
+        TieneRolEnTribunal(
+            _tribunales.FirstOrDefault(x => x.Id == _nuevaGestion.TribunalId)?.Nombre);
 
     // =========================================================
     // DATOS
@@ -1875,7 +1900,8 @@ private string _nuevoAbogado =
             _tribunales.Count > 0)
         {
             _nuevaGestion.TribunalId =
-                _tribunales[0].Id;
+                (_tribunales.FirstOrDefault(x => !TieneRolEnTribunal(x.Nombre))
+                 ?? _tribunales[0]).Id;
         }
 
         if (!_nuevaGestion.AbogadoId.HasValue &&
@@ -2023,10 +2049,31 @@ private string _nuevoAbogado =
             await respuesta.Content
                 .ReadAsStringAsync();
 
+        if (ExtraerMensajeApi(detalle) is { } mensajeApi)
+            throw new HttpRequestException(mensajeApi);
+
         throw new HttpRequestException(
             $"No se pudo {operacion} " +
             $"({(int)respuesta.StatusCode}). " +
             detalle);
+    }
+
+    // La API devuelve los errores de negocio como { "mensaje": "..." }.
+    private static string? ExtraerMensajeApi(string detalle)
+    {
+        try
+        {
+            using var json = System.Text.Json.JsonDocument.Parse(detalle);
+            return json.RootElement.ValueKind == System.Text.Json.JsonValueKind.Object &&
+                   json.RootElement.TryGetProperty("mensaje", out var mensaje) &&
+                   mensaje.ValueKind == System.Text.Json.JsonValueKind.String
+                ? mensaje.GetString()
+                : null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 
     // =========================================================

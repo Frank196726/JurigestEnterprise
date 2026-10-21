@@ -1,6 +1,6 @@
+using Jurigest.Web.Security;
 using System.Net;
 using System.Net.Http.Headers;
-using Jurigest.Web.Security;
 
 namespace Jurigest.Web.Endpoints;
 

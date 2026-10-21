@@ -1,6 +1,6 @@
-using System.Text;
+﻿using Jurigest.Domain.Judicial.Enums;
 using System.Globalization;
-using Jurigest.Domain.Judicial.Enums;
+using System.Text;
 
 namespace Jurigest.Web.Services.Estampes;
 
@@ -24,7 +24,8 @@ public static class GeneradorEstampe
         decimal? monto = null,
         string? abogado = null,
         string? rutDemandado = null,
-        string? materia = null)
+        string? materia = null,
+        string? nombreDemandado = null)
     {
         if (string.IsNullOrWhiteSpace(rit))
         {
@@ -75,6 +76,7 @@ public static class GeneradorEstampe
                 nameof(fechaGestion));
         }
 
+        rutDemandado = FormatearRut(rutDemandado);
         string? contenidoModelo = null;
         if (!string.IsNullOrWhiteSpace(modelo))
         {
@@ -101,14 +103,24 @@ public static class GeneradorEstampe
                 contenidoModelo = contenidoModelo.Replace(valor.Key, valor.Value, StringComparison.Ordinal);
 
             var partesCaratula = caratula.Split('/', 2, StringSplitOptions.TrimEntries);
-            var nombreEjecutado = partesCaratula.Length == 2 ? partesCaratula[1] : caratula.Trim();
+            var nombreEjecutado = !string.IsNullOrWhiteSpace(nombreDemandado)
+                ? nombreDemandado.Trim()
+                : partesCaratula.Length == 2 ? partesCaratula[1] : caratula.Trim();
             var cultura = CultureInfo.GetCultureInfo("es-CL");
+            if (contenidoModelo.Contains("$monto_ejecutado", StringComparison.OrdinalIgnoreCase))
+            {
+                if (!monto.HasValue) throw new ArgumentException("Ingrese el valor de la diligencia para completar el modelo.");
+                Jurigest.Domain.Judicial.MontoEstampe.Validar(monto.Value);
+            }
             var variablesLegadas = new Dictionary<string, string>
             {
                 ["$fecha_palabras_diligencia"] = fechaGestion.ToString("dddd d 'de' MMMM 'de' yyyy", cultura),
                 ["$hora_diligencia"] = fechaGestion.ToString("HH:mm", cultura),
+                ["$solo_direccion_ejecutado"] = direccion?.Trim() ?? string.Empty,
                 ["$direccion_ejecutado"] = direccion?.Trim() ?? string.Empty,
                 ["$nombre_ejecutado"] = nombreEjecutado,
+                ["$monto_ejecutado"] = "Drs. $" + (monto ?? 0m).ToString("N0", cultura) + ".-",
+                ["$solo_comuna_ejecutado"] = comuna?.Trim() ?? string.Empty,
                 ["$comuna_ejecutado"] = comuna?.Trim() ?? string.Empty,
                 ["$rut_ejecutado"] = rutDemandado?.Trim() ?? string.Empty,
                 ["$receptor_judicial"] = receptorJudicial?.Trim() ?? string.Empty
@@ -152,7 +164,17 @@ public static class GeneradorEstampe
         }
 
         var estampe = texto.ToString().Trim();
-        return monto.HasValue ? Jurigest.Domain.Judicial.MontoEstampe.Aplicar(estampe, monto.Value) : estampe;
+        var valorActuaciones = Jurigest.Domain.Judicial.MontoEstampe.SumarActuaciones(estampe) ?? monto;
+        return valorActuaciones.HasValue ? Jurigest.Domain.Judicial.MontoEstampe.Aplicar(estampe, valorActuaciones.Value) : estampe;
+    }
+
+    private static string? FormatearRut(string? rut)
+    {
+        if (string.IsNullOrWhiteSpace(rut)) return rut;
+        var limpio = rut.Replace(".", "").Replace(" ", "").Trim().ToUpperInvariant();
+        var partes = limpio.Split('-');
+        if (partes.Length != 2 || !long.TryParse(partes[0], out var numero)) return rut;
+        return numero.ToString("N0", CultureInfo.GetCultureInfo("es-CL")) + "-" + partes[1];
     }
 
     private static string ObtenerTitulo(

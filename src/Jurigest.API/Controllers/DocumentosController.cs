@@ -4,9 +4,9 @@ using Jurigest.Application.Judicial.Documentos.Commands.CargarDocumento;
 using Jurigest.Application.Judicial.Documentos.Commands.EliminarDocumento;
 using Jurigest.Application.Judicial.Documentos.Queries.ObtenerDocumento;
 using Jurigest.Application.Judicial.Documentos.Queries.ObtenerDocumentosPorCausa;
-using Microsoft.AspNetCore.Authorization;
 using Jurigest.Domain.Judicial.Enums;
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Jurigest.API.Controllers;

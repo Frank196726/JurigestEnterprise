@@ -1,7 +1,7 @@
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
 using Jurigest.Application.Abstractions.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace Jurigest.API.Security;
 

@@ -25,9 +25,9 @@ public sealed class UsuarioRepository : IUsuarioRepository
         await _context.SaveChangesAsync(cancellationToken);
     }
 
-        public async Task<Usuario?> GetByIdAsync(
-        Guid id,
-        CancellationToken cancellationToken)
+    public async Task<Usuario?> GetByIdAsync(
+    Guid id,
+    CancellationToken cancellationToken)
     {
         return await _context.Usuarios
             .FirstOrDefaultAsync(
@@ -88,9 +88,9 @@ public sealed class UsuarioRepository : IUsuarioRepository
             cancellationToken);
     }
 
-        public async Task UpdateAsync(
-        Usuario usuario,
-        CancellationToken cancellationToken)
+    public async Task UpdateAsync(
+    Usuario usuario,
+    CancellationToken cancellationToken)
     {
         var valoresGuardados = await _context.Entry(usuario).GetDatabaseValuesAsync(cancellationToken);
         var nombreAnterior = valoresGuardados?.GetValue<string>(nameof(Usuario.Nombre));

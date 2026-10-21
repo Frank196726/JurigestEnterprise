@@ -1,4 +1,4 @@
-using Jurigest.Application.Abstractions.Persistence;
+﻿using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Domain.Judicial.Entities;
 using MediatR;
 
@@ -64,15 +64,17 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
                 "La diligencia realizada seleccionada no existe o no está activa.");
         }
 
+        var esBusquedaCompatible = diligenciaRealizada.CodigoTipoDiligencia == 112 &&
+            ((int)diligencia.Tipo == 1 || ((int)diligencia.Tipo >= 105 && (int)diligencia.Tipo <= 112));
         if (diligenciaRealizada.CodigoTipoDiligencia !=
-            (int)diligencia.Tipo)
+            (int)diligencia.Tipo && !esBusquedaCompatible)
         {
             throw new ArgumentException(
                 "La diligencia realizada seleccionada no corresponde al tipo de diligencia encargada.");
         }
 
         var reciboExistente = await _reciboRepository.GetByDiligenciaIdAsync(diligencia.Id, cancellationToken);
-        var monto = request.Monto ?? reciboExistente?.ValorGestion ?? diligenciaRealizada.Arancel ?? 0m;
+        var monto = Jurigest.Domain.Judicial.MontoEstampe.SumarActuaciones(request.Estampe) ?? request.Monto ?? reciboExistente?.ValorGestion ?? diligenciaRealizada.Arancel ?? 0m;
         Jurigest.Domain.Judicial.MontoEstampe.Validar(monto);
         if (reciboExistente is not null && (reciboExistente.ValorGestion != monto ||
             reciboExistente.DiligenciaRealizadaId != diligenciaRealizada.Id))

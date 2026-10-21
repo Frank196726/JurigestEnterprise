@@ -1,5 +1,5 @@
-using System.Security.Cryptography;
 using Jurigest.Application.Abstractions.Security;
+using System.Security.Cryptography;
 
 namespace Jurigest.Persistence.Security;
 

@@ -1,6 +1,6 @@
+using Jurigest.Domain.Judicial;
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Judicial.Enums;
-using Jurigest.Domain.Judicial;
 
 namespace Jurigest.Domain.Tests.Judicial;
 

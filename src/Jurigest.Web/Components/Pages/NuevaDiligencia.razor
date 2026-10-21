@@ -455,7 +455,7 @@
     private void Volver()
 {
         Navigation.NavigateTo(
-            $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}");
+            $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}&causa={_causa?.Id}");
 }
 
     private void AlternarAgregarTipo()

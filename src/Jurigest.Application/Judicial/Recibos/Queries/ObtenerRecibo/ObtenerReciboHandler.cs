@@ -38,6 +38,7 @@ public sealed class ObtenerReciboHandler
             recibo.Monto,
             recibo.Estado,
             recibo.FechaEmision,
-            recibo.FechaPago) { Numero = recibo.Numero, Abogado = recibo.Abogado, Receptor = recibo.Receptor, Rol = recibo.Rol, Tribunal = recibo.Tribunal, Caratulado = recibo.Caratulado, DiligenciaEncargada = recibo.DiligenciaEncargada, NumeroOperacion = recibo.NumeroOperacion, Cuantia = recibo.Cuantia, ValorGestion = recibo.ValorGestion, Observacion = recibo.Observacion, DetalleAdicionales = recibo.DetalleAdicionales, TotalAdicionales = recibo.TotalAdicionales };
+            recibo.FechaPago)
+        { Numero = recibo.Numero, Abogado = recibo.Abogado, Receptor = recibo.Receptor, Rol = recibo.Rol, Tribunal = recibo.Tribunal, Caratulado = recibo.Caratulado, DiligenciaEncargada = recibo.DiligenciaEncargada, NumeroOperacion = recibo.NumeroOperacion, Cuantia = recibo.Cuantia, ValorGestion = recibo.ValorGestion, Observacion = recibo.Observacion, DetalleAdicionales = recibo.DetalleAdicionales, TotalAdicionales = recibo.TotalAdicionales };
     }
 }

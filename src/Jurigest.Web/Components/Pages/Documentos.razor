@@ -21,7 +21,7 @@
         </div>
 
         <span class="count-badge">
-            @_documentos.Count documentos
+            @_documentos.Count @(_documentos.Count == 1 ? "documento" : "documentos")
         </span>
     </header>
 

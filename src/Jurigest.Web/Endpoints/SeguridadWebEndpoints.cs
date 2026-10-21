@@ -1,7 +1,6 @@
-using System.Net;
-using System.Net.Http.Json;
 using Jurigest.Web.Security;
 using Microsoft.AspNetCore.Antiforgery;
+using System.Net;
 
 namespace Jurigest.Web.Endpoints;
 

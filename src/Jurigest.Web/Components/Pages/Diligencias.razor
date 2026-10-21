@@ -23,7 +23,7 @@
         </div>
 
         <span class="count-badge">
-            @_diligencias.Count diligencias
+            @_diligencias.Count @(_diligencias.Count == 1 ? "diligencia" : "diligencias")
         </span>
     </header>
 

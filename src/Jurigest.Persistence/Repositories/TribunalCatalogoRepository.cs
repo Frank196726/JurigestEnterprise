@@ -26,7 +26,17 @@ public sealed class TribunalCatalogoRepository
             .ToListAsync(cancellationToken);
 
         return tribunales.GroupBy(x => x.Nombre, StringComparer.OrdinalIgnoreCase)
-            .Select(grupo => grupo.OrderBy(x => x.Id).First()).ToList();
+            .Select(grupo => grupo.OrderBy(x => x.Id).First())
+            .OrderBy(x => NumeroTribunal(x.Nombre) ?? long.MaxValue)
+            .ThenBy(x => x.Nombre, StringComparer.CurrentCultureIgnoreCase)
+            .ToList();
+    }
+
+    // Orden correlativo: "2° Juzgado" antes que "10° Juzgado"; los sin número, al final.
+    private static long? NumeroTribunal(string nombre)
+    {
+        var digitos = new string(nombre.TakeWhile(char.IsAsciiDigit).ToArray());
+        return long.TryParse(digitos, out var numero) ? numero : null;
     }
 
     public async Task<bool> ExisteNombreAsync(

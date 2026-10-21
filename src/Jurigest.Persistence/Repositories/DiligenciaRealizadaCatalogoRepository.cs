@@ -33,12 +33,14 @@ public sealed class DiligenciaRealizadaCatalogoRepository
             int codigoTipoDiligencia,
             CancellationToken cancellationToken)
     {
+        if (codigoTipoDiligencia >= 105 && codigoTipoDiligencia <= 112)
+            codigoTipoDiligencia = 112;
         return await _context.DiligenciasRealizadas
             .AsNoTracking()
-            .Where(x =>
-                x.Activo &&
-                x.CodigoTipoDiligencia ==
-                    codigoTipoDiligencia)
+            .Where(x => x.Activo &&
+                ((codigoTipoDiligencia == 112 && x.CodigoTipoDiligencia == 112 && x.Nombre == "Búsqueda") ||
+                 (codigoTipoDiligencia != 112 && x.CodigoTipoDiligencia == codigoTipoDiligencia) ||
+                 (codigoTipoDiligencia == 1 && x.CodigoTipoDiligencia == 112 && x.Nombre == "Búsqueda")))
             .OrderBy(x => x.Nombre)
             .ToListAsync(cancellationToken);
     }

@@ -250,8 +250,8 @@ public sealed class Causa
     {
         ValidarCorreccionIngreso();
 
-    	ValidarFechaEncargo(
-        	fechaEncargoCausa);
+        ValidarFechaEncargo(
+            fechaEncargoCausa);
 
         if (FechaGestionCausa.HasValue &&
             fechaEncargoCausa >

@@ -77,28 +77,28 @@ public sealed class DiligenciaRepository : IDiligenciaRepository
     public async Task<List<Diligencia>> GetByCausaIdAsync(
         Guid causaId,
         CancellationToken cancellationToken)
-{
-    return await _context.Diligencias
-        .AsNoTracking()
-        .Where(d => d.CausaId == causaId)
-        .OrderByDescending(d =>
-            d.FechaGestion
-            ?? d.FechaRealizada
-            ?? d.FechaProgramada
-            ?? d.FechaCreacion)
-        .ThenByDescending(d => d.FechaCreacion)
-        .ToListAsync(cancellationToken);
-}
+    {
+        return await _context.Diligencias
+            .AsNoTracking()
+            .Where(d => d.CausaId == causaId)
+            .OrderByDescending(d =>
+                d.FechaGestion
+                ?? d.FechaRealizada
+                ?? d.FechaProgramada
+                ?? d.FechaCreacion)
+            .ThenByDescending(d => d.FechaCreacion)
+            .ToListAsync(cancellationToken);
+    }
 
     public async Task<Diligencia?> GetUltimaByCausaAsync(
         Guid causaId,
         CancellationToken cancellationToken)
-{
-    return await _context.Diligencias
-        .AsNoTracking()
-        .Where(d => d.CausaId == causaId)
-        .OrderByDescending(d => d.FechaCreacion)
-        .FirstOrDefaultAsync(cancellationToken);
-}
+    {
+        return await _context.Diligencias
+            .AsNoTracking()
+            .Where(d => d.CausaId == causaId)
+            .OrderByDescending(d => d.FechaCreacion)
+            .FirstOrDefaultAsync(cancellationToken);
+    }
 
 }

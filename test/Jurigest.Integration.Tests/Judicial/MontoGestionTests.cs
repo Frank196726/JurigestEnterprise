@@ -1,6 +1,4 @@
-using System.Net;
-using System.Net.Http.Json;
-using Jurigest.Domain.Judicial;
+﻿using Jurigest.Domain.Judicial;
 using Jurigest.Domain.Judicial.Catalogos;
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Domain.Judicial.Enums;
@@ -9,13 +7,17 @@ using Jurigest.Persistence.Context;
 using Jurigest.Web.Services.Estampes;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using System.Net;
+using System.Net.Http.Json;
 
 namespace Jurigest.Integration.Tests.Judicial;
 
 public sealed class MontoGestionTests
 {
-    [Fact]
-    public async Task ReciboConAdicionales_ConservaDesgloseYDatosEnApi()
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReciboConAdicionales_ConservaDesgloseYDatosEnApi(bool dosActuaciones)
     {
         await using var factory = new JurigestApiFactory();
         using var client = factory.CreateClient();
@@ -29,9 +31,20 @@ public sealed class MontoGestionTests
             var db = scope.ServiceProvider.GetRequiredService<JurigestDbContext>();
             db.Causas.Add(causa); db.DiligenciasRealizadas.Add(gestion); await db.SaveChangesAsync();
         }
-        var datos = new { diligenciaRealizadaId = gestion.Id, resultado = 1, fechaGestion = DateTime.UtcNow,
-            estampe = "Texto", monto = 30000, totalAdicionales = 27000, abogado = "Abogada",
-            numeroOperacion = "OP-123", cuantia = 100000, observacionRecibo = "Not. Rvm.", detalleAdicionales = "Traslado" };
+        var datos = new
+        {
+            diligenciaRealizadaId = gestion.Id,
+            resultado = 1,
+            fechaGestion = DateTime.UtcNow,
+            estampe = dosActuaciones ? "Actuación principal\nDrs $30.000.-\nSegunda actuación\nDrs $27.000.-" : "Texto",
+            monto = 30000,
+            totalAdicionales = 27000,
+            abogado = "Abogada",
+            numeroOperacion = "OP-123",
+            cuantia = 100000,
+            observacionRecibo = "Not. Rvm.",
+            detalleAdicionales = "Traslado"
+        };
         for (var i = 0; i < 2; i++)
         {
             using var guardado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
@@ -43,11 +56,64 @@ public sealed class MontoGestionTests
         lectura.EnsureSuccessStatusCode();
         var recibos = await lectura.Content.ReadFromJsonAsync<System.Text.Json.JsonElement[]>();
         var recibo = Assert.Single(recibos!);
-        Assert.Equal(57000m, recibo.GetProperty("monto").GetDecimal());
-        Assert.Equal(30000m, recibo.GetProperty("valorGestion").GetDecimal());
+        Assert.Equal(dosActuaciones ? 84000m : 57000m, recibo.GetProperty("monto").GetDecimal());
+        Assert.Equal(dosActuaciones ? 57000m : 30000m, recibo.GetProperty("valorGestion").GetDecimal());
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<JurigestDbContext>();
+            var guardada = await db.Diligencias.SingleAsync(x => x.Id == diligencia.Id);
+            Assert.EndsWith(dosActuaciones ? "VALOR DE LA DILIGENCIA: $57.000.-" : "VALOR DE LA DILIGENCIA: $30.000.-", guardada.Estampe);
+        }
         Assert.Equal(27000m, recibo.GetProperty("totalAdicionales").GetDecimal());
         Assert.Equal("OP-123", recibo.GetProperty("numeroOperacion").GetString());
         Assert.Equal("Banco / Morales", recibo.GetProperty("caratulado").GetString());
+    }
+
+    [Fact]
+    public void ModeloCalleInexistenteCompletaComunaYDireccionDeLaDiligencia()
+    {
+        var texto = GeneradorEstampe.Generar("C-8459-26", "25°", "Banco / Duarte", "Búsqueda",
+            TipoDiligencia.Notificacion, "Búsqueda frustrada", ResultadoDiligencia.Negativa, "",
+            new DateTime(2026, 10, 12), direccion: " Calle Sol 123 ", comuna: " Santiago ",
+            modelo: "Haberme constituido en la comuna de $solo_comuna_ejecutado; la calle $solo_direccion_ejecutado no existe. Comuna $comuna_ejecutado, dirección $direccion_ejecutado.",
+            monto: 15000);
+        Assert.Contains("comuna de Santiago; la calle Calle Sol 123 no existe", texto);
+        Assert.Contains("Comuna Santiago, dirección Calle Sol 123.", texto);
+        Assert.DoesNotContain("$solo_comuna_ejecutado", texto);
+        Assert.DoesNotContain("$solo_direccion_ejecutado", texto);
+    }
+
+    [Fact]
+    public void ModeloBusquedaUsaDireccionNombreCompletoFechaYHonorariosActuales()
+    {
+        var modelo = "CERTIFICO: Que me constituí en $direccion_ejecutado, a fin de notificar a don(ña) $nombre_ejecutado. Santiago, $fecha_palabras_diligencia\n$monto_ejecutado";
+        var fecha = new DateTime(2026, 10, 12, 15, 30, 0);
+        var texto = GeneradorEstampe.Generar("C-1", "Tribunal", "Banco / TORRES", "Búsqueda",
+            TipoDiligencia.Notificacion, "Búsqueda negativa", ResultadoDiligencia.Negativa, "", fecha,
+            direccion: "Gabriela Mistral 1128", modelo: modelo, monto: 30000,
+            nombreDemandado: "MELQUICEDEC ALEXIS TORRES LOPEZ");
+        Assert.Contains("me constituí en Gabriela Mistral 1128", texto);
+        Assert.Contains("don(ña) MELQUICEDEC ALEXIS TORRES LOPEZ", texto);
+        Assert.Contains("Santiago, lunes 12 de octubre de 2026", texto);
+        Assert.Contains("Drs. $30.000.-", texto);
+        Assert.EndsWith("VALOR DE LA DILIGENCIA: $30.000.-", texto);
+        Assert.DoesNotContain("$direccion_ejecutado", texto);
+        Assert.DoesNotContain("$nombre_ejecutado", texto);
+        Assert.DoesNotContain("$fecha_palabras_diligencia", texto);
+        Assert.DoesNotContain("$monto_ejecutado", texto);
+    }
+
+    [Fact]
+    public void SumaActuacionesSinContarCuantiaNiTotalAnterior()
+    {
+        var texto = "Cuantía $1.000.000\nDrs $30.000.-\nDrs $27.000.-\nVALOR DE LA DILIGENCIA: $30.000.-";
+        Assert.Equal(57000m, MontoEstampe.SumarActuaciones(texto));
+        Assert.Equal(57000m, MontoEstampe.SumarActuaciones(MontoEstampe.Aplicar(texto, 57000m)));
+        Assert.Null(MontoEstampe.SumarActuaciones("Cuantía $1.000.000"));
+        var borrador = GeneradorEstampe.Generar("C-1", "Tribunal", "Banco / Persona", "Embargo",
+            TipoDiligencia.Embargo, "Embargo", ResultadoDiligencia.Positiva, "", DateTime.Now,
+            modelo: texto, monto: 30000);
+        Assert.True(borrador.EndsWith("VALOR DE LA DILIGENCIA: $57.000.-"), borrador);
     }
 
     [Fact]
@@ -63,8 +129,8 @@ public sealed class MontoGestionTests
         Assert.Contains("Caratulado: Banco / Javier Orellana", texto);
         Assert.Contains("Abogado: Abogada", texto);
         Assert.Contains("Materia: Ejecutivo", texto);
-        Assert.Contains("Rut Demandado: 19995588-8", texto);
-        Assert.Contains("Demandado RUT 19995588-8.", texto);
+        Assert.Contains("Rut Demandado: 19.995.588-8", texto);
+        Assert.Contains("Demandado RUT 19.995.588-8.", texto);
         Assert.DoesNotContain("ESTAMPE DE EMBARGO", texto);
         Assert.Equal(1, texto.Split("CERTIFICO:").Length - 1);
     }

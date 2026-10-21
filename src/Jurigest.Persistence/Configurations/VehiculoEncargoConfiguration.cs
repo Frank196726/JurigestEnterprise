@@ -2,6 +2,7 @@ using Jurigest.Domain.Judicial.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 namespace Jurigest.Persistence.Configurations;
+
 public sealed class VehiculoEncargoConfiguration : IEntityTypeConfiguration<VehiculoEncargo>
 {
     public void Configure(EntityTypeBuilder<VehiculoEncargo> b)

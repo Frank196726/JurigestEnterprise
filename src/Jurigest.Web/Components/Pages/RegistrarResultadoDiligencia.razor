@@ -1,4 +1,4 @@
-@page "/causas/{CausaId:guid}/diligencias/registrar"
+﻿@page "/causas/{CausaId:guid}/diligencias/registrar"
 @rendermode InteractiveServer
 @attribute [Authorize(Policy = "DiligenciasGestion")]
 
@@ -185,9 +185,9 @@
 
                             <div class="result-group">
                                 <label>
-                                    <span>Diligencia realizada *</span>
+                                    <span>Diligencia Encargada *</span>
                                     <select class="form-select" @bind="_diligenciaRealizadaId" @bind:after="SeleccionarGestion" disabled="@(_reciboExistente is not null)">
-                                        <option value="">Seleccionar diligencia realizada...</option>
+                                        <option value="">Seleccionar diligencia encargada...</option>
                                         @foreach (var item in _diligenciasRealizadas) { <option value="@item.Id">@item.Nombre</option> }
                                     </select>
                                 </label>
@@ -231,7 +231,7 @@
                                         <label><span>Total adicionales (CLP)</span><input class="form-control" type="number" min="0" step="1" @bind="_totalAdicionales" /></label>
                                         <p class="mt-2 mb-0"><strong>Total recibo: @TotalRecibo.ToString("C0", System.Globalization.CultureInfo.GetCultureInfo("es-CL"))</strong></p>
                                     </fieldset>
-                                    <small>El estampe conserva el valor de gestión. El recibo suma gestión y adicionales; si el total es 0, no se emite recibo.</small>
+                                    <small>El valor de gestión suma las actuaciones identificadas como Drs en el estampe. El recibo suma gestión y adicionales; si el total es 0, no se emite recibo.</small>
                                     @if (_reciboExistente is not null) { <p>Esta diligencia ya tiene un recibo emitido; su gestión y valor están protegidos. <a href="/recibos">Ver recibos</a></p> }
                                 }
                                 <label>
@@ -275,18 +275,30 @@
                                 @if (!string.IsNullOrWhiteSpace(_estampe)) { <span class="draft-badge">Borrador generado</span> }
                             </div>
                             <div class="model-box">
-                                <label><span>Modelo aplicado</span>
+                                <label><span>Diligencia Realizada</span>
                                     <select class="form-control" @bind="_modeloEstampeId" @bind:after="CambiarModeloEstampe">
                                         <option value="">Formato predeterminado</option>
                                         @foreach (var modelo in ModelosAplicables) { <option value="@modelo.Id">@modelo.Nombre (@NombreResultadoModelo(modelo.Resultado))</option> }
                                     </select>
                                 </label>
                                 <small>Seleccione el modelo requerido para la gestión actual. Al cambiarlo se regenera el borrador.</small>
-                                <a href="/configuracion/modelos-estampe">Administrar modelos</a>
+                                <a href="/configuracion/modelos-estampe">Agregar o administrar modelos de estampe</a>
                             </div>
-                            <textarea class="form-control stamp-preview" rows="22" maxlength="8000" @bind="_estampe"
-                                      placeholder="Complete los antecedentes y genere el borrador para revisarlo aquí."></textarea>
-                            @if (!string.IsNullOrWhiteSpace(_estampe)) { <small>Puede corregir manualmente el texto antes de guardarlo.</small> }
+                            @if (!string.IsNullOrWhiteSpace(_estampe))
+                            {
+                                <div class="form-control stamp-preview rendered-stamp" aria-label="Vista previa del estampe">
+                                    @foreach (var linea in _estampe.Replace("\r\n", "\n").Split('\n'))
+                                    {
+                                        <div class="stamp-line">@if (linea.StartsWith("DILIGENCIA REALIZADA:", StringComparison.Ordinal)) { <strong class="stamp-gestion">@linea</strong> } else { @linea }</div>
+                                    }
+                                </div>
+                            }
+                            <details class="stamp-editor">
+                                <summary>Editar texto del estampe</summary>
+                                <textarea class="form-control stamp-preview" rows="22" maxlength="8000" @bind="_estampe" @bind:after="ActualizarMontoEstampe"
+                                          aria-label="Texto del estampe" placeholder="Complete los antecedentes y genere el borrador para revisarlo aquí."></textarea>
+                                <small>Puede corregir manualmente el texto antes de guardarlo.</small>
+                            </details>
                         </section>
                     </div>
 
@@ -522,10 +534,20 @@
     }
 
     private IEnumerable<ModeloEstampeItem> ModelosAplicables =>
-        _modelosEstampe.OrderBy(x => x.Nombre);
+        _modelosEstampe.Where(x =>
+            (!x.DiligenciaRealizadaId.HasValue || x.DiligenciaRealizadaId == _diligenciaRealizadaId) &&
+            (!x.Resultado.HasValue || !_resultado.HasValue || x.Resultado == _resultado))
+            .OrderBy(x => x.Nombre);
 
     private void CambiarModeloEstampe()
     {
+        var modelo = _modelosEstampe.FirstOrDefault(x => x.Id == _modeloEstampeId);
+        if (modelo?.DiligenciaRealizadaId is Guid gestionId && _diligenciasRealizadas.Any(x => x.Id == gestionId))
+        {
+            _diligenciaRealizadaId = gestionId;
+            _monto = _reciboExistente?.ValorGestion ?? _diligenciasRealizadas.First(x => x.Id == gestionId).Arancel ?? 0m;
+            if (modelo.Resultado.HasValue) _resultado = modelo.Resultado;
+        }
         _estampe = string.Empty;
         GenerarBorradorEstampe();
     }
@@ -537,8 +559,9 @@
 
     private void SeleccionarGestion()
     {
-        _monto = _reciboExistente?.ValorGestion ?? _diligenciasRealizadas.FirstOrDefault(x => x.Id == _diligenciaRealizadaId)?.Arancel;
+        _monto = _reciboExistente?.ValorGestion ?? _diligenciasRealizadas.FirstOrDefault(x => x.Id == _diligenciaRealizadaId)?.Arancel ?? 0m;
         _estampe = string.Empty;
+        _resultado = null;
         SeleccionarModeloRelacionado();
     }
     private bool ValidarMonto()
@@ -549,22 +572,46 @@
     }
     private void ActualizarMontoEstampe()
     {
-        if (!string.IsNullOrWhiteSpace(_estampe) && ValidarMonto())
-            _estampe = Jurigest.Domain.Judicial.MontoEstampe.Aplicar(_estampe, _monto!.Value);
+        if (string.IsNullOrWhiteSpace(_estampe)) return;
+        try
+        {
+            var actuaciones = Jurigest.Domain.Judicial.MontoEstampe.SumarActuaciones(_estampe);
+            if (actuaciones.HasValue)
+            {
+                if (_reciboExistente is not null && actuaciones.Value != _reciboExistente.ValorGestion)
+                {
+                    _mensaje = "Las actuaciones no coinciden con el recibo emitido.";
+                    return;
+                }
+                _monto = actuaciones.Value;
+            }
+            if (ValidarMonto())
+                _estampe = Jurigest.Domain.Judicial.MontoEstampe.Aplicar(_estampe, _monto!.Value);
+        }
+        catch (ArgumentException ex) { _mensaje = ex.Message; }
     }
     private void SeleccionarModeloRelacionado()
     {
+        if (_diligenciasRealizadas.FirstOrDefault(x => x.Id == _diligenciaRealizadaId)?.CodigoTipoDiligencia == 112 && !_resultado.HasValue)
+        {
+            _modeloEstampeId = null;
+            _estampe = string.Empty;
+            return;
+        }
         var relacionado = _modelosEstampe
             .Where(x => x.DiligenciaRealizadaId == _diligenciaRealizadaId &&
-                (!x.Resultado.HasValue || x.Resultado == _resultado))
+                (!x.Resultado.HasValue || !_resultado.HasValue || x.Resultado == _resultado))
             .OrderByDescending(x => x.Resultado.HasValue)
             .FirstOrDefault();
         relacionado ??= _modelosEstampe
             .Where(x => !x.DiligenciaRealizadaId.HasValue &&
-                (!x.Resultado.HasValue || x.Resultado == _resultado))
+                (!x.Resultado.HasValue || !_resultado.HasValue || x.Resultado == _resultado))
             .OrderByDescending(x => x.Resultado.HasValue)
             .FirstOrDefault();
         _modeloEstampeId = relacionado?.Id;
+        _estampe = string.Empty;
+        if (_diligenciasRealizadas.FirstOrDefault(x => x.Id == _diligenciaRealizadaId)?.CodigoTipoDiligencia != 112 &&
+            relacionado?.Resultado.HasValue == true) _resultado = relacionado.Resultado;
     }
 
     private async Task AgregarDiligenciaRealizadaAsync()
@@ -674,7 +721,7 @@
     private void Volver()
 {
     Navigation.NavigateTo(
-        $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}");
+        $"/causas/buscar?rit={Uri.EscapeDataString(_causa?.Rit ?? string.Empty)}&causa={_causa?.Id}");
 }
 
 private void GenerarBorradorEstampe()
@@ -734,7 +781,7 @@ private void GenerarBorradorEstampe()
                 _causa.Descripcion,
                 diligenciaRealizada.Nombre,
                 modeloSeleccionado is null ? TipoDiligencia.Otro : (TipoDiligencia)modeloSeleccionado.TipoDiligencia,
-                diligenciaRealizada.Nombre,
+                modeloSeleccionado?.Nombre ?? diligenciaRealizada.Nombre,
                 (ResultadoDiligencia)_resultado.Value,
                 string.Empty,
                 _fechaGestion.Value,
@@ -743,8 +790,10 @@ private void GenerarBorradorEstampe()
                 _diligencia.Comuna,
                 modelo: modelo, monto: _monto,
                 abogado: _abogadoRecibo,
-                rutDemandado: _causa.Demandados.FirstOrDefault(x => x.EsPrincipal)?.Rut,
-                materia: _materiaEstampe);
+                rutDemandado: DemandadoPrincipal?.Rut,
+                materia: _materiaEstampe,
+                nombreDemandado: DemandadoPrincipal?.Nombre);
+        ActualizarMontoEstampe();
     }
     catch (ArgumentException ex)
     {

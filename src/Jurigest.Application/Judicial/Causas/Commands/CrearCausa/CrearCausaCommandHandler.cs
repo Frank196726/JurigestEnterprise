@@ -104,7 +104,7 @@ public sealed class CrearCausaCommandHandler
         if (existentes.Any(x =>
             Jurigest.Domain.Judicial.IdentificacionCausa.MismoRol(x.Rit, causa.Rit) &&
             Jurigest.Domain.Judicial.IdentificacionCausa.MismoTribunal(x.Tribunal, causa.Tribunal)))
-            throw new InvalidOperationException("Ya existe una causa con ese ROL en el mismo tribunal.");
+            throw new InvalidOperationException(Jurigest.Domain.Judicial.IdentificacionCausa.MensajeCausaDuplicada);
 
         await _causaRepository.AddAsync(
             causa,
