@@ -46,7 +46,9 @@
         <label class="file-field">
             <span>Archivo</span>
 
-            <InputFile OnChange="SeleccionarArchivo"
+            @* La clave cambia tras cada carga para vaciar el selector y poder elegir el mismo archivo. *@
+            <InputFile @key="_versionSelector"
+                       OnChange="SeleccionarArchivo"
                        accept=".pdf,.doc,.docx" />
         </label>
 

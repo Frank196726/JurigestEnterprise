@@ -21,6 +21,25 @@ public partial class CargaDocumento
     private string? _mensajeCarga;
     private string? _errorCarga;
     private bool _subiendo;
+    private int _versionSelector;
+    private Guid _causaAnterior;
+
+    protected override void OnParametersSet()
+    {
+        // Al cambiar de causa se descarta el formulario, salvo durante una carga en curso:
+        // esa carga sigue con su causa y su resultado se muestra al terminar.
+        if (CausaId != _causaAnterior && !_subiendo)
+        {
+            _archivoSeleccionado = null;
+            _nombreDocumento = string.Empty;
+            _tipoDocumento = 6;
+            _mensajeCarga = null;
+            _errorCarga = null;
+            _versionSelector++;
+        }
+
+        _causaAnterior = CausaId;
+    }
 
     private void SeleccionarArchivo(
         InputFileChangeEventArgs args)
@@ -155,6 +174,7 @@ public partial class CargaDocumento
             _archivoSeleccionado = null;
             _nombreDocumento = string.Empty;
             _tipoDocumento = 6;
+            _versionSelector++;
 
             await DocumentoCargado.InvokeAsync();
         }

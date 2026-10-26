@@ -7,6 +7,7 @@
 
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 
 <PageTitle>Documentos | Jurigest Enterprise</PageTitle>
 
@@ -41,15 +42,14 @@
         </label>
     </section>
 
-    <AuthorizeView Policy="DocumentosCarga">
-        <Authorized>
-            @* El formulario vive en su propio componente: así AuthorizeView puede volver a
-               evaluarse sin descartar el InputFile y el archivo ya seleccionado. *@
-            <Jurigest.Web.Components.Shared.CargaDocumento @key="_causaSeleccionadaId"
-                                                          CausaId="@_causaSeleccionadaId"
-                                                          DocumentoCargado="CargarDocumentosAsync" />
-        </Authorized>
-    </AuthorizeView>
+    @* El permiso se resuelve una vez al iniciar: dentro de AuthorizeView, cada nueva
+       evaluación de la autorización reconstruía el formulario y descartaba el archivo
+       seleccionado. La API valida igualmente el permiso en cada carga. *@
+    @if (_puedeCargar)
+    {
+        <Jurigest.Web.Components.Shared.CargaDocumento CausaId="@_causaSeleccionadaId"
+                                                      DocumentoCargado="CargarDocumentosAsync" />
+    }
     @if (_cargando)
     {
         <div class="state-card">
@@ -137,9 +137,19 @@
     private Guid _causaSeleccionadaId;
     private string? _mensajeError;
     private bool _cargando = true;
+    private bool _puedeCargar;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthenticationState is not null)
+        {
+            var usuario = (await AuthenticationState).User;
+            _puedeCargar = (await AuthorizationService.AuthorizeAsync(usuario, "DocumentosCarga")).Succeeded;
+        }
+
         try
         {
             var causas =
