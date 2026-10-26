@@ -157,6 +157,7 @@ builder.Services.AddRateLimiter(options =>
 
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<PermisosService>();
+builder.Services.AddScoped<AccesoReceptores>();
 builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, PermisosAuthorizationHandler>();
 builder.Services.AddAuthorization(options =>
 {

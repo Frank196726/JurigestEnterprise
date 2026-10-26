@@ -11,6 +11,7 @@ public sealed class CrearUsuarioHandler
     private readonly IUsuarioRepository _repository;
     private readonly IPasswordHasher _passwordHasher;
     private readonly IRolCatalogoRepository _roles;
+    private readonly IReceptorJudicialCatalogoRepository _receptores;
     private readonly IAuditoriaSeguridadRepository
         _auditoriaRepository;
 
@@ -18,10 +19,12 @@ public sealed class CrearUsuarioHandler
         IUsuarioRepository repository,
         IPasswordHasher passwordHasher,
         IAuditoriaSeguridadRepository auditoriaRepository,
-        IRolCatalogoRepository roles)
+        IRolCatalogoRepository roles,
+        IReceptorJudicialCatalogoRepository receptores)
     {
         _repository = repository;
         _roles = roles;
+        _receptores = receptores;
         _passwordHasher = passwordHasher;
         _auditoriaRepository = auditoriaRepository;
     }
@@ -49,6 +52,11 @@ public sealed class CrearUsuarioHandler
             rolCatalogo = await _roles.GetByIdAsync(rolId, cancellationToken)
                 ?? throw new ArgumentException("El rol seleccionado no existe.");
 
+        var receptorIds = await ReceptoresUsuario.ValidarAsync(
+            request.ReceptorIds,
+            _receptores,
+            cancellationToken);
+
         var passwordHash =
             _passwordHasher.Hash(request.Password);
 
@@ -70,6 +78,7 @@ public sealed class CrearUsuarioHandler
 
         await _repository.AddAsync(
             usuario,
+            receptorIds,
             cancellationToken);
 
         var auditoria = new AuditoriaSeguridad(
@@ -78,8 +87,9 @@ public sealed class CrearUsuarioHandler
             "UsuarioCreado",
             usuario.Id,
             usuario.NombreRolPersonalizado is null
-                ? $"Rol asignado: {usuario.Rol}."
-                : $"Rol asignado: {usuario.NombreRolPersonalizado}. Perfil: {usuario.Rol}.",
+                ? $"Rol asignado: {usuario.Rol}. Receptores asociados: {receptorIds.Count}."
+                : $"Rol asignado: {usuario.NombreRolPersonalizado}. Perfil: {usuario.Rol}." +
+                  $" Receptores asociados: {receptorIds.Count}.",
             request.DireccionIp);
 
         await _auditoriaRepository.AddAsync(

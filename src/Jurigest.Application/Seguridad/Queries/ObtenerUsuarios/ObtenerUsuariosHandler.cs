@@ -23,6 +23,11 @@ public sealed class ObtenerUsuariosHandler
         var usuarios = await _repository.GetAllAsync(
             cancellationToken);
 
+        var receptores = (await _repository.GetReceptoresAsignadosAsync(
+                null,
+                cancellationToken))
+            .ToLookup(x => x.UsuarioId);
+
         return usuarios
             .Select(usuario => new ObtenerUsuariosResponse(
                 usuario.Id,
@@ -34,7 +39,10 @@ public sealed class ObtenerUsuariosHandler
                 usuario.NumeroOficina,
                 usuario.NombreRolPersonalizado ?? usuario.Rol.ToString(),
                 usuario.Activo,
-                usuario.FechaCreacion))
+                usuario.FechaCreacion,
+                receptores[usuario.Id]
+                    .Select(x => new ReceptorAsignadoResponse(x.ReceptorId, x.Nombre))
+                    .ToList()))
             .ToList();
     }
 }

@@ -24,11 +24,8 @@ public sealed class ObtenerDiligenciasPorPlazoHandler
     {
         var hoy = DateTime.UtcNow.Date;
         var diligencias = await _diligencias.GetAllAsync(cancellationToken);
-        if (!string.IsNullOrWhiteSpace(request.ReceptorAsignado))
-            diligencias = diligencias.Where(d => string.Equals(
-                d.ReceptorJudicial?.Trim(),
-                request.ReceptorAsignado.Trim(),
-                StringComparison.OrdinalIgnoreCase)).ToList();
+        if (request.Receptores is not null)
+            diligencias = request.Receptores.FiltrarDiligencias(diligencias);
         var causas = (await _causas.GetAllAsync(cancellationToken))
             .ToDictionary(causa => causa.Id);
 

@@ -25,6 +25,15 @@ public sealed class ObtenerRecibosHandler
                 cancellationToken);
 
         var causas = (await _causas.GetAllAsync(cancellationToken)).ToDictionary(c => c.Id);
+        if (request.Receptores is not null)
+        {
+            // Un recibo es visible si su diligencia lo es.
+            var visibles = request.Receptores
+                .FiltrarDiligencias(causas.Values.SelectMany(c => c.Diligencias))
+                .Select(d => d.Id)
+                .ToHashSet();
+            recibos = recibos.Where(r => visibles.Contains(r.DiligenciaId)).ToList();
+        }
         string? Caratula(Jurigest.Domain.Judicial.Entities.Recibo recibo) =>
             !string.IsNullOrWhiteSpace(recibo.Caratulado) ? recibo.Caratulado : causas.GetValueOrDefault(recibo.CausaId)?.Descripcion;
         string? Abogado(Jurigest.Domain.Judicial.Entities.Recibo recibo)

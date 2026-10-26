@@ -1,3 +1,5 @@
+using Jurigest.Application.Judicial;
+using Jurigest.API.Security;
 using Jurigest.API.Contracts;
 using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Application.Judicial.Diligencias.Commands.ActualizarDiligencia;
@@ -42,13 +44,14 @@ public sealed class DiligenciasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerDiligenciasPorPlazoQuery(ObtenerFiltroReceptor()),
+            new ObtenerDiligenciasPorPlazoQuery(await ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
     }
 
     [HttpGet("{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     public async Task<IActionResult> Obtener(
         Guid id,
         CancellationToken cancellationToken)
@@ -69,6 +72,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpGet("causa/{causaId:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     public async Task<IActionResult> ObtenerPorCausa(
         Guid causaId,
         CancellationToken cancellationToken)
@@ -81,6 +85,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> Actualizar(
         Guid id,
@@ -120,6 +125,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/iniciar")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> Iniciar(
         Guid id,
@@ -154,6 +160,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpGet("causa/{causaId:guid}/ultima")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "DiligenciasLectura")]
     public async Task<IActionResult> ObtenerUltima(
     Guid causaId,
@@ -196,6 +203,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/completar")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> Completar(
         Guid id,
@@ -230,6 +238,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/programar")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> Programar(
         Guid id,
@@ -275,6 +284,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/asignar-receptor")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> AsignarReceptor(
         Guid id,
@@ -321,6 +331,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/tipo")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> CambiarTipo(
         Guid id,
@@ -366,6 +377,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/suspender")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> Suspender(
         Guid id,
@@ -399,6 +411,7 @@ public sealed class DiligenciasController : ControllerBase
         }
     }
     [HttpPut("{id:guid}/rechazar")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> Rechazar(
         Guid id,
@@ -433,6 +446,7 @@ public sealed class DiligenciasController : ControllerBase
 
     }
     [HttpPut("{id:guid}/ubicacion")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> AsignarUbicacion(
         Guid id,
@@ -489,6 +503,7 @@ public sealed class DiligenciasController : ControllerBase
 
 
     [HttpPut("{id:guid}/coordenadas")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> RegistrarCoordenadas(
         Guid id,
@@ -542,6 +557,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/observacion")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> AgregarObservacion(
         Guid id,
@@ -578,6 +594,7 @@ public sealed class DiligenciasController : ControllerBase
     }
 
     [HttpPut("{id:guid}/resultado")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> RegistrarResultado(
     Guid id,
@@ -671,11 +688,7 @@ public sealed class DiligenciasController : ControllerBase
         }
     }
 
-    private string? ObtenerFiltroReceptor()
-    {
-        var rolAsignado = User.FindFirst("rol_asignado")?.Value;
-        return string.Equals(rolAsignado, "Receptor", StringComparison.OrdinalIgnoreCase)
-            ? User.Identity?.Name
-            : null;
-    }
+    private Task<FiltroReceptores?> ObtenerFiltroReceptor() =>
+        HttpContext.RequestServices.GetRequiredService<AccesoReceptores>()
+            .ObtenerFiltroAsync(HttpContext.RequestAborted);
 }

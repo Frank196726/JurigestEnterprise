@@ -23,4 +23,5 @@ public sealed class EditarUsuarioModel
     [Required(ErrorMessage = "El N° de oficina es obligatorio.")]
     public string NumeroOficina { get; set; } = string.Empty;
 
+    public List<Guid> ReceptorIds { get; set; } = [];
 }

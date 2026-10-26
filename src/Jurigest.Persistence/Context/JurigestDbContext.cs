@@ -60,6 +60,9 @@ public class JurigestDbContext : DbContext
 
     public DbSet<Usuario> Usuarios => Set<Usuario>();
 
+    public DbSet<UsuarioReceptor> UsuariosReceptores =>
+    Set<UsuarioReceptor>();
+
     public DbSet<SesionUsuario> SesionesUsuario =>
     Set<SesionUsuario>();
 

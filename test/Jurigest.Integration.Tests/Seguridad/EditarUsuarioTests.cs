@@ -15,7 +15,8 @@ public sealed class EditarUsuarioTests
         var admin = await SeguridadTestHelper.IniciarSesionAsync(client, SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
         var id = await SeguridadTestHelper.CrearProcuradorAsync(client, admin.Token);
         var usuario = await SeguridadTestHelper.IniciarSesionAsync(client, SeguridadTestHelper.ProcuradorEmail, SeguridadTestHelper.ProcuradorPassword);
-        object Datos(string email) => new { nombre = "Nombre actualizado", email, rut = "15.003.942-8", telefono = "999999999", direccion = "Nueva dirección 30", numeroOficina = "15" };
+        var receptorId = await SeguridadTestHelper.CrearReceptorAsync(client, admin.Token);
+        object Datos(string email) => new { nombre = "Nombre actualizado", email, rut = "15.003.942-8", telefono = "999999999", direccion = "Nueva dirección 30", numeroOficina = "15", receptorIds = new[] { receptorId } };
         using var prohibido = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put, $"/api/seguridad/usuarios/{id}", usuario.Token, Datos("nuevo@test.cl"));
         Assert.Equal(HttpStatusCode.Forbidden, prohibido.StatusCode);
         using var duplicado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put, $"/api/seguridad/usuarios/{id}", admin.Token, Datos(SeguridadTestHelper.AdminEmail));

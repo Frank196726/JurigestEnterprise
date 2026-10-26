@@ -1,3 +1,4 @@
+using Jurigest.API.Security;
 using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Resoluciones.Commands.EliminarResolucion;
 using Jurigest.Application.Judicial.Resoluciones.Commands.RegistrarResolucion;
@@ -23,6 +24,7 @@ public sealed class ResolucionesController : ControllerBase
 
     [Authorize(Policy = "ResolucionesRegistro")]
     [HttpPost("Causas/{causaId:guid}/resoluciones")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     public async Task<IActionResult> Registrar(
         Guid causaId,
         [FromBody] RegistrarResolucionRequest request,
@@ -83,6 +85,7 @@ public sealed class ResolucionesController : ControllerBase
 
     [Authorize(Policy = "ResolucionesLectura")]
     [HttpGet("Resoluciones/{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Resolucion)]
     public async Task<IActionResult> Obtener(
         Guid id,
         CancellationToken cancellationToken)
@@ -104,6 +107,7 @@ public sealed class ResolucionesController : ControllerBase
 
     [Authorize(Policy = "ResolucionesLectura")]
     [HttpGet("Causas/{causaId:guid}/resoluciones")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     public async Task<IActionResult> ObtenerPorCausa(
         Guid causaId,
         CancellationToken cancellationToken)
@@ -117,6 +121,7 @@ public sealed class ResolucionesController : ControllerBase
 
     [Authorize(Policy = "ResolucionesEliminacion")]
     [HttpDelete("Resoluciones/{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Resolucion)]
     public async Task<IActionResult> Eliminar(
         Guid id,
         CancellationToken cancellationToken)

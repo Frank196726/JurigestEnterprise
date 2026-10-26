@@ -1,3 +1,4 @@
+using Jurigest.API.Security;
 using Jurigest.API.Contracts;
 using Jurigest.Application.Abstractions.Storage;
 using Jurigest.Application.Judicial.Documentos.Commands.CargarDocumento;
@@ -27,6 +28,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpPost("Causas/{causaId:guid}/documentos/archivo")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Consumes("multipart/form-data")]
     [RequestSizeLimit(11_534_336)]
     [Authorize(Policy = "DocumentosCarga")]
@@ -126,6 +128,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpGet("Documentos/{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Documento)]
     [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> Obtener(
         Guid id,
@@ -147,6 +150,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpGet("Documentos/{id:guid}/archivo")]
+    [AccesoPorReceptor(RecursoJudicial.Documento)]
     [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> Descargar(
         Guid id,
@@ -189,6 +193,7 @@ public sealed class DocumentosController : ControllerBase
             enableRangeProcessing: true);
     }
     [HttpGet("Causas/{causaId:guid}/documentos")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "DocumentosLectura")]
     public async Task<IActionResult> ObtenerPorCausa(
         Guid causaId,
@@ -202,6 +207,7 @@ public sealed class DocumentosController : ControllerBase
     }
 
     [HttpDelete("Documentos/{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Documento)]
     [Authorize(Policy = "DocumentosEliminacion")]
     public async Task<IActionResult> Eliminar(
         Guid id,

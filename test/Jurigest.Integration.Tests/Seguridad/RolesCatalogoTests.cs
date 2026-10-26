@@ -21,6 +21,7 @@ public sealed class RolesCatalogoTests
             new { nombre, perfil = 3 });
         Assert.Equal(HttpStatusCode.OK, crearRol.StatusCode);
         var id = (await crearRol.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var receptorId = await SeguridadTestHelper.CrearReceptorAsync(client, admin.Token);
         using var creado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, "/api/seguridad/usuarios", admin.Token,
             new
             {
@@ -32,7 +33,8 @@ public sealed class RolesCatalogoTests
                 rut = "15.003.942-8",
                 telefono = "+56 9 5555 0202",
                 direccion = "Calle Operativa 10",
-                numeroOficina = "2"
+                numeroOficina = "2",
+                receptorIds = new[] { receptorId }
             });
         Assert.Equal(HttpStatusCode.Created, creado.StatusCode);
         var usuario = await SeguridadTestHelper.IniciarSesionAsync(client, "operativo@jurigest.test", "Operativo.Test.2026!");
@@ -64,6 +66,7 @@ public sealed class RolesCatalogoTests
             new { nombre = "Coordinador", perfil = 4 });
         Assert.Equal(HttpStatusCode.OK, crear.StatusCode);
         var id = (await crear.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        var receptorId = await SeguridadTestHelper.CrearReceptorAsync(client, admin.Token);
         using var duplicado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, "/api/seguridad/roles", admin.Token,
             new { nombre = " coordinador ", perfil = 4 });
         Assert.Equal(HttpStatusCode.Conflict, duplicado.StatusCode);
@@ -84,7 +87,8 @@ public sealed class RolesCatalogoTests
                 rut = "15.003.942-8",
                 telefono = "+56 9 5555 0303",
                 direccion = "Calle Consulta 20",
-                numeroOficina = "3"
+                numeroOficina = "3",
+                receptorIds = new[] { receptorId }
             });
         Assert.Equal(HttpStatusCode.BadRequest, desconocido.StatusCode);
         using var usuarioCreado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post, "/api/seguridad/usuarios", admin.Token,
@@ -98,7 +102,8 @@ public sealed class RolesCatalogoTests
                 rut = "15.003.942-8",
                 telefono = "+56 9 5555 0303",
                 direccion = "Calle Consulta 20",
-                numeroOficina = "3"
+                numeroOficina = "3",
+                receptorIds = new[] { receptorId }
             });
         Assert.Equal(HttpStatusCode.Created, usuarioCreado.StatusCode);
         var usuario = await SeguridadTestHelper.IniciarSesionAsync(client, "coordinador@jurigest.test", "Consulta.Test.2026!");

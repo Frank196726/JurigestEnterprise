@@ -17,5 +17,7 @@ public sealed class CrearUsuarioRequest
     public string Direccion { get; set; } = string.Empty;
     public string NumeroOficina { get; set; } = string.Empty;
 
+    public List<Guid> ReceptorIds { get; set; } = [];
+
     public RolUsuario Rol { get; set; }
 }

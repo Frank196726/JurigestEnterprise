@@ -1,3 +1,4 @@
+using Jurigest.API.Security;
 using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausa;
 using Jurigest.Domain.Judicial.Entities;
 using Jurigest.Persistence.Context;
@@ -10,14 +11,13 @@ namespace Jurigest.API.Controllers;
 [ApiController]
 [Route("api/diligencias/{diligenciaId:guid}/vehiculos")]
 [Authorize(Policy = "DiligenciasLectura")]
-public sealed class VehiculosController(JurigestDbContext db, IMediator mediator) : ControllerBase
+public sealed class VehiculosController(JurigestDbContext db, AccesoReceptores acceso) : ControllerBase
 {
     private async Task<bool> Acceso(Guid id, CancellationToken ct)
     {
         var diligencia = await db.Diligencias.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
         if (diligencia is null) return false;
-        var filtro = string.Equals(User.FindFirst("rol_asignado")?.Value, "Receptor", StringComparison.OrdinalIgnoreCase) ? User.Identity?.Name : null;
-        return await mediator.Send(new ObtenerCausaQuery(diligencia.CausaId, filtro), ct) is not null;
+        return await acceso.PuedeVerDiligenciaAsync(id, ct);
     }
     [HttpGet]
     public async Task<IActionResult> Listar(Guid diligenciaId, CancellationToken ct)

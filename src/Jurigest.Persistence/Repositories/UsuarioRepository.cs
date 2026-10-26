@@ -88,6 +88,62 @@ public sealed class UsuarioRepository : IUsuarioRepository
             cancellationToken);
     }
 
+    public async Task AddAsync(
+        Usuario usuario,
+        IReadOnlyCollection<Guid> receptorIds,
+        CancellationToken cancellationToken)
+    {
+        await _context.Usuarios.AddAsync(usuario, cancellationToken);
+        foreach (var receptorId in receptorIds.Distinct())
+            await _context.UsuariosReceptores.AddAsync(
+                new UsuarioReceptor(usuario.Id, receptorId),
+                cancellationToken);
+
+        await _context.SaveChangesAsync(cancellationToken);
+    }
+
+    public async Task UpdateAsync(
+        Usuario usuario,
+        IReadOnlyCollection<Guid> receptorIds,
+        CancellationToken cancellationToken)
+    {
+        var solicitados = receptorIds.Distinct().ToHashSet();
+        var actuales = await _context.UsuariosReceptores
+            .Where(x => x.UsuarioId == usuario.Id)
+            .ToListAsync(cancellationToken);
+
+        _context.UsuariosReceptores.RemoveRange(
+            actuales.Where(x => !solicitados.Contains(x.ReceptorJudicialId)));
+
+        foreach (var receptorId in solicitados.Except(actuales.Select(x => x.ReceptorJudicialId)))
+            await _context.UsuariosReceptores.AddAsync(
+                new UsuarioReceptor(usuario.Id, receptorId),
+                cancellationToken);
+
+        await UpdateAsync(usuario, cancellationToken);
+    }
+
+    public async Task<List<UsuarioReceptorAsignado>> GetReceptoresAsignadosAsync(
+        IReadOnlyCollection<Guid>? usuarioIds,
+        CancellationToken cancellationToken)
+    {
+        var consulta = _context.UsuariosReceptores.AsNoTracking();
+        if (usuarioIds is not null)
+            consulta = consulta.Where(x => usuarioIds.Contains(x.UsuarioId));
+
+        return await consulta
+            .Join(
+                _context.ReceptoresJudiciales,
+                asignacion => asignacion.ReceptorJudicialId,
+                receptor => receptor.Id,
+                (asignacion, receptor) => new UsuarioReceptorAsignado(
+                    asignacion.UsuarioId,
+                    receptor.Id,
+                    receptor.Nombre))
+            .OrderBy(x => x.Nombre)
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task UpdateAsync(
     Usuario usuario,
     CancellationToken cancellationToken)

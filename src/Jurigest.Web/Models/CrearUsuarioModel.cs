@@ -29,6 +29,8 @@ public sealed class CrearUsuarioModel
 
     public Guid? RolCatalogoId { get; set; }
 
+    public List<Guid> ReceptorIds { get; set; } = [];
+
     [Range(1, 4)]
     public int Rol { get; set; } = 3;
 }

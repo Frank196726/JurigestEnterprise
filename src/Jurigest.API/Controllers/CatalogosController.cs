@@ -1,3 +1,4 @@
+using Jurigest.API.Security;
 using Jurigest.Application.Abstractions.Persistence;
 using Jurigest.Domain.Judicial.Catalogos;
 using Microsoft.AspNetCore.Authorization;
@@ -154,11 +155,17 @@ public sealed class CatalogosController : ControllerBase
     [HttpGet("receptores")]
     [Authorize(Policy = "DiligenciasLectura")]
     public async Task<IActionResult> ObtenerReceptores(
+        [FromServices] AccesoReceptores acceso,
         CancellationToken cancellationToken)
     {
         var receptores =
             await _receptorRepository
                 .GetActivosAsync(cancellationToken);
+
+        // Un usuario con receptores asociados solo puede elegir entre los suyos.
+        var filtro = await acceso.ObtenerFiltroAsync(cancellationToken);
+        if (filtro is not null)
+            receptores = receptores.Where(x => filtro.EsPropio(x.Nombre)).ToList();
 
         return Ok(
             receptores.Select(

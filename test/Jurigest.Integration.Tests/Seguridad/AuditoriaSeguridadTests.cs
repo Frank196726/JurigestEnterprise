@@ -83,7 +83,7 @@ public sealed class AuditoriaSeguridadTests
                 .GetGuid());
 
         Assert.Equal(
-            "Rol asignado: Procurador.",
+            "Rol asignado: Procurador. Receptores asociados: 1.",
             auditoria.GetProperty("detalle").GetString());
     }
 
