@@ -1,3 +1,4 @@
+using Jurigest.Domain.Judicial.Catalogos;
 using Jurigest.Domain.Judicial.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -43,6 +44,13 @@ public sealed class DiligenciaConfiguration : IEntityTypeConfiguration<Diligenci
             .IsRequired(false);
 
         builder.HasIndex(x => x.DiligenciaRealizadaId);
+
+        builder.HasOne<ReceptorJudicialCatalogo>()
+            .WithMany()
+            .HasForeignKey(x => x.ReceptorJudicialId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.ReceptorJudicialId);
 
         builder.Property(x => x.Estampe)
             .HasMaxLength(8000)

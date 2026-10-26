@@ -58,6 +58,13 @@ public sealed class Diligencia : Entity<Guid>
 
     public string? ReceptorJudicial { get; private set; }
 
+    /// <summary>
+    /// Receptor del catálogo que corresponde a <see cref="ReceptorJudicial"/>. Lo resuelve la
+    /// persistencia al guardar; es null si el nombre no está en el catálogo (texto libre).
+    /// El nombre se conserva como dato histórico de la gestión.
+    /// </summary>
+    public Guid? ReceptorJudicialId { get; private set; }
+
     public string? Direccion { get; private set; }
 
     public string? Comuna { get; private set; }
@@ -101,9 +108,9 @@ public sealed class Diligencia : Entity<Guid>
         Descripcion = descripcion.Trim();
         Tipo = tipo;
         FechaProgramada = fechaProgramada;
-        ReceptorJudicial = string.IsNullOrWhiteSpace(receptorJudicial)
+        CambiarReceptorJudicial(string.IsNullOrWhiteSpace(receptorJudicial)
             ? null
-            : receptorJudicial.Trim();
+            : receptorJudicial.Trim());
         Direccion = tieneDireccion ? direccion!.Trim() : null;
         Comuna = tieneComuna ? comuna!.Trim() : null;
         Observaciones = string.IsNullOrWhiteSpace(observaciones)
@@ -163,7 +170,16 @@ public sealed class Diligencia : Entity<Guid>
                 "No se puede cambiar el receptor de una diligencia finalizada o cancelada.");
         }
 
-        ReceptorJudicial = receptor.Trim();
+        CambiarReceptorJudicial(receptor.Trim());
+    }
+
+    // Al cambiar el nombre, el Id anterior deja de ser válido; la persistencia lo vuelve a
+    // resolver al guardar y, mientras tanto, la visibilidad se decide por el nombre.
+    private void CambiarReceptorJudicial(string? receptor)
+    {
+        if (ReceptorJudicial == receptor) return;
+        ReceptorJudicial = receptor;
+        ReceptorJudicialId = null;
     }
 
     public void AsignarUbicacion(

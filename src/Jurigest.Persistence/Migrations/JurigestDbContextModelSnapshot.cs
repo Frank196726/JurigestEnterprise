@@ -598,6 +598,9 @@ namespace Jurigest.Persistence.Migrations
                     b.Property<string>("ReceptorJudicial")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<Guid?>("ReceptorJudicialId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<int>("Resultado")
                         .HasColumnType("int");
 
@@ -613,6 +616,8 @@ namespace Jurigest.Persistence.Migrations
                     b.HasIndex("CausaId");
 
                     b.HasIndex("DiligenciaRealizadaId");
+
+                    b.HasIndex("ReceptorJudicialId");
 
                     b.ToTable("Diligencias", (string)null);
                 });
@@ -1289,6 +1294,11 @@ namespace Jurigest.Persistence.Migrations
                         .HasForeignKey("CausaId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.HasOne("Jurigest.Domain.Judicial.Catalogos.ReceptorJudicialCatalogo", null)
+                        .WithMany()
+                        .HasForeignKey("ReceptorJudicialId")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Documento", b =>

@@ -165,7 +165,7 @@ public sealed class CatalogosController : ControllerBase
         // Un usuario con receptores asociados solo puede elegir entre los suyos.
         var filtro = await acceso.ObtenerFiltroAsync(cancellationToken);
         if (filtro is not null)
-            receptores = receptores.Where(x => filtro.EsPropio(x.Nombre)).ToList();
+            receptores = receptores.Where(x => filtro.EsPropio(x.Id, x.Nombre)).ToList();
 
         return Ok(
             receptores.Select(
