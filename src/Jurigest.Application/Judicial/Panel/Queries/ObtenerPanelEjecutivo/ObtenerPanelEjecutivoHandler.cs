@@ -37,18 +37,20 @@ public sealed class ObtenerPanelEjecutivoHandler
             causas = causas.Where(c => causaIds.Contains(c.Id)).ToList();
         }
 
+        // Misma regla que el reporte de causas: RegistrarResultado guarda
+        // FechaGestion; FechaRealizada solo la fija Completar().
         var ultimaGestionPorCausa = diligencias
-            .Where(d => d.FechaRealizada.HasValue)
+            .Where(d => (d.FechaGestion ?? d.FechaRealizada).HasValue)
             .GroupBy(d => d.CausaId)
             .ToDictionary(
                 grupo => grupo.Key,
-                grupo => grupo.Max(d => d.FechaRealizada!.Value));
+                grupo => grupo.Max(d => (d.FechaGestion ?? d.FechaRealizada)!.Value));
 
         var diasSinGestion = causas.Select(causa =>
         {
-            var referencia = ultimaGestionPorCausa.GetValueOrDefault(
-                causa.Id,
-                causa.FechaCreacion);
+            var referencia = ultimaGestionPorCausa.TryGetValue(causa.Id, out var ultima)
+                ? ultima
+                : causa.FechaGestionCausa ?? causa.FechaEncargoCausa;
             return Math.Max(0, (hoy - referencia.Date).Days);
         }).ToList();
 
