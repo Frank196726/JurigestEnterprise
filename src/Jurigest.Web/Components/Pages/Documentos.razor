@@ -7,6 +7,7 @@
 
 @inject IJurigestApiClient ApiClient
 @inject NavigationManager Navigation
+@inject Microsoft.AspNetCore.Authorization.IAuthorizationService AuthorizationService
 
 <PageTitle>Documentos | Jurigest Enterprise</PageTitle>
 
@@ -41,88 +42,14 @@
         </label>
     </section>
 
-    <AuthorizeView Policy="DocumentosCarga">
-        <Authorized>
-            <section class="upload-card">
-                <div class="upload-heading">
-                    <div>
-                        <span class="eyebrow">
-                            Nuevo documento
-                        </span>
-
-                        <h2>Cargar archivo</h2>
-                    </div>
-
-                    <span class="file-limit">
-                        PDF, DOC o DOCX · Máximo 10 MB
-                    </span>
-                </div>
-
-                <div class="upload-grid">
-                    <label>
-                        <span>Nombre del documento</span>
-
-                        <input type="text"
-                               maxlength="200"
-                               placeholder="Ej.: Informe del receptor"
-                               @bind="_nombreDocumento" />
-                    </label>
-
-                    <label>
-                        <span>Tipo</span>
-
-                        <select @bind="_tipoDocumento">
-                            <option value="1">Demanda</option>
-                            <option value="2">Contestación</option>
-                            <option value="3">Escrito</option>
-                            <option value="4">Resolución</option>
-                            <option value="5">Contrato</option>
-                            <option value="6">Informe</option>
-                            <option value="7">Poder</option>
-                            <option value="8">Anexo</option>
-                            <option value="99">Otro</option>
-                        </select>
-                    </label>
-
-                    <label class="file-field">
-                        <span>Archivo</span>
-
-                        <InputFile OnChange="SeleccionarArchivo"
-                                   accept=".pdf,.doc,.docx" />
-                    </label>
-
-                    <button class="upload-button"
-                            type="button"
-                            disabled="@(_subiendo ||
-                                _archivoSeleccionado is null ||
-                                _causaSeleccionadaId == Guid.Empty ||
-                                string.IsNullOrWhiteSpace(
-                                    _nombreDocumento))"
-                            @onclick="CargarArchivoAsync">
-                        @(_subiendo
-                            ? "Cargando…"
-                            : "Cargar documento")
-                    </button>
-                </div>
-
-                @if (!string.IsNullOrWhiteSpace(_mensajeCarga))
-                {
-                    <div class="upload-message success"
-                         role="status">
-                        @_mensajeCarga
-                    </div>
-                }
-
-                @if (!string.IsNullOrWhiteSpace(_errorCarga))
-                {
-                    <div class="upload-message error"
-                         role="alert">
-                        @_errorCarga
-                    </div>
-                }
-            </section>
-        </Authorized>
-    </AuthorizeView>
+    @* El permiso se resuelve una vez al iniciar: dentro de AuthorizeView, cada nueva
+       evaluación de la autorización reconstruía el formulario y descartaba el archivo
+       seleccionado. La API valida igualmente el permiso en cada carga. *@
+    @if (_puedeCargar)
+    {
+        <Jurigest.Web.Components.Shared.CargaDocumento CausaId="@_causaSeleccionadaId"
+                                                      DocumentoCargado="CargarDocumentosAsync" />
+    }
     @if (_cargando)
     {
         <div class="state-card">
@@ -210,9 +137,19 @@
     private Guid _causaSeleccionadaId;
     private string? _mensajeError;
     private bool _cargando = true;
+    private bool _puedeCargar;
+
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationState { get; set; }
 
     protected override async Task OnInitializedAsync()
     {
+        if (AuthenticationState is not null)
+        {
+            var usuario = (await AuthenticationState).User;
+            _puedeCargar = (await AuthorizationService.AuthorizeAsync(usuario, "DocumentosCarga")).Succeeded;
+        }
+
         try
         {
             var causas =

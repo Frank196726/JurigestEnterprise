@@ -1,12 +1,17 @@
-using Microsoft.AspNetCore.Components.Forms;
+using Microsoft.AspNetCore.Components;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
+using System.Net.Http.Json;
+using Microsoft.AspNetCore.Components.Forms;
 
-namespace Jurigest.Web.Components.Pages;
+namespace Jurigest.Web.Components.Shared;
 
-public partial class Documentos
+public partial class CargaDocumento
 {
+    [Parameter] public Guid CausaId { get; set; }
+    [Parameter] public EventCallback DocumentoCargado { get; set; }
+
     private const long MaximoArchivoBytes =
         10 * 1024 * 1024;
 
@@ -16,6 +21,25 @@ public partial class Documentos
     private string? _mensajeCarga;
     private string? _errorCarga;
     private bool _subiendo;
+    private int _versionSelector;
+    private Guid _causaAnterior;
+
+    protected override void OnParametersSet()
+    {
+        // Al cambiar de causa se descarta el formulario, salvo durante una carga en curso:
+        // esa carga sigue con su causa y su resultado se muestra al terminar.
+        if (CausaId != _causaAnterior && !_subiendo)
+        {
+            _archivoSeleccionado = null;
+            _nombreDocumento = string.Empty;
+            _tipoDocumento = 6;
+            _mensajeCarga = null;
+            _errorCarga = null;
+            _versionSelector++;
+        }
+
+        _causaAnterior = CausaId;
+    }
 
     private void SeleccionarArchivo(
         InputFileChangeEventArgs args)
@@ -40,7 +64,7 @@ public partial class Documentos
         _mensajeCarga = null;
         _errorCarga = null;
 
-        if (_causaSeleccionadaId == Guid.Empty ||
+        if (CausaId == Guid.Empty ||
             _archivoSeleccionado is null ||
             string.IsNullOrWhiteSpace(_nombreDocumento))
         {
@@ -117,7 +141,7 @@ public partial class Documentos
 
             using var response =
                 await ApiClient.PostAsync(
-                    $"/api/Causas/{_causaSeleccionadaId}" +
+                    $"/api/Causas/{CausaId}" +
                     "/documentos/archivo",
                     formulario);
 
@@ -150,8 +174,9 @@ public partial class Documentos
             _archivoSeleccionado = null;
             _nombreDocumento = string.Empty;
             _tipoDocumento = 6;
+            _versionSelector++;
 
-            await CargarDocumentosAsync();
+            await DocumentoCargado.InvokeAsync();
         }
         catch (UnauthorizedAccessException)
         {
