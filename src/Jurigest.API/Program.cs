@@ -1,41 +1,41 @@
+using Jurigest.Application.Contabilidad;
+using Jurigest.Application.Judicial;
+using Jurigest.Persistence.Contabilidad;
+using Jurigest.Persistence.Database;
+using Jurigest.Persistence.Judicial;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+
+builder.Services.AddDbContext<JurigestDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection") ?? "Data Source=jurigest.db"));
+
+builder.Services.AddScoped<ICuentaRepository, EfCuentaRepository>();
+builder.Services.AddScoped<IAsientoRepository, EfAsientoRepository>();
+builder.Services.AddScoped<ContabilidadApplicationService>();
+
+builder.Services.AddSingleton<ICausaRepository, InMemoryCausaRepository>();
+builder.Services.AddSingleton<IEncargoRepository, InMemoryEncargoRepository>();
+builder.Services.AddScoped<JudicialApplicationService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<JurigestDbContext>();
+    dbContext.Database.Migrate();
+}
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
 
 app.UseHttpsRedirection();
-
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+app.MapControllers();
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

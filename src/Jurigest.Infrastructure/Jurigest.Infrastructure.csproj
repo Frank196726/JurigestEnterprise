@@ -6,4 +6,9 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Jurigest.Application\Jurigest.Application.csproj" />
+    <ProjectReference Include="..\Jurigest.Domain\Jurigest.Domain.csproj" />
+  </ItemGroup>
+
 </Project>

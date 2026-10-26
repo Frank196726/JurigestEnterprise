@@ -15,6 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\Jurigest.API\Jurigest.API.csproj" />
+    <ProjectReference Include="..\..\src\Jurigest.Application\Jurigest.Application.csproj" />
+    <ProjectReference Include="..\..\src\Jurigest.Domain\Jurigest.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
     <Using Include="Xunit" />
   </ItemGroup>
 
