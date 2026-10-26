@@ -36,19 +36,26 @@ public sealed class AccesoReceptores(JurigestDbContext db, IHttpContextAccessor 
         if (usuario is null || usuario.Rol == RolUsuario.Administrador)
             return _filtro;
 
-        var nombres = await db.UsuariosReceptores.AsNoTracking()
+        var asociados = await db.UsuariosReceptores.AsNoTracking()
             .Where(x => x.UsuarioId == id)
-            .Join(db.ReceptoresJudiciales, a => a.ReceptorJudicialId, r => r.Id, (a, r) => r.Nombre)
+            .Join(db.ReceptoresJudiciales, a => a.ReceptorJudicialId, r => r.Id, (a, r) => new { r.Id, r.Nombre })
             .ToListAsync(ct);
+        var ids = asociados.Select(x => x.Id).ToList();
+        var nombres = asociados.Select(x => x.Nombre).ToList();
 
         // Compatibilidad: el rol "Receptor" ya filtraba por el nombre del propio usuario.
         if (string.Equals(usuario.NombreRolPersonalizado, "Receptor", StringComparison.OrdinalIgnoreCase))
         {
             _receptorPropio = usuario.Nombre;
             nombres.Add(usuario.Nombre);
+            var propio = await db.ReceptoresJudiciales.AsNoTracking()
+                .Where(r => r.Nombre == usuario.Nombre)
+                .Select(r => (Guid?)r.Id)
+                .FirstOrDefaultAsync(ct);
+            if (propio is Guid propioId) ids.Add(propioId);
         }
 
-        _filtro = nombres.Count == 0 ? null : new FiltroReceptores(nombres);
+        _filtro = nombres.Count == 0 ? null : new FiltroReceptores(ids, nombres);
         return _filtro;
     }
 
@@ -67,11 +74,11 @@ public sealed class AccesoReceptores(JurigestDbContext db, IHttpContextAccessor 
         var filtro = await ObtenerFiltroAsync(ct);
         if (filtro is null) return true;
 
-        var receptores = await db.Diligencias.AsNoTracking()
+        var asignaciones = await db.Diligencias.AsNoTracking()
             .Where(d => d.CausaId == causaId)
-            .Select(d => d.ReceptorJudicial)
+            .Select(d => new { d.ReceptorJudicialId, d.ReceptorJudicial })
             .ToListAsync(ct);
-        return filtro.PermiteCausa(receptores);
+        return filtro.PermiteCausa(asignaciones.Select(x => (x.ReceptorJudicialId, x.ReceptorJudicial)));
     }
 
     public async Task<bool> PuedeVerDiligenciaAsync(Guid diligenciaId, CancellationToken ct)
@@ -81,11 +88,12 @@ public sealed class AccesoReceptores(JurigestDbContext db, IHttpContextAccessor 
 
         var diligencia = await db.Diligencias.AsNoTracking()
             .Where(d => d.Id == diligenciaId)
-            .Select(d => new { d.CausaId, d.ReceptorJudicial })
+            .Select(d => new { d.CausaId, d.ReceptorJudicialId, d.ReceptorJudicial })
             .SingleOrDefaultAsync(ct);
         if (diligencia is null) return true; // El endpoint responde que no existe.
 
         return filtro.PermiteDiligencia(
+            diligencia.ReceptorJudicialId,
             diligencia.ReceptorJudicial,
             await PuedeVerCausaAsync(diligencia.CausaId, ct));
     }

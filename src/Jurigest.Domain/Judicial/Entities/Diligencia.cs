@@ -58,6 +58,13 @@ public sealed class Diligencia : Entity<Guid>
 
     public string? ReceptorJudicial { get; private set; }
 
+    /// <summary>
+    /// Receptor del catálogo que corresponde a <see cref="ReceptorJudicial"/>. Lo resuelve la
+    /// persistencia al guardar; es null si el nombre no está en el catálogo (texto libre).
+    /// El nombre se conserva como dato histórico de la gestión.
+    /// </summary>
+    public Guid? ReceptorJudicialId { get; private set; }
+
     public string? Direccion { get; private set; }
 
     public string? Comuna { get; private set; }

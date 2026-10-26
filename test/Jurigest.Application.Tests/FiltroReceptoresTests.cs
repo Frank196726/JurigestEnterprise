@@ -5,8 +5,10 @@ namespace Jurigest.Application.Tests;
 
 public sealed class FiltroReceptoresTests
 {
+    private static readonly Guid UnoId = Guid.NewGuid();
+
     private static readonly FiltroReceptores Filtro =
-        new(["Receptor Uno", "Receptor Dos"]);
+        new([UnoId], ["Receptor Uno", "Receptor Dos"]);
 
     private static Causa CrearCausa(params string?[] receptores)
     {
@@ -61,5 +63,16 @@ public sealed class FiltroReceptoresTests
         var resultado = Filtro.FiltrarCausas([vacia, ajena], ajena.Diligencias);
 
         Assert.Equal([vacia.Id], resultado.Select(c => c.Id));
+    }
+
+    [Fact]
+    public void AsignacionVinculada_SeComparaPorIdAunqueCambieElNombre()
+    {
+        // Receptor propio renombrado: el texto histórico ya no coincide, el Id sí.
+        Assert.True(Filtro.PermiteCausa([(UnoId, "Nombre anterior")]));
+        // Receptor ajeno con un nombre igual a uno propio: decide el Id.
+        Assert.False(Filtro.PermiteCausa([(Guid.NewGuid(), "Receptor Uno")]));
+        // Texto libre fuera del catálogo: se compara por nombre.
+        Assert.True(Filtro.PermiteCausa([(null, "receptor dos")]));
     }
 }
