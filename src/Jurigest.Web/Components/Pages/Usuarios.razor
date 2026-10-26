@@ -26,7 +26,7 @@
                         <option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="4">Consulta</option>
                         @foreach (var rol in _roles) { <option value="@rol.Id">@rol.Nombre</option> }
                     </InputSelect></label>
-                    <small>Perfil de acceso: @NombrePerfil(_nuevo.Rol)</small>
+                    <small>@(_roles.FirstOrDefault(x => x.Id == _nuevo.RolCatalogoId) is { } rolElegido ? $"Rol {rolElegido.Nombre} · perfil base: {NombrePerfil(_nuevo.Rol)}" : $"Perfil de acceso: {NombrePerfil(_nuevo.Rol)}")</small>
                     <button type="button" class="btn btn-secondary" @onclick="() => _mostrarRol = !_mostrarRol">@(_mostrarRol ? "Cancelar nuevo rol" : "+ Agregar rol")</button>
                 </div>
             </div>
@@ -155,12 +155,30 @@
         }
         else { _nuevo.RolCatalogoId = null; _nuevo.Rol = int.Parse(_seleccionRol); }
     }
+    private bool SeleccionarRolExistente(string nombre)
+    {
+        var existente = _roles.FirstOrDefault(x => string.Equals(x.Nombre.Trim(), nombre.Trim(), StringComparison.CurrentCultureIgnoreCase));
+        if (existente is null) return false;
+        _seleccionRol = existente.Id.ToString(); SeleccionarRol();
+        _nombreRol = string.Empty; _perfilRol = 4; _mostrarRol = false;
+        Mostrar($"El rol «{existente.Nombre}» ya existía (perfil {NombrePerfil(existente.Perfil)}) y quedó seleccionado.", true);
+        return true;
+    }
+
     private async Task CrearRolAsync()
     {
         _guardandoRol = true;
         await SeguroAsync(async () => {
             if (string.IsNullOrWhiteSpace(_nombreRol)) throw new InvalidOperationException("Indica el nombre del rol.");
+            // Los nombres de rol no distinguen mayúsculas: si ya existe, se selecciona el existente.
+            if (SeleccionarRolExistente(_nombreRol)) return;
             using var response = await ApiClient.PostAsync("/api/seguridad/roles", JsonContent.Create(new { nombre = _nombreRol.Trim(), perfil = _perfilRol }));
+            if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
+            {
+                // Otro administrador pudo crearlo recién: se recarga la lista y se selecciona.
+                _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? [];
+                if (SeleccionarRolExistente(_nombreRol)) return;
+            }
             await ValidarAsync(response);
             var creado = await response.Content.ReadFromJsonAsync<RolItem>() ?? throw new InvalidOperationException("No se recibió el rol creado.");
             _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? [];
