@@ -12,6 +12,7 @@ public sealed class EditarUsuarioModel
     public string Email { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "El RUT es obligatorio.")]
+    [RutChileno]
     public string Rut { get; set; } = string.Empty;
 
     [Required(ErrorMessage = "El teléfono es obligatorio.")]

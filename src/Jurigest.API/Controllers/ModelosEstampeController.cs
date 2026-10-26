@@ -46,7 +46,7 @@ public sealed class ModelosEstampeController(IModeloEstampeRepository repository
             await repository.AddAsync(modelo, cancellationToken);
             return Ok(Mapear(modelo));
         }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
     }
 
     [HttpPut("{id:guid}")]
@@ -70,7 +70,7 @@ public sealed class ModelosEstampeController(IModeloEstampeRepository repository
             await repository.SaveChangesAsync(cancellationToken);
             return Ok(Mapear(modelo));
         }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
     }
 
     [HttpDelete("{id:guid}")]

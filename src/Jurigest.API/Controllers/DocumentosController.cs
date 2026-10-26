@@ -122,7 +122,7 @@ public sealed class DocumentosController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }

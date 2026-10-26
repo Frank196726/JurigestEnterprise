@@ -72,11 +72,11 @@ public sealed class CausasController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { mensaje = ex.Message });
+            return Conflict(new { mensaje = ex.MensajeParaUsuario() });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { mensaje = ex.Message });
+            return BadRequest(new { mensaje = ex.MensajeParaUsuario() });
         }
     }
 
@@ -127,8 +127,8 @@ public sealed class CausasController : ControllerBase
                 request.Rut, request.RepresentanteLegal, request.RutRepresentanteLegal), cancellationToken);
             return id is null ? NotFound() : Ok(new { id });
         }
-        catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.MensajeParaUsuario() }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
     }
 
     [HttpPost("{causaId:guid}/demandados/{demandadoId:guid}/avales")]
@@ -146,8 +146,8 @@ public sealed class CausasController : ControllerBase
                 request.Rut, request.RepresentanteLegal, request.RutRepresentanteLegal), cancellationToken);
             return id is null ? NotFound() : Ok(new { id });
         }
-        catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.Message }); }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (InvalidOperationException ex) { return Conflict(new { mensaje = ex.MensajeParaUsuario() }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
     }
 
     [HttpPut("{causaId:guid}/demandados/{demandadoId:guid}/identificacion")]
@@ -178,7 +178,7 @@ public sealed class CausasController : ControllerBase
                 request.RepresentanteLegal, request.RutRepresentanteLegal), cancellationToken);
             return actualizado ? NoContent() : NotFound();
         }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
     }
 
     [HttpGet("rit/{rit}")]
@@ -251,11 +251,11 @@ public sealed class CausasController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { mensaje = ex.Message });
+            return Conflict(new { mensaje = ex.MensajeParaUsuario() });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { mensaje = ex.Message });
+            return BadRequest(new { mensaje = ex.MensajeParaUsuario() });
         }
     }
 

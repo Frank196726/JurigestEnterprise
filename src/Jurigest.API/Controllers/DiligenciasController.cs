@@ -116,11 +116,11 @@ public sealed class DiligenciasController : ControllerBase
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { mensaje = ex.Message });
+            return Conflict(new { mensaje = ex.MensajeParaUsuario() });
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { mensaje = ex.Message });
+            return BadRequest(new { mensaje = ex.MensajeParaUsuario() });
         }
     }
 
@@ -154,7 +154,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -232,7 +232,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -278,7 +278,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -325,7 +325,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -371,7 +371,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -406,7 +406,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -440,7 +440,7 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
 
@@ -489,14 +489,14 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -544,14 +544,14 @@ public sealed class DiligenciasController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -670,20 +670,20 @@ public sealed class DiligenciasController : ControllerBase
         }
         catch (Jurigest.Domain.Judicial.ReciboEmitidoException ex)
         {
-            return Conflict(new { mensaje = ex.Message });
+            return Conflict(new { mensaje = ex.MensajeParaUsuario() });
         }
         catch (InvalidOperationException ex)
         {
             return NotFound(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }

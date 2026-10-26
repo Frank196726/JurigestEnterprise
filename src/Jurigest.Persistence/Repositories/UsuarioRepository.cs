@@ -131,16 +131,21 @@ public sealed class UsuarioRepository : IUsuarioRepository
         if (usuarioIds is not null)
             consulta = consulta.Where(x => usuarioIds.Contains(x.UsuarioId));
 
+        // Se ordena antes de construir el record: SQL Server no puede traducir un
+        // OrderBy sobre las propiedades de un objeto creado con constructor.
         return await consulta
             .Join(
                 _context.ReceptoresJudiciales,
                 asignacion => asignacion.ReceptorJudicialId,
                 receptor => receptor.Id,
-                (asignacion, receptor) => new UsuarioReceptorAsignado(
+                (asignacion, receptor) => new
+                {
                     asignacion.UsuarioId,
-                    receptor.Id,
-                    receptor.Nombre))
+                    ReceptorId = receptor.Id,
+                    receptor.Nombre
+                })
             .OrderBy(x => x.Nombre)
+            .Select(x => new UsuarioReceptorAsignado(x.UsuarioId, x.ReceptorId, x.Nombre))
             .ToListAsync(cancellationToken);
     }
 
