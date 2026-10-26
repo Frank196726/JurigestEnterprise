@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 namespace Jurigest.Persistence.Migrations;
+
 [DbContext(typeof(JurigestDbContext))]
 [Migration("20261013010000_VincularModelosConGestiones")]
 public class VincularModelosConGestiones : Migration

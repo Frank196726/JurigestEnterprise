@@ -18,8 +18,13 @@ public sealed class ModelosEstampeTests
         foreach (var resultado in new[] { 1, 2 })
         {
             using var response = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
-                "/api/modelos-estampe", admin.Token, new { nombre = "Búsqueda variante " + resultado,
-                tipoDiligencia = 112, resultado, contenido = "CERTIFICO: Modelo de búsqueda" });
+                "/api/modelos-estampe", admin.Token, new
+                {
+                    nombre = "Búsqueda variante " + resultado,
+                    tipoDiligencia = 112,
+                    resultado,
+                    contenido = "CERTIFICO: Modelo de búsqueda"
+                });
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var modelo = await response.Content.ReadFromJsonAsync<JsonElement>();
             var vinculada = modelo.GetProperty("diligenciaRealizadaId").GetGuid();
@@ -46,7 +51,7 @@ public sealed class ModelosEstampeTests
         await SeguridadTestHelper.CrearAdministradorAsync(client);
         var admin = await SeguridadTestHelper.IniciarSesionAsync(client, SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
         using var modelo = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Post,
-            "/api/modelos-estampe", admin.Token, new { nombre="Búsqueda Conserje", tipoDiligencia=112, resultado=2, contenido="CERTIFICO: Búsqueda" });
+            "/api/modelos-estampe", admin.Token, new { nombre = "Búsqueda Conserje", tipoDiligencia = 112, resultado = 2, contenido = "CERTIFICO: Búsqueda" });
         modelo.EnsureSuccessStatusCode();
         var gestionId = (await modelo.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("diligenciaRealizadaId").GetGuid();
         var causa = new Jurigest.Domain.Judicial.Entities.Causa("C-123-26", "Tribunal", "Banco / Persona", DateTime.UtcNow);
@@ -60,7 +65,7 @@ public sealed class ModelosEstampeTests
         }
         using var guardado = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
             $"/api/Diligencias/{diligencia.Id}/resultado", admin.Token,
-            new { diligenciaRealizadaId=gestionId, resultado=2, fechaGestion=DateTime.UtcNow, estampe="CERTIFICO: Búsqueda", monto=0 });
+            new { diligenciaRealizadaId = gestionId, resultado = 2, fechaGestion = DateTime.UtcNow, estampe = "CERTIFICO: Búsqueda", monto = 0 });
         Assert.Equal(HttpStatusCode.OK, guardado.StatusCode);
     }
 
