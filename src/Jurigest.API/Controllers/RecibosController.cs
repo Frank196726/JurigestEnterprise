@@ -109,14 +109,14 @@ public sealed class RecibosController : ControllerBase
         {
             return Conflict(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
         catch (ArgumentException ex)
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }

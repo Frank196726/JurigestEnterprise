@@ -89,7 +89,7 @@ public sealed class SeguridadController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -174,7 +174,7 @@ public sealed class SeguridadController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -285,11 +285,11 @@ public sealed class SeguridadController : ControllerBase
         }
         catch (ArgumentException ex)
         {
-            return BadRequest(new { mensaje = ex.Message });
+            return BadRequest(new { mensaje = ex.MensajeParaUsuario() });
         }
         catch (InvalidOperationException ex)
         {
-            return Conflict(new { mensaje = ex.Message });
+            return Conflict(new { mensaje = ex.MensajeParaUsuario() });
         }
     }
 
@@ -406,7 +406,7 @@ public sealed class SeguridadController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -471,7 +471,7 @@ public sealed class SeguridadController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }
@@ -566,7 +566,7 @@ public sealed class SeguridadController : ControllerBase
                 HttpContext.Connection.RemoteIpAddress?.ToString()), cancellationToken);
             return Ok(new { mensaje = "Usuario modificado correctamente." });
         }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
     }
 
     [Authorize(Policy = "Administracion")]

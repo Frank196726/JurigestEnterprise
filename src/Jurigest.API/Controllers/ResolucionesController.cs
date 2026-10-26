@@ -78,7 +78,7 @@ public sealed class ResolucionesController : ControllerBase
         {
             return BadRequest(new
             {
-                mensaje = ex.Message
+                mensaje = ex.MensajeParaUsuario()
             });
         }
     }

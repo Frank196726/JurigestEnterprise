@@ -155,14 +155,17 @@
         }
         else { _nuevo.RolCatalogoId = null; _nuevo.Rol = int.Parse(_seleccionRol); }
     }
-    private bool SeleccionarRolExistente(string nombre)
+    // Cambio de perfil pendiente de confirmar: rol y perfil que se aplicarán al pulsar de nuevo.
+    private (Guid RolId, int Perfil)? _confirmarPerfil;
+
+    private RolItem? BuscarRol(string nombre) =>
+        _roles.FirstOrDefault(x => string.Equals(x.Nombre.Trim(), nombre.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+    private void SeleccionarRolCreado(Guid id, string mensaje)
     {
-        var existente = _roles.FirstOrDefault(x => string.Equals(x.Nombre.Trim(), nombre.Trim(), StringComparison.CurrentCultureIgnoreCase));
-        if (existente is null) return false;
-        _seleccionRol = existente.Id.ToString(); SeleccionarRol();
-        _nombreRol = string.Empty; _perfilRol = 4; _mostrarRol = false;
-        Mostrar($"El rol «{existente.Nombre}» ya existía (perfil {NombrePerfil(existente.Perfil)}) y quedó seleccionado.", true);
-        return true;
+        _seleccionRol = id.ToString(); SeleccionarRol();
+        _nombreRol = string.Empty; _perfilRol = 4; _mostrarRol = false; _confirmarPerfil = null;
+        Mostrar(mensaje, true);
     }
 
     private async Task CrearRolAsync()
@@ -170,24 +173,60 @@
         _guardandoRol = true;
         await SeguroAsync(async () => {
             if (string.IsNullOrWhiteSpace(_nombreRol)) throw new InvalidOperationException("Indica el nombre del rol.");
-            // Los nombres de rol no distinguen mayúsculas: si ya existe, se selecciona el existente.
-            if (SeleccionarRolExistente(_nombreRol)) return;
+
+            // Los nombres de rol no distinguen mayúsculas: si ya existe, se usa el existente.
+            if (BuscarRol(_nombreRol) is { } existente)
+            {
+                await UsarRolExistenteAsync(existente);
+                return;
+            }
+
             using var response = await ApiClient.PostAsync("/api/seguridad/roles", JsonContent.Create(new { nombre = _nombreRol.Trim(), perfil = _perfilRol }));
             if (response.StatusCode == System.Net.HttpStatusCode.Conflict)
             {
-                // Otro administrador pudo crearlo recién: se recarga la lista y se selecciona.
+                // Otro administrador pudo crearlo recién: se recarga la lista y se usa ese rol.
                 _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? [];
-                if (SeleccionarRolExistente(_nombreRol)) return;
+                if (BuscarRol(_nombreRol) is { } recien)
+                {
+                    await UsarRolExistenteAsync(recien);
+                    return;
+                }
             }
             await ValidarAsync(response);
             var creado = await response.Content.ReadFromJsonAsync<RolItem>() ?? throw new InvalidOperationException("No se recibió el rol creado.");
             _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? [];
-            _seleccionRol = creado.Id.ToString(); SeleccionarRol();
-            _nombreRol = string.Empty; _perfilRol = 4; _mostrarRol = false;
-            Mostrar("Rol creado y seleccionado. Ya puedes asignarlo al usuario.", true);
+            SeleccionarRolCreado(creado.Id, "Rol creado y seleccionado. Ya puedes asignarlo al usuario.");
         });
         _guardandoRol = false;
     }
+
+    private async Task UsarRolExistenteAsync(RolItem existente)
+    {
+        if (existente.Perfil == _perfilRol)
+        {
+            SeleccionarRolCreado(existente.Id, $"El rol «{existente.Nombre}» ya existía con perfil {NombrePerfil(existente.Perfil)} y quedó seleccionado.");
+            return;
+        }
+
+        // Cambiar el perfil base afecta a todos los usuarios del rol: se pide un segundo clic.
+        if (_confirmarPerfil != (existente.Id, _perfilRol))
+        {
+            _confirmarPerfil = (existente.Id, _perfilRol);
+            var usuarios = _usuarios.Count(x => x.Rol == existente.Nombre);
+            Mostrar($"El rol «{existente.Nombre}» ya existe con perfil {NombrePerfil(existente.Perfil)}. " +
+                $"Pulsa «Guardar rol» otra vez para cambiar su perfil base a {NombrePerfil(_perfilRol)}: " +
+                $"se aplicará a {usuarios} usuario(s) del rol y sus permisos pasarán a los del perfil {NombrePerfil(_perfilRol)}.", false);
+            return;
+        }
+
+        using var response = await ApiClient.PutAsync($"/api/seguridad/roles/{existente.Id}/perfil", JsonContent.Create(new { perfil = _perfilRol }));
+        await ValidarAsync(response);
+        var perfil = _perfilRol;
+        _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? [];
+        await CargarAsync();
+        SeleccionarRolCreado(existente.Id, $"El rol «{existente.Nombre}» ahora tiene perfil {NombrePerfil(perfil)} y quedó seleccionado.");
+    }
+
     private readonly List<UsuarioResumen> _usuarios = [];
     private CrearUsuarioModel _nuevo = new();
     private bool _cargando = true, _guardando, _exito;

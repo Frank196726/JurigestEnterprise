@@ -51,7 +51,7 @@ public sealed class PermisosController(JurigestDbContext db, PermisosService per
         if (!esBase && !(Guid.TryParse(clave, out var id) && await db.Set<RolCatalogo>().AnyAsync(x => x.Id == id, ct))) return NotFound();
         if (request.Seleccion is null) return BadRequest(new { mensaje = "Debe enviar una selección de permisos." });
         try { PermisosSistema.Validar(request.Seleccion); }
-        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.Message }); }
+        catch (ArgumentException ex) { return BadRequest(new { mensaje = ex.MensajeParaUsuario() }); }
         var actual = await db.Set<PermisosRol>().SingleOrDefaultAsync(x => x.Clave == clave, ct);
         if ((actual?.Version ?? Guid.Empty) != request.Version) return Conflict(new { mensaje = "Otro administrador cambió estos permisos. Recarga antes de guardar." });
         if (actual is null) { actual = new PermisosRol { Clave = clave }; db.Add(actual); }
