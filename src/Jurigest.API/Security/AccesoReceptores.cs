@@ -1,4 +1,6 @@
+using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial;
+using Jurigest.Domain.Seguridad.Entities;
 using Jurigest.Domain.Seguridad.Enums;
 using Jurigest.Persistence.Context;
 using Microsoft.AspNetCore.Mvc;
@@ -112,13 +114,44 @@ public sealed class AccesoReceptores(JurigestDbContext db, IHttpContextAccessor 
 
     /// <summary>
     /// Un usuario con receptores solo puede asignar diligencias a sus propios receptores.
+    /// Reenviar el receptor que el registro ya tiene no es una asignación nueva.
     /// </summary>
-    public async Task<bool> PuedeAsignarAsync(string? receptor, CancellationToken ct)
+    public async Task<bool> PuedeAsignarAsync(
+        string? receptor, RecursoJudicial recurso, Guid? id, CancellationToken ct)
     {
         if (string.IsNullOrWhiteSpace(receptor)) return true;
         var filtro = await ObtenerFiltroAsync(ct);
-        return filtro is null || filtro.EsPropio(receptor);
+        if (filtro is null || filtro.EsPropio(receptor)) return true;
+        return id is Guid recursoId &&
+            receptor.Trim() == (await ObtenerReceptorActualAsync(recurso, recursoId, ct))?.Trim();
     }
+
+    /// <summary>
+    /// Asocia un receptor recién creado al usuario actual cuando este tiene el acceso
+    /// restringido, para que pueda usarlo de inmediato.
+    /// </summary>
+    public async Task AsociarReceptorCreadoAsync(Guid receptorId, CancellationToken ct)
+    {
+        if (await ObtenerFiltroAsync(ct) is null) return;
+        if (!Guid.TryParse(accessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var usuarioId))
+            return;
+
+        db.UsuariosReceptores.Add(new UsuarioReceptor(usuarioId, receptorId));
+        await db.SaveChangesAsync(ct);
+    }
+
+    // Mismo criterio que ActualizarCausa: el receptor de la causa es el de su primera diligencia.
+    private async Task<string?> ObtenerReceptorActualAsync(RecursoJudicial recurso, Guid id, CancellationToken ct) =>
+        recurso switch
+        {
+            RecursoJudicial.Diligencia => await db.Diligencias.AsNoTracking()
+                .Where(d => d.Id == id).Select(d => d.ReceptorJudicial).SingleOrDefaultAsync(ct),
+            RecursoJudicial.Causa => await db.Diligencias.AsNoTracking()
+                .Where(d => d.CausaId == id)
+                .OrderBy(d => d.FechaCreacion).ThenBy(d => d.Id)
+                .Select(d => d.ReceptorJudicial).FirstOrDefaultAsync(ct),
+            _ => null
+        };
 }
 
 public enum RecursoJudicial
@@ -132,8 +165,8 @@ public enum RecursoJudicial
 
 /// <summary>
 /// Responde 404 cuando el recurso de la ruta pertenece a receptores que el usuario
-/// no tiene asociados, y 400 cuando el cuerpo intenta asignar un receptor ajeno
-/// (cualquier argumento con una propiedad <c>ReceptorJudicial</c>).
+/// no tiene asociados, y 400 cuando un <see cref="IAsignaReceptorRequest"/> intenta
+/// asignar un receptor ajeno.
 /// </summary>
 [AttributeUsage(AttributeTargets.Method)]
 public sealed class AccesoPorReceptorAttribute(RecursoJudicial recurso, string parametro = "id")
@@ -144,17 +177,19 @@ public sealed class AccesoPorReceptorAttribute(RecursoJudicial recurso, string p
         var acceso = context.HttpContext.RequestServices.GetRequiredService<AccesoReceptores>();
         var ct = context.HttpContext.RequestAborted;
 
-        if (context.ActionArguments.TryGetValue(parametro, out var valor) && valor is Guid id &&
-            !await acceso.PuedeVerAsync(recurso, id, ct))
+        Guid? id = context.ActionArguments.TryGetValue(parametro, out var valor) && valor is Guid guid
+            ? guid
+            : null;
+
+        if (id is Guid recursoId && !await acceso.PuedeVerAsync(recurso, recursoId, ct))
         {
             context.Result = new NotFoundObjectResult(new { mensaje = "El registro no existe o no está asociado a sus receptores." });
             return;
         }
 
-        foreach (var argumento in context.ActionArguments.Values)
+        foreach (var solicitud in context.ActionArguments.Values.OfType<IAsignaReceptorRequest>())
         {
-            var receptor = argumento?.GetType().GetProperty("ReceptorJudicial")?.GetValue(argumento) as string;
-            if (!await acceso.PuedeAsignarAsync(receptor, ct))
+            if (!await acceso.PuedeAsignarAsync(solicitud.ReceptorJudicial, recurso, id, ct))
             {
                 context.Result = new BadRequestObjectResult(new { mensaje = "Solo puede asignar receptores asociados a su usuario." });
                 return;

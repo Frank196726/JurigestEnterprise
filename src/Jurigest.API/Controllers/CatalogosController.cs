@@ -180,6 +180,7 @@ public sealed class CatalogosController : ControllerBase
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> CrearReceptor(
         [FromBody] CrearCatalogoRequest request,
+        [FromServices] AccesoReceptores acceso,
         CancellationToken cancellationToken)
     {
         if (request is null ||
@@ -214,6 +215,11 @@ public sealed class CatalogosController : ControllerBase
 
         await _receptorRepository.AddAsync(
             receptor,
+            cancellationToken);
+
+        // Si el usuario tiene acceso restringido, el receptor que crea queda asociado a él.
+        await acceso.AsociarReceptorCreadoAsync(
+            receptor.Id,
             cancellationToken);
 
         return Ok(new

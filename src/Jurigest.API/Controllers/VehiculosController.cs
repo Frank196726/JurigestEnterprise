@@ -15,9 +15,8 @@ public sealed class VehiculosController(JurigestDbContext db, AccesoReceptores a
 {
     private async Task<bool> Acceso(Guid id, CancellationToken ct)
     {
-        var diligencia = await db.Diligencias.AsNoTracking().FirstOrDefaultAsync(x => x.Id == id, ct);
-        if (diligencia is null) return false;
-        return await acceso.PuedeVerDiligenciaAsync(id, ct);
+        return await db.Diligencias.AnyAsync(x => x.Id == id, ct) &&
+            await acceso.PuedeVerDiligenciaAsync(id, ct);
     }
     [HttpGet]
     public async Task<IActionResult> Listar(Guid diligenciaId, CancellationToken ct)

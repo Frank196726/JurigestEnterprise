@@ -338,14 +338,6 @@ public sealed class SeguridadController : ControllerBase
             });
         }
 
-        if (request.ReceptorIds is null || request.ReceptorIds.Count == 0)
-        {
-            return BadRequest(new
-            {
-                mensaje = "Debe asociar el usuario a al menos un receptor."
-            });
-        }
-
         if (!Enum.IsDefined(typeof(RolUsuario), request.Rol))
         {
             return BadRequest(new
@@ -553,14 +545,24 @@ public sealed class SeguridadController : ControllerBase
                 return Conflict(new { mensaje = "Ya existe un usuario con ese correo." });
             if (rut is not null && usuarios.Any(x => x.Id != id && x.Rut == rut))
                 return Conflict(new { mensaje = "Ya existe un usuario con ese RUT." });
-            var receptorIds = await Jurigest.Application.Seguridad.ReceptoresUsuario.ValidarAsync(
-                request.ReceptorIds, receptores, cancellationToken);
+            // Sin ReceptorIds se conservan los receptores actuales (clientes anteriores a la asociación).
+            List<Guid>? receptorIds = null;
+            if (request.ReceptorIds is not null)
+            {
+                var actuales = (await repository.GetReceptoresAsignadosAsync([id], cancellationToken))
+                    .Select(x => x.ReceptorId);
+                receptorIds = await Jurigest.Application.Seguridad.ReceptoresUsuario.ValidarAsync(
+                    request.ReceptorIds, receptores, cancellationToken, actuales);
+            }
             usuario.ActualizarDatosPersonales(request.Rut, request.Telefono, request.Direccion, request.NumeroOficina);
             usuario.ActualizarIdentidad(request.Nombre, request.Email!);
-            await repository.UpdateAsync(usuario, receptorIds, cancellationToken);
+            if (receptorIds is null) await repository.UpdateAsync(usuario, cancellationToken);
+            else await repository.UpdateAsync(usuario, receptorIds, cancellationToken);
             await auditoria.AddAsync(new Jurigest.Domain.Seguridad.Entities.AuditoriaSeguridad(
                 Guid.NewGuid(), actorId, "UsuarioModificado", id,
-                $"Se actualizaron los datos del usuario. Receptores asociados: {receptorIds.Count}.",
+                receptorIds is null
+                    ? "Se actualizaron los datos del usuario."
+                    : $"Se actualizaron los datos del usuario. Receptores asociados: {receptorIds.Count}.",
                 HttpContext.Connection.RemoteIpAddress?.ToString()), cancellationToken);
             return Ok(new { mensaje = "Usuario modificado correctamente." });
         }

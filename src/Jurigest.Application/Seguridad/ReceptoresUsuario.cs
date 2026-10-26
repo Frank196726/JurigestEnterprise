@@ -9,12 +9,14 @@ public static class ReceptoresUsuario
 {
     /// <summary>
     /// Valida que se indique al menos un receptor y que todos existan y estén activos.
-    /// Devuelve los identificadores sin duplicados.
+    /// Devuelve los identificadores sin duplicados. Las asociaciones <paramref name="actuales"/>
+    /// a receptores hoy inactivos se conservan, porque la pantalla no puede mostrarlas.
     /// </summary>
     public static async Task<List<Guid>> ValidarAsync(
         IEnumerable<Guid>? receptorIds,
         IReceptorJudicialCatalogoRepository receptores,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IEnumerable<Guid>? actuales = null)
     {
         var ids = (receptorIds ?? [])
             .Where(x => x != Guid.Empty)
@@ -31,6 +33,7 @@ public static class ReceptoresUsuario
         if (ids.Any(id => !activos.Contains(id)))
             throw new ArgumentException("Uno o más receptores seleccionados no existen o están inactivos.");
 
+        ids.AddRange((actuales ?? []).Where(id => !activos.Contains(id) && !ids.Contains(id)));
         return ids;
     }
 }
