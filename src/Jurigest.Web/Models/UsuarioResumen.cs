@@ -10,5 +10,7 @@ public sealed record UsuarioResumen(
     string? NumeroOficina,
     string Rol,
     bool Activo,
-    DateTime FechaCreacion);
+    DateTime FechaCreacion,
+    List<ReceptorAsignado>? Receptores);
+public sealed record ReceptorAsignado(Guid Id, string Nombre);
 public sealed record UsuariosResponse(List<UsuarioResumen> Value, int Count);

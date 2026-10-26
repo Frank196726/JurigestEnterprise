@@ -27,14 +27,10 @@ public sealed class ObtenerPanelEjecutivoHandler
         var causas = await _causas.GetAllAsync(cancellationToken);
         var diligencias = await _diligencias.GetAllAsync(cancellationToken);
 
-        if (!string.IsNullOrWhiteSpace(request.ReceptorAsignado))
+        if (request.Receptores is not null)
         {
-            diligencias = diligencias.Where(d => string.Equals(
-                d.ReceptorJudicial?.Trim(),
-                request.ReceptorAsignado.Trim(),
-                StringComparison.OrdinalIgnoreCase)).ToList();
-            var causaIds = diligencias.Select(d => d.CausaId).ToHashSet();
-            causas = causas.Where(c => causaIds.Contains(c.Id)).ToList();
+            causas = request.Receptores.FiltrarCausas(causas, diligencias);
+            diligencias = request.Receptores.FiltrarDiligencias(diligencias);
         }
 
         // Misma regla que el reporte de causas: RegistrarResultado guarda

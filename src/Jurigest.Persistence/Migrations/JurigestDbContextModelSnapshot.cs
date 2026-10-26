@@ -1238,6 +1238,24 @@ namespace Jurigest.Persistence.Migrations
                     b.ToTable("Usuarios", (string)null);
                 });
 
+            modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.UsuarioReceptor", b =>
+                {
+                    b.Property<Guid>("UsuarioId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid>("ReceptorJudicialId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("FechaAsignacion")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("UsuarioId", "ReceptorJudicialId");
+
+                    b.HasIndex("ReceptorJudicialId");
+
+                    b.ToTable("UsuariosReceptores", (string)null);
+                });
+
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.AvalSolidario", b =>
                 {
                     b.HasOne("Jurigest.Domain.Judicial.Entities.Demandado", null)
@@ -1339,6 +1357,21 @@ namespace Jurigest.Persistence.Migrations
                         .WithMany()
                         .HasForeignKey("RolCatalogoId")
                         .OnDelete(DeleteBehavior.Restrict);
+                });
+
+            modelBuilder.Entity("Jurigest.Domain.Seguridad.Entities.UsuarioReceptor", b =>
+                {
+                    b.HasOne("Jurigest.Domain.Judicial.Catalogos.ReceptorJudicialCatalogo", null)
+                        .WithMany()
+                        .HasForeignKey("ReceptorJudicialId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Jurigest.Domain.Seguridad.Entities.Usuario", null)
+                        .WithMany()
+                        .HasForeignKey("UsuarioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Jurigest.Domain.Judicial.Entities.Causa", b =>

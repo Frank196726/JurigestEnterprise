@@ -10,4 +10,9 @@ public sealed record ObtenerUsuariosResponse(
     string? NumeroOficina,
     string Rol,
     bool Activo,
-    DateTime FechaCreacion);
+    DateTime FechaCreacion,
+    IReadOnlyList<ReceptorAsignadoResponse> Receptores);
+
+public sealed record ReceptorAsignadoResponse(
+    Guid Id,
+    string Nombre);

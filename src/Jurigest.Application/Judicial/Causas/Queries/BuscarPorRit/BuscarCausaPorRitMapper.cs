@@ -1,16 +1,13 @@
+using Jurigest.Application.Judicial;
 using Jurigest.Domain.Judicial.Entities;
 
 namespace Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
 
 internal static class BuscarCausaPorRitMapper
 {
-    // Un receptor solo ve las causas donde tiene diligencias asignadas.
-    public static bool EsVisiblePara(Causa causa, string? receptorAsignado) =>
-        string.IsNullOrWhiteSpace(receptorAsignado) ||
-        causa.Diligencias.Any(d => string.Equals(
-            d.ReceptorJudicial?.Trim(),
-            receptorAsignado.Trim(),
-            StringComparison.OrdinalIgnoreCase));
+    // Un usuario solo ve las causas de sus receptores o las aún sin receptor.
+    public static bool EsVisiblePara(Causa causa, FiltroReceptores? receptores) =>
+        receptores is null || receptores.PermiteCausa(causa.Diligencias);
 
     public static BuscarCausaPorRitResponse Mapear(Causa causa)
     {

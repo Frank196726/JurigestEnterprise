@@ -89,10 +89,36 @@ internal static class SeguridadTestHelper
         return resultado;
     }
 
+    /// <summary>
+    /// Crea un receptor judicial en el catálogo, o devuelve el existente con ese nombre.
+    /// </summary>
+    internal static async Task<Guid> CrearReceptorAsync(
+        HttpClient client,
+        string adminToken,
+        string nombre = "Receptor de pruebas")
+    {
+        using var creado = await EnviarAutorizadoAsync(
+            client, HttpMethod.Post, "/api/Catalogos/receptores", adminToken, new { nombre });
+        if (creado.StatusCode != HttpStatusCode.Conflict)
+        {
+            creado.EnsureSuccessStatusCode();
+            using var json = JsonDocument.Parse(await creado.Content.ReadAsStringAsync());
+            return json.RootElement.GetProperty("id").GetGuid();
+        }
+
+        using var listado = await EnviarAutorizadoAsync(
+            client, HttpMethod.Get, "/api/Catalogos/receptores", adminToken);
+        using var receptores = JsonDocument.Parse(await listado.Content.ReadAsStringAsync());
+        return receptores.RootElement.EnumerateArray()
+            .Single(x => x.GetProperty("nombre").GetString() == nombre)
+            .GetProperty("id").GetGuid();
+    }
+
     internal static async Task<Guid> CrearProcuradorAsync(
         HttpClient client,
         string adminToken)
     {
+        var receptorId = await CrearReceptorAsync(client, adminToken);
         using var response = await EnviarAutorizadoAsync(
             client,
             HttpMethod.Post,
@@ -107,7 +133,8 @@ internal static class SeguridadTestHelper
                 rut = "15.003.942-8",
                 telefono = "+56 9 5555 0101",
                 direccion = "Avenida de Pruebas 123",
-                numeroOficina = "Oficina 7"
+                numeroOficina = "Oficina 7",
+                receptorIds = new[] { receptorId }
             });
 
         Assert.Equal(

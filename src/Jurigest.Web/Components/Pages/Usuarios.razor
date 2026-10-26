@@ -30,6 +30,7 @@
                     <button type="button" class="btn btn-secondary" @onclick="() => _mostrarRol = !_mostrarRol">@(_mostrarRol ? "Cancelar nuevo rol" : "+ Agregar rol")</button>
                 </div>
             </div>
+            @SelectorReceptores(_nuevo.ReceptorIds)
             <ValidationSummary class="error-text" />
             <div class="form-actions"><button type="submit" class="btn btn-primary" disabled="@_guardando">@(_guardando ? "Creando…" : "Crear usuario")</button></div>
         </EditForm>
@@ -65,6 +66,7 @@
                         <label><span>N° de oficina *</span><InputText @bind-Value="_edicion.NumeroOficina" maxlength="50" /></label>
                         <label><span>Correo electrónico *</span><InputText type="email" @bind-Value="_edicion.Email" maxlength="200" /></label>
                     </div>
+                    @SelectorReceptores(_edicion.ReceptorIds)
                     <ValidationSummary class="error-text" />
                     <div class="form-actions"><button type="submit" class="btn btn-primary">@(_guardandoEdicion ? "Guardando…" : "Guardar cambios")</button><button type="button" class="btn btn-secondary" @onclick="() => _editandoId = null">Cancelar</button></div>
                 </fieldset>
@@ -73,8 +75,8 @@
     }
     @if (_mensaje is not null) { <div class="message @(_exito ? "success" : "error")">@_mensaje</div> }
     @if (_cargando) { <div class="state-card">Cargando usuarios…</div> }
-    else { <div class="table-card"><table><thead><tr><th>Usuario</th><th>Contacto</th><th>Rol</th><th>Creación</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
-        @foreach (var usuario in _usuarios) { <tr @key="usuario.Id"><td><strong>@usuario.Nombre</strong><small>@(usuario.Rut ?? "RUT no registrado")</small></td><td><strong>@usuario.Email</strong><small>@(usuario.Telefono ?? "Teléfono no registrado") · @(usuario.Direccion ?? "Dirección no registrada") · @(usuario.NumeroOficina ?? "Oficina no registrada")</small></td><td>@usuario.Rol</td><td>@usuario.FechaCreacion.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td><td><span class="status @(usuario.Activo ? "active" : "inactive")">@(usuario.Activo ? "Activo" : "Inactivo")</span></td><td><div class="user-actions"><button type="button" class="btn btn-outline-primary" disabled="@_guardandoEdicion" @onclick="() => Editar(usuario)">Modificar</button><button class="state-action" disabled="@(_procesando == usuario.Id)" @onclick="() => CambiarEstadoAsync(usuario)">@(usuario.Activo ? "Desactivar" : "Activar")</button></div></td></tr> }
+    else { <div class="table-card"><table><thead><tr><th>Usuario</th><th>Contacto</th><th>Rol</th><th>Receptores</th><th>Creación</th><th>Estado</th><th>Acción</th></tr></thead><tbody>
+        @foreach (var usuario in _usuarios) { <tr @key="usuario.Id"><td><strong>@usuario.Nombre</strong><small>@(usuario.Rut ?? "RUT no registrado")</small></td><td><strong>@usuario.Email</strong><small>@(usuario.Telefono ?? "Teléfono no registrado") · @(usuario.Direccion ?? "Dirección no registrada") · @(usuario.NumeroOficina ?? "Oficina no registrada")</small></td><td>@usuario.Rol</td><td>@if (usuario.Receptores is { Count: > 0 } asignados) { <ul class="receptor-tags">@foreach (var receptor in asignados) { <li>@receptor.Nombre</li> }</ul> } else { <small class="sin-receptor">Sin receptor asociado</small> }</td><td>@usuario.FechaCreacion.ToLocalTime().ToString("dd-MM-yyyy HH:mm")</td><td><span class="status @(usuario.Activo ? "active" : "inactive")">@(usuario.Activo ? "Activo" : "Inactivo")</span></td><td><div class="user-actions"><button type="button" class="btn btn-outline-primary" disabled="@_guardandoEdicion" @onclick="() => Editar(usuario)">Modificar</button><button class="state-action" disabled="@(_procesando == usuario.Id)" @onclick="() => CambiarEstadoAsync(usuario)">@(usuario.Activo ? "Desactivar" : "Activar")</button></div></td></tr> }
     </tbody></table></div> }
 </section>
 
@@ -86,13 +88,14 @@
     {
         _mensaje = null;
         _editandoId = usuario.Id;
-        _edicion = new() { Nombre = usuario.Nombre, Email = usuario.Email, Rut = usuario.Rut ?? "", Telefono = usuario.Telefono ?? "", Direccion = usuario.Direccion ?? "", NumeroOficina = usuario.NumeroOficina ?? "" };
+        _edicion = new() { Nombre = usuario.Nombre, Email = usuario.Email, Rut = usuario.Rut ?? "", Telefono = usuario.Telefono ?? "", Direccion = usuario.Direccion ?? "", NumeroOficina = usuario.NumeroOficina ?? "", ReceptorIds = usuario.Receptores?.Select(x => x.Id).Where(id => _receptores.Any(r => r.Id == id)).ToList() ?? [] };
     }
     private async Task GuardarEdicionAsync()
     {
         if (_editandoId is not Guid id) return;
         _guardandoEdicion = true;
         await SeguroAsync(async () => {
+            ExigirReceptor(_edicion.ReceptorIds);
             using var respuesta = await ApiClient.PutAsync($"/api/seguridad/usuarios/{id}", JsonContent.Create(_edicion));
             await ValidarAsync(respuesta);
             _editandoId = null;
@@ -100,6 +103,40 @@
             Mostrar("Usuario modificado correctamente.", true);
         });
         _guardandoEdicion = false;
+    }
+
+    private List<ReceptorItem> _receptores = [];
+    private sealed record ReceptorItem(Guid Id, string Nombre);
+    private RenderFragment SelectorReceptores(List<Guid> seleccion) => __builder =>
+    {
+        <fieldset class="receptor-field">
+            <legend>Receptores asociados * <small>(@seleccion.Count seleccionado@(seleccion.Count == 1 ? "" : "s"))</small></legend>
+            @if (_receptores.Count == 0)
+            {
+                <small>No hay receptores activos registrados. Créalos desde el catálogo de receptores.</small>
+            }
+            else
+            {
+                <div class="receptor-options">
+                    @foreach (var receptor in _receptores)
+                    {
+                        <label class="receptor-option" @key="receptor.Id">
+                            <input type="checkbox" checked="@seleccion.Contains(receptor.Id)" @onchange="e => AlternarReceptor(seleccion, receptor.Id, e.Value is true)" />
+                            <span>@receptor.Nombre</span>
+                        </label>
+                    }
+                </div>
+            }
+        </fieldset>
+    };
+    private static void AlternarReceptor(List<Guid> seleccion, Guid id, bool marcado)
+    {
+        if (marcado) { if (!seleccion.Contains(id)) seleccion.Add(id); }
+        else seleccion.Remove(id);
+    }
+    private static void ExigirReceptor(List<Guid> seleccion)
+    {
+        if (seleccion.Count == 0) throw new InvalidOperationException("Selecciona al menos un receptor para el usuario.");
     }
 
     private List<RolItem> _roles = [];
@@ -139,9 +176,9 @@
     private Guid? _procesando;
     private string? _mensaje;
 
-    protected override async Task OnInitializedAsync() => await SeguroAsync(async () => { _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? []; await CargarAsync(); });
+    protected override async Task OnInitializedAsync() => await SeguroAsync(async () => { _roles = await ApiClient.GetAsync<List<RolItem>>("/api/seguridad/roles") ?? []; _receptores = await ApiClient.GetAsync<List<ReceptorItem>>("/api/Catalogos/receptores") ?? []; await CargarAsync(); });
     private async Task CargarAsync() { var r = await ApiClient.GetAsync<UsuariosResponse>("/api/seguridad/usuarios"); _usuarios.Clear(); if (r?.Value is not null) _usuarios.AddRange(r.Value.OrderBy(x => x.Nombre)); _cargando = false; }
-    private async Task CrearAsync() { _guardando = true; await SeguroAsync(async () => { using var r = await ApiClient.PostAsync("/api/seguridad/usuarios", JsonContent.Create(_nuevo)); await ValidarAsync(r); _nuevo = new(); _seleccionRol = "3"; await CargarAsync(); Mostrar("Usuario creado correctamente.", true); }); _guardando = false; }
+    private async Task CrearAsync() { _guardando = true; await SeguroAsync(async () => { ExigirReceptor(_nuevo.ReceptorIds); using var r = await ApiClient.PostAsync("/api/seguridad/usuarios", JsonContent.Create(_nuevo)); await ValidarAsync(r); _nuevo = new(); _seleccionRol = "3"; await CargarAsync(); Mostrar("Usuario creado correctamente.", true); }); _guardando = false; }
     private async Task CambiarEstadoAsync(UsuarioResumen u) { _procesando = u.Id; await SeguroAsync(async () => { using var r = await ApiClient.PutAsync($"/api/seguridad/usuarios/{u.Id}/estado", JsonContent.Create(new { activo = !u.Activo })); await ValidarAsync(r); await CargarAsync(); Mostrar(u.Activo ? "Usuario desactivado correctamente." : "Usuario activado correctamente.", true); }); _procesando = null; }
     private async Task SeguroAsync(Func<Task> accion) { _mensaje = null; try { await accion(); } catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); } catch (Exception ex) when (ex is HttpRequestException or InvalidOperationException) { Mostrar(ex.Message, false); _cargando = false; } }
     private void Mostrar(string texto, bool exito) { _mensaje = texto; _exito = exito; }

@@ -27,7 +27,7 @@ public sealed class BuscarCausaPorRitHandler
             cancellationToken);
 
         var causa = causas.FirstOrDefault(x =>
-            BuscarCausaPorRitMapper.EsVisiblePara(x, request.ReceptorAsignado));
+            BuscarCausaPorRitMapper.EsVisiblePara(x, request.Receptores));
 
         return causa is null
             ? null

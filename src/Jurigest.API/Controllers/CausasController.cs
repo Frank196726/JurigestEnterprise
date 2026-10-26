@@ -1,3 +1,5 @@
+using Jurigest.Application.Judicial;
+using Jurigest.API.Security;
 using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarCausa;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarIdentificacionParte;
@@ -84,7 +86,7 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerCausasQuery(ObtenerFiltroReceptor()),
+            new ObtenerCausasQuery(await ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
@@ -97,7 +99,7 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerCausaQuery(id, ObtenerFiltroReceptor()),
+            new ObtenerCausaQuery(id, await ObtenerFiltroReceptor()),
             cancellationToken);
 
         if (resultado is null)
@@ -112,6 +114,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpPost("{causaId:guid}/demandados")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> AgregarDemandado(
         Guid causaId, [FromBody] AgregarParteRequest request, CancellationToken cancellationToken)
@@ -129,6 +132,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpPost("{causaId:guid}/demandados/{demandadoId:guid}/avales")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> AgregarAvalSolidario(
         Guid causaId, Guid demandadoId, [FromBody] AgregarParteRequest request,
@@ -147,6 +151,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpPut("{causaId:guid}/demandados/{demandadoId:guid}/identificacion")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "CausasEscritura")]
     public Task<IActionResult> ActualizarDemandado(
         Guid causaId, Guid demandadoId, [FromBody] ActualizarIdentificacionParteRequest request,
@@ -154,6 +159,7 @@ public sealed class CausasController : ControllerBase
         ActualizarIdentificacion(causaId, demandadoId, null, request, cancellationToken);
 
     [HttpPut("{causaId:guid}/demandados/{demandadoId:guid}/avales/{avalId:guid}/identificacion")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "CausasEscritura")]
     public Task<IActionResult> ActualizarAval(
         Guid causaId, Guid demandadoId, Guid avalId,
@@ -182,7 +188,7 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new BuscarCausaPorRitQuery(rit, ObtenerFiltroReceptor()),
+            new BuscarCausaPorRitQuery(rit, await ObtenerFiltroReceptor()),
             cancellationToken);
 
         if (resultado is null)
@@ -204,13 +210,14 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new BuscarCausasPorRitQuery(rit, ObtenerFiltroReceptor()),
+            new BuscarCausasPorRitQuery(rit, await ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
     }
 
     [HttpPut("{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Causa)]
     [Authorize(Policy = "CausasEscritura")]
     public async Task<IActionResult> Actualizar(
     Guid id,
@@ -253,6 +260,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Causa)]
     [Authorize(Policy = "CausasEliminacion")]
     public async Task<IActionResult> Eliminar(
         Guid id,
@@ -266,6 +274,7 @@ public sealed class CausasController : ControllerBase
     }
 
     [HttpPost("{causaId:guid}/diligencias")]
+    [AccesoPorReceptor(RecursoJudicial.Causa, "causaId")]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> CrearDiligencia(
         Guid causaId,
@@ -285,7 +294,8 @@ public sealed class CausasController : ControllerBase
             causaId,
             request.Descripcion,
             request.Tipo,
-            ObtenerFiltroReceptor());
+            await HttpContext.RequestServices.GetRequiredService<AccesoReceptores>()
+                .ObtenerReceptorUnicoAsync(cancellationToken));
 
         var id = await _mediator.Send(
             command,
@@ -302,7 +312,7 @@ public sealed class CausasController : ControllerBase
     [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> ObtenerReporte(CancellationToken cancellationToken)
     {
-        return Ok(await _mediator.Send(new ObtenerReporteCausasQuery(ObtenerFiltroReceptor()), cancellationToken));
+        return Ok(await _mediator.Send(new ObtenerReporteCausasQuery(await ObtenerFiltroReceptor()), cancellationToken));
     }
 
     [HttpGet("panel-ejecutivo")]
@@ -311,17 +321,13 @@ public sealed class CausasController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerPanelEjecutivoQuery(ObtenerFiltroReceptor()),
+            new ObtenerPanelEjecutivoQuery(await ObtenerFiltroReceptor()),
             cancellationToken);
 
         return Ok(resultado);
     }
 
-    private string? ObtenerFiltroReceptor()
-    {
-        var rolAsignado = User.FindFirst("rol_asignado")?.Value;
-        return string.Equals(rolAsignado, "Receptor", StringComparison.OrdinalIgnoreCase)
-            ? User.Identity?.Name
-            : null;
-    }
+    private Task<FiltroReceptores?> ObtenerFiltroReceptor() =>
+        HttpContext.RequestServices.GetRequiredService<AccesoReceptores>()
+            .ObtenerFiltroAsync(HttpContext.RequestAborted);
 }

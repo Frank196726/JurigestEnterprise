@@ -26,6 +26,7 @@ public sealed class PrimerIngresoYAlcanceReceptorTests
             new { nombre = "Receptor", perfil = 3 });
         rolResponse.EnsureSuccessStatusCode();
         var rol = await rolResponse.Content.ReadFromJsonAsync<JsonElement>();
+        var receptorId = await SeguridadTestHelper.CrearReceptorAsync(client, admin.Token);
 
         using var usuarioResponse = await SeguridadTestHelper.EnviarAutorizadoAsync(
             client,
@@ -42,7 +43,8 @@ public sealed class PrimerIngresoYAlcanceReceptorTests
                 email = "marcela@jurigest.test",
                 password = "Temporal.Marcela.2026!",
                 rol = 3,
-                rolCatalogoId = rol.GetProperty("id").GetGuid()
+                rolCatalogoId = rol.GetProperty("id").GetGuid(),
+                receptorIds = new[] { receptorId }
             });
         Assert.Equal(HttpStatusCode.Created, usuarioResponse.StatusCode);
 
@@ -115,7 +117,7 @@ public sealed class PrimerIngresoYAlcanceReceptorTests
         Assert.Equal(2, (await panelFinal.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("totalCausas").GetInt32());
         using var editar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Put,
             $"/api/seguridad/usuarios/{receptor.UsuarioId}", admin.Token,
-            new { nombre = "Marcela Alejandra Vargas Rojas", email = "marcela@jurigest.test", rut = "15.003.942-8", telefono = "999999999", direccion = "Avenida Jurídica 100", numeroOficina = "14" });
+            new { nombre = "Marcela Alejandra Vargas Rojas", email = "marcela@jurigest.test", rut = "15.003.942-8", telefono = "999999999", direccion = "Avenida Jurídica 100", numeroOficina = "14", receptorIds = new[] { receptorId } });
         Assert.Equal(HttpStatusCode.OK, editar.StatusCode);
         receptor = await SeguridadTestHelper.IniciarSesionAsync(client, "marcela@jurigest.test", "Marcela.Definitiva.2026!");
         using var trasRenombrar = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get, "/api/Causas", receptor.Token);

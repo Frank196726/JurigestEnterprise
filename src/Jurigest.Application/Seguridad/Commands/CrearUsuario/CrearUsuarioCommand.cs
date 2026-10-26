@@ -17,6 +17,7 @@ public sealed record CrearUsuarioCommand(
     public string Telefono { get; init; } = string.Empty;
     public string Direccion { get; init; } = string.Empty;
     public string NumeroOficina { get; init; } = string.Empty;
+    public IReadOnlyList<Guid> ReceptorIds { get; init; } = [];
 }
 
 public sealed record CrearUsuarioResult(

@@ -1,3 +1,5 @@
+using Jurigest.Application.Judicial;
+using Jurigest.API.Security;
 using Jurigest.API.Contracts;
 using Jurigest.Application.Judicial.Recibos.Commands.MarcarPagado;
 using Jurigest.Application.Judicial.Recibos.Queries.ObtenerRecibo;
@@ -14,6 +16,7 @@ namespace Jurigest.API.Controllers;
 public sealed class RecibosController : ControllerBase
 {
     [HttpGet("diligencia/{diligenciaId:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Diligencia, "diligenciaId")]
     public async Task<IActionResult> ObtenerPorDiligencia(Guid diligenciaId,
         [FromServices] Jurigest.Application.Abstractions.Persistence.IReciboRepository repository,
         CancellationToken cancellationToken)
@@ -35,13 +38,16 @@ public sealed class RecibosController : ControllerBase
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new ObtenerRecibosQuery(),
+            new ObtenerRecibosQuery(
+                await HttpContext.RequestServices.GetRequiredService<AccesoReceptores>()
+                    .ObtenerFiltroAsync(cancellationToken)),
             cancellationToken);
 
         return Ok(resultado);
     }
 
     [HttpGet("{id:guid}")]
+    [AccesoPorReceptor(RecursoJudicial.Recibo)]
     public async Task<IActionResult> Obtener(
         Guid id,
         CancellationToken cancellationToken)
@@ -62,6 +68,7 @@ public sealed class RecibosController : ControllerBase
     }
 
     [HttpPut("{id:guid}/pagar")]
+    [AccesoPorReceptor(RecursoJudicial.Recibo)]
     [Authorize(Policy = "DiligenciasGestion")]
     public async Task<IActionResult> MarcarPagado(
         Guid id,

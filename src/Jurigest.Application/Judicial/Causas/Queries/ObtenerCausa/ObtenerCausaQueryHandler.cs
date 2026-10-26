@@ -24,11 +24,8 @@ public sealed class ObtenerCausaHandler
         if (causa is null)
             return null;
 
-        if (!string.IsNullOrWhiteSpace(request.ReceptorAsignado) &&
-            !causa.Diligencias.Any(d => string.Equals(
-                d.ReceptorJudicial?.Trim(),
-                request.ReceptorAsignado.Trim(),
-                StringComparison.OrdinalIgnoreCase)))
+        if (request.Receptores is not null &&
+            !request.Receptores.PermiteCausa(causa.Diligencias))
             return null;
 
         var diasSinGestion = causa.ObtenerDiasSinGestion(

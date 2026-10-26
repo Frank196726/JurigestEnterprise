@@ -378,7 +378,8 @@ public sealed class SeguridadController : ControllerBase
                     Rut = request.Rut,
                     Telefono = request.Telefono,
                     Direccion = request.Direccion,
-                    NumeroOficina = request.NumeroOficina
+                    NumeroOficina = request.NumeroOficina,
+                    ReceptorIds = request.ReceptorIds ?? []
                 },
                     cancellationToken);
 
@@ -521,13 +522,14 @@ public sealed class SeguridadController : ControllerBase
         return Ok(usuario);
     }
 
-    public sealed record EditarUsuarioRequest(string Nombre, string Email, string Rut, string Telefono, string Direccion, string NumeroOficina);
+    public sealed record EditarUsuarioRequest(string Nombre, string Email, string Rut, string Telefono, string Direccion, string NumeroOficina, List<Guid>? ReceptorIds);
 
     [Authorize(Policy = "Administracion")]
     [HttpPut("usuarios/{id:guid}")]
     public async Task<IActionResult> EditarUsuario(Guid id, [FromBody] EditarUsuarioRequest request,
         [FromServices] Jurigest.Application.Abstractions.Persistence.IUsuarioRepository repository,
         [FromServices] Jurigest.Application.Abstractions.Persistence.IAuditoriaSeguridadRepository auditoria,
+        [FromServices] Jurigest.Application.Abstractions.Persistence.IReceptorJudicialCatalogoRepository receptores,
         CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? User.FindFirst("sub")?.Value, out var actorId))
@@ -543,11 +545,24 @@ public sealed class SeguridadController : ControllerBase
                 return Conflict(new { mensaje = "Ya existe un usuario con ese correo." });
             if (rut is not null && usuarios.Any(x => x.Id != id && x.Rut == rut))
                 return Conflict(new { mensaje = "Ya existe un usuario con ese RUT." });
+            // Sin ReceptorIds se conservan los receptores actuales (clientes anteriores a la asociación).
+            List<Guid>? receptorIds = null;
+            if (request.ReceptorIds is not null)
+            {
+                var actuales = (await repository.GetReceptoresAsignadosAsync([id], cancellationToken))
+                    .Select(x => x.ReceptorId);
+                receptorIds = await Jurigest.Application.Seguridad.ReceptoresUsuario.ValidarAsync(
+                    request.ReceptorIds, receptores, cancellationToken, actuales);
+            }
             usuario.ActualizarDatosPersonales(request.Rut, request.Telefono, request.Direccion, request.NumeroOficina);
             usuario.ActualizarIdentidad(request.Nombre, request.Email!);
-            await repository.UpdateAsync(usuario, cancellationToken);
+            if (receptorIds is null) await repository.UpdateAsync(usuario, cancellationToken);
+            else await repository.UpdateAsync(usuario, receptorIds, cancellationToken);
             await auditoria.AddAsync(new Jurigest.Domain.Seguridad.Entities.AuditoriaSeguridad(
-                Guid.NewGuid(), actorId, "UsuarioModificado", id, "Se actualizaron los datos del usuario.",
+                Guid.NewGuid(), actorId, "UsuarioModificado", id,
+                receptorIds is null
+                    ? "Se actualizaron los datos del usuario."
+                    : $"Se actualizaron los datos del usuario. Receptores asociados: {receptorIds.Count}.",
                 HttpContext.Connection.RemoteIpAddress?.ToString()), cancellationToken);
             return Ok(new { mensaje = "Usuario modificado correctamente." });
         }

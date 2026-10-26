@@ -1,6 +1,6 @@
 namespace Jurigest.API.Contracts;
 
-public sealed class ActualizarCausaRequest
+public sealed class ActualizarCausaRequest : IAsignaReceptorRequest
 {
     public string Tribunal { get; set; } = string.Empty;
 
