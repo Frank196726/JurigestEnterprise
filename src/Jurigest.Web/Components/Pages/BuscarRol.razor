@@ -51,14 +51,14 @@
 @if (causas.Count > 1)
 {
     <div class="alert alert-info mb-0">
-        <p class="mb-2">El ROL @causas[0].Rit está registrado en @causas.Count tribunales. Seleccione la causa:</p>
+        <p class="mb-2">@(VariasLetras ? $"Hay {causas.Count} causas con el número {IdentificacionCausa.NumeroRol(rit)}" : $"El ROL {causas[0].Rit} está registrado en {causas.Count} tribunales"). Seleccione la causa:</p>
         <div class="d-flex flex-wrap gap-2">
             @foreach (var opcion in causas)
             {
                 <button type="button"
                         class="btn @(opcion.Id == causa?.Id ? "btn-primary" : "btn-outline-primary") btn-sm"
                         @onclick="() => SeleccionarCausaAsync(opcion)">
-                    @opcion.Tribunal
+                    @(VariasLetras ? $"{opcion.Rit} · {opcion.Tribunal}" : opcion.Tribunal)
                 </button>
             }
         </div>
@@ -310,9 +310,14 @@ private bool busquedaInicialEjecutada;
         await CargarDiligenciasAsync(seleccionada.Id);
     }
 
+    // La búsqueda trae también las causas del mismo número con otra letra (C-2580-26 y E-2580-26).
+    private bool VariasLetras => causas.Select(x => x.Rit).Distinct().Count() > 1;
+
+    // Solo cuentan como ocupados los tribunales donde está exactamente este ROL.
     private string UrlMismoRolEnOtroTribunal(CausaResponse actual) =>
         $"/causas/nueva?rit={Uri.EscapeDataString(actual.Rit)}" +
-        string.Concat(causas.Select(x => $"&tribunalActual={Uri.EscapeDataString(x.Tribunal)}"));
+        string.Concat(causas.Where(x => x.Rit == actual.Rit)
+            .Select(x => $"&tribunalActual={Uri.EscapeDataString(x.Tribunal)}"));
 
     private List<DiligenciaResponse> diligencias = new();
 
@@ -366,7 +371,7 @@ private bool busquedaInicialEjecutada;
 
             // Un mismo ROL puede estar en varios tribunales.
             causas = await Api.GetAsync<List<CausaResponse>>(
-                $"api/Causas/rit/{Uri.EscapeDataString(rit.Trim())}/causas") ?? new();
+                $"api/Causas/rit/{Uri.EscapeDataString(rit.Trim())}/causas?cualquierLetra=true") ?? new();
 
             busquedaRealizada = true;
 

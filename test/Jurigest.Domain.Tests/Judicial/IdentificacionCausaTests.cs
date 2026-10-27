@@ -18,6 +18,18 @@ public sealed class IdentificacionCausaTests
     }
 
     [Theory]
+    [InlineData("C-2580-26", "2580-26")]
+    [InlineData("E-2580-26", "2580-26")]
+    [InlineData("e - 2580 - 26", "2580-26")]
+    [InlineData("2580-26", "2580-26")]
+    [InlineData("C-TEST-2026", null)]
+    [InlineData("", null)]
+    public void NumeroRol_IgnoraLaLetraDelTipo(string entrada, string? esperado)
+    {
+        Assert.Equal(esperado, IdentificacionCausa.NumeroRol(entrada));
+    }
+
+    [Theory]
     [InlineData("1", "1°")]
     [InlineData("1°", "1°")]
     [InlineData("2º", "2°")]
