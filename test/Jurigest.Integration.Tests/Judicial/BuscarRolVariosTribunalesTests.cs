@@ -53,6 +53,41 @@ public sealed class BuscarRolVariosTribunalesTests
     }
 
     [Fact]
+    public async Task BuscarTodasPorRit_CualquierLetra_IncluyeOtrasLetrasDelMismoNumero()
+    {
+        await using var factory = new JurigestApiFactory();
+        using var client = factory.CreateClient();
+        await SeguridadTestHelper.CrearAdministradorAsync(client);
+        var admin = await SeguridadTestHelper.IniciarSesionAsync(client,
+            SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
+        var ejecutiva = new Causa("E-55003-26", "1° Juzgado Civil de Santiago", "E / F");
+        var civil = new Causa("C-55003-26", "23° Juzgado Civil de Santiago", "A / B");
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<JurigestDbContext>();
+            db.Causas.Add(ejecutiva);
+            db.Causas.Add(civil);
+            db.Causas.Add(new Causa("C-155003-26", "2° Juzgado Civil de Santiago", "Otro / Numero"));
+            db.Causas.Add(new Causa("C-55003-25", "2° Juzgado Civil de Santiago", "Otro / Año"));
+            await db.SaveChangesAsync();
+        }
+
+        using var respuesta = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get,
+            "/api/Causas/rit/C-55003-26/causas?cualquierLetra=true", admin.Token);
+
+        Assert.Equal(HttpStatusCode.OK, respuesta.StatusCode);
+        var causas = (await respuesta.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray().ToList();
+        // Primero la del ROL buscado y luego la de otra letra; no entran otro número ni otro año.
+        Assert.Equal([civil.Id, ejecutiva.Id], causas.Select(x => x.GetProperty("id").GetGuid()));
+
+        // Sin el parámetro, solo el ROL exacto.
+        using var exacta = await SeguridadTestHelper.EnviarAutorizadoAsync(client, HttpMethod.Get,
+            "/api/Causas/rit/C-55003-26/causas", admin.Token);
+        Assert.Equal([civil.Id], (await exacta.Content.ReadFromJsonAsync<JsonElement>()).EnumerateArray()
+            .Select(x => x.GetProperty("id").GetGuid()));
+    }
+
+    [Fact]
     public async Task BuscarTodasPorRit_SinCausas_DevuelveListaVacia()
     {
         await using var factory = new JurigestApiFactory();

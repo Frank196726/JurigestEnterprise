@@ -125,6 +125,32 @@ public sealed class CausaRepository : ICausaRepository
             .ToListAsync(cancellationToken);
     }
 
+    public async Task<List<Causa>> GetAllByNumeroRolAsync(
+        string rit,
+        CancellationToken cancellationToken)
+    {
+        var normalizado = Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(rit);
+        var numero = Jurigest.Domain.Judicial.IdentificacionCausa.NumeroRol(normalizado);
+        if (numero is null)
+            return await GetAllByRitAsync(rit, cancellationToken);
+
+        var sufijo = $"-{numero}";
+        var candidatas = await _context.Causas
+            .Include(c => c.Demandados)
+            .Include(c => c.Diligencias)
+            .Where(c => c.Rit.Trim().ToUpper() == numero || c.Rit.Trim().ToUpper().EndsWith(sufijo))
+            .ToListAsync(cancellationToken);
+
+        // El LIKE también acepta prefijos que no son una letra de tipo; se descartan aquí.
+        // Primero las del ROL buscado y luego las de otras letras.
+        return candidatas
+            .Where(c => Jurigest.Domain.Judicial.IdentificacionCausa.NumeroRol(c.Rit) == numero)
+            .OrderBy(c => Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(c.Rit) != normalizado)
+            .ThenBy(c => c.Rit)
+            .ThenBy(c => c.FechaCreacion).ThenBy(c => c.Id)
+            .ToList();
+    }
+
     private IQueryable<Causa> ConsultarPorRit(string rit)
     {
         var normalizado = Jurigest.Domain.Judicial.IdentificacionCausa.NormalizarRol(rit);

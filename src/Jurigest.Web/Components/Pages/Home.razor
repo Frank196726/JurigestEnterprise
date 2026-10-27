@@ -32,7 +32,9 @@
 @if (_causasEncontradas.Count > 1)
 {
     <p class="found-count" style="margin:.75rem 0 0;">
-        El ROL @_causasEncontradas[0].Rit está registrado en @_causasEncontradas.Count tribunales.
+        @(_causasEncontradas.Select(x => x.Rit).Distinct().Count() > 1
+            ? $"Hay {_causasEncontradas.Count} causas con el número {IdentificacionCausa.NumeroRol(_rit)}."
+            : $"El ROL {_causasEncontradas[0].Rit} está registrado en {_causasEncontradas.Count} tribunales.")
     </p>
 }
 @foreach (var causaEncontrada in _causasEncontradas)
@@ -151,7 +153,7 @@
         if (string.IsNullOrWhiteSpace(_rit)) return;
         _rit = IdentificacionCausa.NormalizarRol(_rit);
         _buscando = true; _busquedaRealizada = false; _causasEncontradas = []; _mensajeError = null;
-        try { _causasEncontradas = await ApiClient.GetAsync<List<CausaEncontradaResumen>>($"/api/Causas/rit/{Uri.EscapeDataString(_rit.Trim())}/causas") ?? []; _busquedaRealizada = true; }
+        try { _causasEncontradas = await ApiClient.GetAsync<List<CausaEncontradaResumen>>($"/api/Causas/rit/{Uri.EscapeDataString(_rit.Trim())}/causas?cualquierLetra=true") ?? []; _busquedaRealizada = true; }
         catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
         catch (HttpRequestException) { _mensajeError = "No fue posible completar la búsqueda."; }
         finally { _buscando = false; }
@@ -169,7 +171,7 @@
         private void AgregarRolEnOtroTribunal() =>
             Navigation.NavigateTo(
                 $"/causas/nueva?rit={Uri.EscapeDataString(_causasEncontradas[0].Rit)}" +
-                string.Concat(_causasEncontradas.Select(x =>
+                string.Concat(_causasEncontradas.Where(x => x.Rit == _causasEncontradas[0].Rit).Select(x =>
                     $"&tribunalActual={Uri.EscapeDataString(x.Tribunal)}")));
 
         private void NuevaDiligencia(CausaEncontradaResumen causa) =>

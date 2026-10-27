@@ -203,14 +203,16 @@ public sealed class CausasController : ControllerBase
     }
 
     // Un mismo ROL puede estar en varios tribunales: devuelve todas (lista vacía si no hay).
+    // Con cualquierLetra=true también las de otra letra con el mismo número y año.
     [HttpGet("rit/{rit}/causas")]
     [Authorize(Policy = "CausasLectura")]
     public async Task<IActionResult> BuscarTodasPorRit(
         string rit,
+        [FromQuery] bool cualquierLetra,
         CancellationToken cancellationToken)
     {
         var resultado = await _mediator.Send(
-            new BuscarCausasPorRitQuery(rit, await ObtenerFiltroReceptor()),
+            new BuscarCausasPorRitQuery(rit, await ObtenerFiltroReceptor(), cualquierLetra),
             cancellationToken);
 
         return Ok(resultado);

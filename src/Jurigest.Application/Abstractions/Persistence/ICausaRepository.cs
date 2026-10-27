@@ -40,4 +40,9 @@ CancellationToken cancellationToken);
     Task<List<Causa>> GetAllByRitAsync(
         string rit,
         CancellationToken cancellationToken);
+
+    // Causas con el mismo número y año de ROL, sea cual sea la letra (C-2580-26, E-2580-26…).
+    Task<List<Causa>> GetAllByNumeroRolAsync(
+        string rit,
+        CancellationToken cancellationToken);
 }

@@ -550,6 +550,11 @@ public sealed class RegistrarResultadoDiligenciaHandlerTests
             CancellationToken cancellationToken) =>
             Task.FromResult(
                 causa?.Rit == rit ? new List<Causa> { causa } : new List<Causa>());
+
+        public Task<List<Causa>> GetAllByNumeroRolAsync(
+            string rit,
+            CancellationToken cancellationToken) =>
+            GetAllByRitAsync(rit, cancellationToken);
     }
 
     private sealed class DiligenciaRepositoryFake(
