@@ -41,7 +41,8 @@
             <h2>Agregar rol</h2>
             <div class="form-grid">
                 <label><span>Nombre del rol *</span><input class="form-control" maxlength="80" @bind="_nombreRol" @bind:event="oninput" @bind:after="DetectarRolExistente" placeholder="Ej.: Coordinador" /></label>
-                <label><span>Perfil base *</span><select class="form-control" @bind="_perfilRol">
+                <label><span>Perfil base *</span><select class="form-control" @bind="_perfilRol" @bind:after="ElegirPerfil">
+                    <option value="0" disabled>Selecciona un perfil base</option>
                     <option value="4">Consulta — solo lectura</option>
                     <option value="3">Procurador — gestionar diligencias y documentos</option>
                     <option value="2">Abogado — registrar causas y gestiones</option>
@@ -145,7 +146,8 @@
 
     private List<RolItem> _roles = [];
     private string _seleccionRol = "3", _nombreRol = string.Empty;
-    private int _perfilRol = 4;
+    // _perfilElegido es lo que eligió el administrador; _perfilRol muestra el de un rol existente si el nombre coincide.
+    private int _perfilRol, _perfilElegido;
     private bool _mostrarRol, _guardandoRol;
     private sealed record RolItem(Guid Id, string Nombre, int Perfil);
     private static string NombrePerfil(int perfil) => perfil switch { 1 => "Administrador", 2 => "Abogado", 3 => "Procurador", _ => "Consulta" };
@@ -170,13 +172,19 @@
     private void DetectarRolExistente()
     {
         _confirmarPerfil = null;
-        if (BuscarRol(_nombreRol) is { } existente) _perfilRol = existente.Perfil;
+        _perfilRol = BuscarRol(_nombreRol) is { } existente ? existente.Perfil : _perfilElegido;
+    }
+
+    private void ElegirPerfil()
+    {
+        _confirmarPerfil = null;
+        _perfilElegido = _perfilRol;
     }
 
     private void SeleccionarRolCreado(Guid id, string mensaje)
     {
         _seleccionRol = id.ToString(); SeleccionarRol();
-        _nombreRol = string.Empty; _perfilRol = 4; _mostrarRol = false; _confirmarPerfil = null;
+        _nombreRol = string.Empty; _perfilRol = _perfilElegido = 0; _mostrarRol = false; _confirmarPerfil = null;
         Mostrar(mensaje, true);
     }
 
@@ -185,6 +193,7 @@
         _guardandoRol = true;
         await SeguroAsync(async () => {
             if (string.IsNullOrWhiteSpace(_nombreRol)) throw new InvalidOperationException("Indica el nombre del rol.");
+            if (_perfilRol == 0) throw new InvalidOperationException("Selecciona el perfil base del rol.");
 
             // Los nombres de rol no distinguen mayúsculas: si ya existe, se usa el existente.
             if (BuscarRol(_nombreRol) is { } existente)
