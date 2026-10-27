@@ -23,7 +23,7 @@
                 <label><span>Contraseña temporal</span><InputText type="password" @bind-Value="_nuevo.Password" /></label>
                 <div>
                     <label><span>Rol</span><InputSelect @bind-Value="_seleccionRol" @bind-Value:after="SeleccionarRol">
-                        <option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="4">Consulta</option>
+                        <option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="5">Operador</option><option value="4">Consulta</option>
                         @foreach (var rol in _roles) { <option value="@rol.Id">@rol.Nombre</option> }
                     </InputSelect></label>
                     <small>@(_roles.FirstOrDefault(x => x.Id == _nuevo.RolCatalogoId) is { } rolElegido ? $"Rol {rolElegido.Nombre} · perfil base: {NombrePerfil(_nuevo.Rol)}" : $"Perfil base: {NombrePerfil(_nuevo.Rol)}")</small>
@@ -46,6 +46,7 @@
                     <option value="4">Consulta — solo lectura</option>
                     <option value="3">Procurador — gestionar diligencias y documentos</option>
                     <option value="2">Abogado — registrar causas y gestiones</option>
+                    <option value="5">Operador — registrar causas y gestionar diligencias</option>
 
                 </select></label>
             </div>
@@ -150,7 +151,7 @@
     private int _perfilRol, _perfilElegido;
     private bool _mostrarRol, _guardandoRol;
     private sealed record RolItem(Guid Id, string Nombre, int Perfil);
-    private static string NombrePerfil(int perfil) => perfil switch { 1 => "Administrador", 2 => "Abogado", 3 => "Procurador", _ => "Consulta" };
+    private static string NombrePerfil(int perfil) => perfil switch { 1 => "Administrador", 2 => "Abogado", 3 => "Procurador", 5 => "Operador", _ => "Consulta" };
     private void SeleccionarRol()
     {
         if (Guid.TryParse(_seleccionRol, out var id))

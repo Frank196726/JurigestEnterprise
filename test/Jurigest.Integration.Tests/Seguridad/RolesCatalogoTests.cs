@@ -9,7 +9,7 @@ public sealed class RolesCatalogoTests
 {
     [Theory]
     [InlineData("Receptor")]
-    [InlineData("Operador")]
+    [InlineData("Coordinador")]
     [InlineData("Digitador")]
     public async Task RolOperativo_SeAsignaYPuedeGestionarSinAdministrarUsuarios(string nombre)
     {

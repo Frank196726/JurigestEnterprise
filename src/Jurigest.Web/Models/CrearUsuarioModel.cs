@@ -32,6 +32,6 @@ public sealed class CrearUsuarioModel
 
     public List<Guid> ReceptorIds { get; set; } = [];
 
-    [Range(1, 4)]
+    [Range(1, 5)]
     public int Rol { get; set; } = 3;
 }

@@ -25,7 +25,8 @@ public static class PermisosSistema
         perfil == RolUsuario.Administrador ||
         x.Codigo.EndsWith("Lectura") ||
         (perfil is RolUsuario.Abogado or RolUsuario.Procurador && x.Codigo is "DiligenciasGestion" or "DocumentosCarga" or "ResolucionesRegistro") ||
-        (perfil == RolUsuario.Abogado && x.Codigo == "CausasEscritura"))
+        (perfil is RolUsuario.Abogado or RolUsuario.Operador && x.Codigo == "CausasEscritura") ||
+        (perfil == RolUsuario.Operador && x.Codigo == "DiligenciasGestion"))
         .Select(x => x.Codigo).ToArray();
 
     public static void Validar(string[] permisos)
