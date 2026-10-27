@@ -17,7 +17,6 @@ public sealed class RolCatalogoConfiguration : IEntityTypeConfiguration<RolCatal
         builder.HasIndex(x => x.NombreNormalizado).IsUnique();
         builder.HasData(
             new RolCatalogo(Guid.Parse("71000000-0000-0000-0000-000000000001"), "Receptor", RolUsuario.Procurador),
-            new RolCatalogo(Guid.Parse("71000000-0000-0000-0000-000000000002"), "Operador", RolUsuario.Procurador),
             new RolCatalogo(Guid.Parse("71000000-0000-0000-0000-000000000003"), "Digitador", RolUsuario.Procurador));
     }
 }

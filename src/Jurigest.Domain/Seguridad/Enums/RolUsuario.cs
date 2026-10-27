@@ -5,5 +5,6 @@ public enum RolUsuario
     Administrador = 1,
     Abogado = 2,
     Procurador = 3,
-    Consulta = 4
+    Consulta = 4,
+    Operador = 5
 }

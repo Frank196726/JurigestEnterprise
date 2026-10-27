@@ -1057,13 +1057,6 @@ namespace Jurigest.Persistence.Migrations
                         },
                         new
                         {
-                            Id = new Guid("71000000-0000-0000-0000-000000000002"),
-                            Nombre = "Operador",
-                            NombreNormalizado = "OPERADOR",
-                            Perfil = 3
-                        },
-                        new
-                        {
                             Id = new Guid("71000000-0000-0000-0000-000000000003"),
                             Nombre = "Digitador",
                             NombreNormalizado = "DIGITADOR",

@@ -22,7 +22,7 @@ public sealed class RolPerfilYMensajesTests
             client, SeguridadTestHelper.AdminEmail, SeguridadTestHelper.AdminPassword);
 
         using var crearRol = await SeguridadTestHelper.EnviarAutorizadoAsync(
-            client, HttpMethod.Post, "/api/seguridad/roles", admin.Token, new { nombre = "Operador", perfil = 3 });
+            client, HttpMethod.Post, "/api/seguridad/roles", admin.Token, new { nombre = "Coordinador", perfil = 3 });
         crearRol.EnsureSuccessStatusCode();
         var rolId = (await crearRol.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         using var permisos = await SeguridadTestHelper.EnviarAutorizadoAsync(
@@ -67,7 +67,7 @@ public sealed class RolPerfilYMensajesTests
             var guardado = await db.Usuarios.AsNoTracking().SingleAsync(x => x.Email == "operador@jurigest.test");
             Assert.Equal(RolUsuario.Abogado, guardado.Rol);
             Assert.Equal(rolId, guardado.RolCatalogoId);
-            Assert.Equal("Operador", guardado.NombreRolPersonalizado);
+            Assert.Equal("Coordinador", guardado.NombreRolPersonalizado);
             Assert.False(await db.Set<PermisosRol>().AnyAsync(x => x.Clave == rolId.ToString()));
         }
 
