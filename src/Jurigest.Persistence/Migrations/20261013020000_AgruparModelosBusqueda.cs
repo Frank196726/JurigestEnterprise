@@ -2,6 +2,7 @@
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 namespace Jurigest.Persistence.Migrations;
+
 [DbContext(typeof(JurigestDbContext))]
 [Migration("20261013020000_AgruparModelosBusqueda")]
 public class AgruparModelosBusqueda : Migration

@@ -74,6 +74,13 @@ dotnet build src/Jurigest.API -c Release
 dotnet build src/Jurigest.Web -c Release
 ```
 
+El formato C# usa cuatro espacios y se comprueba en CI. Para verificar o corregir un proyecto:
+
+```powershell
+dotnet format whitespace src/Jurigest.Application --no-restore --verify-no-changes
+dotnet format whitespace src/Jurigest.Application --no-restore
+```
+
 Para auditar también las dependencias transitivas:
 
 ```powershell
