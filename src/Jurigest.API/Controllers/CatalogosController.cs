@@ -334,7 +334,7 @@ public sealed class CatalogosController : ControllerBase
             return BadRequest(new
             {
                 mensaje =
-                    "Debe indicar nombre y cÃ³digo del tipo de causa."
+                    "Debe indicar nombre y código del tipo de causa."
             });
         }
 
@@ -366,7 +366,7 @@ public sealed class CatalogosController : ControllerBase
             return Conflict(new
             {
                 mensaje =
-                    "Ya existe un tipo de causa con ese cÃ³digo."
+                    "Ya existe un tipo de causa con ese código."
             });
         }
 
