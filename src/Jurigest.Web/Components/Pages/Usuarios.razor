@@ -26,7 +26,7 @@
                         <option value="1">Administrador</option><option value="2">Abogado</option><option value="3">Procurador</option><option value="4">Consulta</option>
                         @foreach (var rol in _roles) { <option value="@rol.Id">@rol.Nombre</option> }
                     </InputSelect></label>
-                    <small>@(_roles.FirstOrDefault(x => x.Id == _nuevo.RolCatalogoId) is { } rolElegido ? $"Rol {rolElegido.Nombre} · perfil base: {NombrePerfil(_nuevo.Rol)}" : $"Perfil de acceso: {NombrePerfil(_nuevo.Rol)}")</small>
+                    <small>@(_roles.FirstOrDefault(x => x.Id == _nuevo.RolCatalogoId) is { } rolElegido ? $"Rol {rolElegido.Nombre} · perfil base: {NombrePerfil(_nuevo.Rol)}" : $"Perfil base: {NombrePerfil(_nuevo.Rol)}")</small>
                     <button type="button" class="btn btn-secondary" @onclick="() => _mostrarRol = !_mostrarRol">@(_mostrarRol ? "Cancelar nuevo rol" : "+ Agregar rol")</button>
                 </div>
             </div>
@@ -40,14 +40,18 @@
         <section class="form-card">
             <h2>Agregar rol</h2>
             <div class="form-grid">
-                <label><span>Nombre del rol *</span><input class="form-control" maxlength="80" @bind="_nombreRol" placeholder="Ej.: Coordinador" /></label>
-                <label><span>Perfil de acceso *</span><select class="form-control" @bind="_perfilRol">
+                <label><span>Nombre del rol *</span><input class="form-control" maxlength="80" @bind="_nombreRol" @bind:event="oninput" @bind:after="DetectarRolExistente" placeholder="Ej.: Coordinador" /></label>
+                <label><span>Perfil base *</span><select class="form-control" @bind="_perfilRol">
                     <option value="4">Consulta — solo lectura</option>
                     <option value="3">Procurador — gestionar diligencias y documentos</option>
                     <option value="2">Abogado — registrar causas y gestiones</option>
 
                 </select></label>
             </div>
+            @if (BuscarRol(_nombreRol) is { } rolExistente)
+            {
+                <small>El rol «@rolExistente.Nombre» ya existe con perfil base @NombrePerfil(rolExistente.Perfil). Para cambiarlo, elige otro perfil base y guarda.</small>
+            }
             <button type="button" disabled="@_guardandoRol" @onclick="CrearRolAsync">@(_guardandoRol ? "Guardando…" : "Guardar rol")</button>
         </section>
     }
@@ -159,7 +163,15 @@
     private (Guid RolId, int Perfil)? _confirmarPerfil;
 
     private RolItem? BuscarRol(string nombre) =>
+        string.IsNullOrWhiteSpace(nombre) ? null :
         _roles.FirstOrDefault(x => string.Equals(x.Nombre.Trim(), nombre.Trim(), StringComparison.CurrentCultureIgnoreCase));
+
+    // Al escribir el nombre de un rol existente se muestra su perfil base actual.
+    private void DetectarRolExistente()
+    {
+        _confirmarPerfil = null;
+        if (BuscarRol(_nombreRol) is { } existente) _perfilRol = existente.Perfil;
+    }
 
     private void SeleccionarRolCreado(Guid id, string mensaje)
     {
