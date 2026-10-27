@@ -99,7 +99,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
             var diligenciaRealizada =
                 new DiligenciaRealizadaCatalogo(
                     diligenciaRealizadaId,
-                    "NotificaciÃ³n personal",
+                    "Notificación personal",
                     (int)TipoDiligencia.Notificacion);
 
             diligenciaRealizada.CambiarArancel(60000m);
@@ -131,8 +131,8 @@ public sealed class FlujoCausaDiligenciaResultadoTests
                 {
                     id = Guid.Empty,
                     rit = "C-RECIBO-001-2026",
-                    tribunal = "Tribunal de integraciÃ³n",
-                    descripcion = "Prueba recibo NotificaciÃ³n personal",
+                    tribunal = "Tribunal de integración",
+                    descripcion = "Prueba recibo Notificación personal",
                     fechaEncargoCausa = fechaEncargo
                 });
 
@@ -153,7 +153,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
                 admin.Token,
                 new
                 {
-                    descripcion = "NotificaciÃ³n de demanda",
+                    descripcion = "Notificación de demanda",
                     tipo = (int)TipoDiligencia.Notificacion
                 });
 
@@ -177,7 +177,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
                     diligenciaRealizadaId,
                     resultado = 1,
                     resultadoDetalle =
-                        "NotificaciÃ³n personal realizada",
+                        "Notificación personal realizada",
                     estampe =
                         "ESTAMPE-PRUEBA-RECIBO-60000",
                     fechaGestion
@@ -262,7 +262,7 @@ public sealed class FlujoCausaDiligenciaResultadoTests
             recibo.DiligenciaRealizadaId);
 
         Assert.Equal(
-            "NotificaciÃ³n personal",
+            "Notificación personal",
             recibo.DiligenciaRealizada);
 
         Assert.Equal(

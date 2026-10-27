@@ -13,7 +13,7 @@ public sealed class CorreccionIngresoTests
     public void PrimeraDiligencia_PermiteCorregirInclusoConResultado(bool conResultado)
     {
         var causa = Crear();
-        var primera = causa.AgregarDiligencia("NotificaciÃ³n");
+        var primera = causa.AgregarDiligencia("Notificación");
         if (conResultado)
             primera.RegistrarResultado(
                 Guid.NewGuid(),

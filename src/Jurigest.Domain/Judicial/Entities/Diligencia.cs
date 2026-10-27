@@ -17,7 +17,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(descripcion))
             throw new ArgumentException(
-                "La descripci�n es obligatoria.",
+                "La descripción es obligatoria.",
                 nameof(descripcion));
 
         CausaId = causaId;
@@ -188,7 +188,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(direccion))
             throw new ArgumentException(
-                "La direcci�n es obligatoria.",
+                "La dirección es obligatoria.",
                 nameof(direccion));
 
         if (string.IsNullOrWhiteSpace(comuna))
@@ -222,7 +222,7 @@ public sealed class Diligencia : Entity<Guid>
     {
         if (string.IsNullOrWhiteSpace(observacion))
             throw new ArgumentException(
-                "La observaci�n es obligatoria.",
+                "La observación es obligatoria.",
                 nameof(observacion));
 
         Observaciones = observacion.Trim();
@@ -233,7 +233,7 @@ public sealed class Diligencia : Entity<Guid>
         if (Estado != EstadoDiligencia.EnProceso)
         {
             throw new InvalidOperationException(
-                "Solo se puede completar una diligencia que est� en proceso.");
+                "Solo se puede completar una diligencia que esté en proceso.");
         }
 
         Estado = EstadoDiligencia.Completada;
@@ -256,7 +256,7 @@ public sealed class Diligencia : Entity<Guid>
         if (Estado != EstadoDiligencia.EnProceso)
         {
             throw new InvalidOperationException(
-                "Solo se puede suspender una diligencia que est� en proceso.");
+                "Solo se puede suspender una diligencia que esté en proceso.");
         }
 
         Estado = EstadoDiligencia.Suspendida;
