@@ -45,12 +45,15 @@ public sealed class JurigestApiFactory
                     ["Jwt:Issuer"] = JwtIssuer,
                     ["Jwt:Audience"] = JwtAudience,
                     ["Jwt:Key"] = JwtKey,
-                    ["Jwt:ExpirationMinutes"] = "60"
+                    ["Jwt:ExpirationMinutes"] = "60",
+                    ["ReverseProxy:WebConfiable"] = ConexionTestFilter.IpWebConfiable
                 });
         });
 
         builder.ConfigureServices(services =>
         {
+            services.AddSingleton<IStartupFilter, ConexionTestFilter>();
+
             services.RemoveAll<
                 IDbContextOptionsConfiguration<
                     JurigestDbContext>>();
