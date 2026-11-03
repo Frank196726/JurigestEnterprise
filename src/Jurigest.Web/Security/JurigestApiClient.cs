@@ -15,14 +15,18 @@ public sealed class JurigestApiClient
     // el scope/circuito de Blazor.
     private readonly string? _identificadorSesionInicial;
 
+    private readonly IpClienteCircuito _ipCliente;
+
     public JurigestApiClient(
         IHttpClientFactory httpClientFactory,
         IHttpContextAccessor httpContextAccessor,
-        ISesionWebStore sesionStore)
+        ISesionWebStore sesionStore,
+        IpClienteCircuito ipCliente)
     {
         _httpClientFactory = httpClientFactory;
         _httpContextAccessor = httpContextAccessor;
         _sesionStore = sesionStore;
+        _ipCliente = ipCliente;
 
         httpContextAccessor.HttpContext?
             .Request.Cookies.TryGetValue(
@@ -106,6 +110,8 @@ public sealed class JurigestApiClient
             new AuthenticationHeaderValue(
                 "Bearer",
                 sesion.AccessToken);
+
+        _ipCliente.Aplicar(request);
 
         if (contenido is not null)
             request.Content = contenido;

@@ -186,6 +186,9 @@ app.Use(async (context, next) =>
 
 app.UseForwardedHeaders();
 
+// IP real del usuario cuando la petición viene de Jurigest.Web.
+app.UseIpClienteWeb(app.Configuration);
+
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

@@ -10,6 +10,17 @@ Use variables de entorno o el almacén de secretos de la plataforma. Tome `deplo
 
 Antes de iniciar, reemplace `AllowedHosts` y `ReverseProxy:KnownProxy` por el dominio y la dirección interna reales. La clave JWT debe tener al menos 64 caracteres aleatorios. La URL pública y la comunicación Web→API deben usar HTTPS.
 
+## IP del usuario en la API
+
+Los navegadores solo hablan con la Web; la API recibe las peticiones desde la Web. Para que el límite de intentos de inicio de sesión (5 por minuto) y de recuperación de contraseña (3 cada 15 minutos) se cuente por usuario, y para que la auditoría guarde la IP del usuario, la Web envía la IP del usuario en la cabecera `X-Jurigest-Cliente-Ip`.
+
+La API solo acepta esa cabecera cuando la conexión viene de una dirección listada en `ReverseProxy:WebConfiable` (variable `ReverseProxy__WebConfiable`, separada por comas). En cualquier otro caso la descarta y usa la IP de la conexión, así que nadie puede cambiar su IP llamando directo a la API.
+
+- `ReverseProxy:WebConfiable` es la dirección con que la Web llega a la API **después** de aplicar `X-Forwarded-For`. Con Web, Nginx y API en el mismo servidor es `127.0.0.1,::1` (valor de `appsettings.Production.json`).
+- Si la Web corre en otro equipo, use su IP interna. No ponga direcciones de usuarios ni rangos públicos.
+- Si se deja vacío, la API ignora la cabecera y vuelve a ver a todos los usuarios con la IP de la Web.
+- El Nginx de la API debe usar `X-Forwarded-For $proxy_add_x_forwarded_for` y `ReverseProxy:KnownProxy` debe ser la IP de Nginx; así un cliente externo nunca aparece como `127.0.0.1`.
+
 ## Publicación
 
 ```powershell

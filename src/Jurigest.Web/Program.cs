@@ -75,7 +75,11 @@ builder.Services.AddHttpClient(
     {
         client.BaseAddress = new Uri(apiBaseUrl);
         client.Timeout = TimeSpan.FromSeconds(30);
-    });
+    })
+    .AddHttpMessageHandler<IpClienteHandler>();
+
+builder.Services.AddTransient<IpClienteHandler>();
+builder.Services.AddScoped<IpClienteCircuito>();
 
 var app = builder.Build();
 
