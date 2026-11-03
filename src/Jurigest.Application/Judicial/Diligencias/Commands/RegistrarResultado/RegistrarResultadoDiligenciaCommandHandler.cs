@@ -52,6 +52,8 @@ public sealed class RegistrarResultadoDiligenciaCommandHandler
                 "La causa asociada a la diligencia no existe.");
         }
 
+        causa.ValidarAdmiteDiligencias();
+
         var diligenciaRealizada =
             await _diligenciaRealizadaCatalogoRepository.GetByIdAsync(
                 request.DiligenciaRealizadaId,

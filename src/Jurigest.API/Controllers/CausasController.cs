@@ -5,6 +5,7 @@ using Jurigest.Application.Judicial.Causas.Commands.ActualizarCausa;
 using Jurigest.Application.Judicial.Causas.Commands.ActualizarIdentificacionParte;
 using Jurigest.Application.Judicial.Causas.Commands.AgregarAvalSolidario;
 using Jurigest.Application.Judicial.Causas.Commands.AgregarDemandado;
+using Jurigest.Application.Judicial.Causas.Commands.CambiarEstadoCausa;
 using Jurigest.Application.Judicial.Causas.Commands.CrearCausa;
 using Jurigest.Application.Judicial.Causas.Commands.EliminarCausa;
 using Jurigest.Application.Judicial.Causas.Queries.BuscarPorRit;
@@ -13,6 +14,7 @@ using Jurigest.Application.Judicial.Causas.Queries.ObtenerCausas;
 using Jurigest.Application.Judicial.Diligencias.Commands.CrearDiligencia;
 using Jurigest.Application.Judicial.Panel.Queries.ObtenerPanelEjecutivo;
 using Jurigest.Application.Judicial.Reportes.Queries.ObtenerReporteCausas;
+using Jurigest.Domain.Judicial.Enums;
 using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -261,6 +263,36 @@ public sealed class CausasController : ControllerBase
         }
     }
 
+    [HttpPut("{id:guid}/estado")]
+    [AccesoPorReceptor(RecursoJudicial.Causa)]
+    [Authorize(Policy = "CausasEscritura")]
+    public async Task<IActionResult> CambiarEstado(
+        Guid id,
+        [FromBody] CambiarEstadoCausaRequest request,
+        CancellationToken cancellationToken)
+    {
+        if (request is null || !Enum.IsDefined(typeof(EstadoCausa), request.Estado))
+        {
+            return BadRequest(new
+            {
+                mensaje = "El estado de la causa no es válido."
+            });
+        }
+
+        try
+        {
+            var actualizada = await _mediator.Send(
+                new CambiarEstadoCausaCommand(id, (EstadoCausa)request.Estado),
+                cancellationToken);
+
+            return actualizada ? NoContent() : NotFound();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return Conflict(new { mensaje = ex.MensajeParaUsuario() });
+        }
+    }
+
     [HttpDelete("{id:guid}")]
     [AccesoPorReceptor(RecursoJudicial.Causa)]
     [Authorize(Policy = "CausasEliminacion")]
@@ -299,9 +331,17 @@ public sealed class CausasController : ControllerBase
             await HttpContext.RequestServices.GetRequiredService<AccesoReceptores>()
                 .ObtenerReceptorUnicoAsync(cancellationToken));
 
-        var id = await _mediator.Send(
-            command,
-            cancellationToken);
+        Guid id;
+        try
+        {
+            id = await _mediator.Send(
+                command,
+                cancellationToken);
+        }
+        catch (Jurigest.Domain.Judicial.CausaNoAdmiteDiligenciasException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
 
         return Ok(new
         {
