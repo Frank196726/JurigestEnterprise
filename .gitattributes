@@ -1,0 +1,5 @@
+# Los archivos que se ejecutan en el servidor Linux deben conservar fin de línea LF.
+deploy/linux/*.sh text eol=lf
+deploy/linux/*.service text eol=lf
+deploy/linux/*.conf text eol=lf
+deploy/linux/*.plantilla text eol=lf

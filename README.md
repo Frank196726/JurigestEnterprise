@@ -100,3 +100,5 @@ La API aplica JWT, roles, revocación de sesiones, bloqueo temporal, auditoría 
 ## Producción
 
 La preparación, variables obligatorias, despliegue, monitoreo y recuperación están documentados en [`docs/PRODUCCION.md`](docs/PRODUCCION.md). Los secretos deben suministrarse mediante variables de entorno o un almacén seguro.
+
+Para instalar en un servidor virtual Ubuntu 24.04 (marcha blanca o producción), siga [`docs/DESPLIEGUE_VPS.md`](docs/DESPLIEGUE_VPS.md). Los scripts están en [`deploy/linux`](deploy/linux).

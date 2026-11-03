@@ -4,6 +4,8 @@
 
 Publique `Jurigest.Web` y `Jurigest.API` como procesos separados detrás de IIS, Nginx o un balanceador que termine TLS. SQL Server debe aceptar conexiones cifradas y no debe exponerse a Internet.
 
+Para un servidor virtual Ubuntu 24.04 hay una instalación automatizada con Nginx, SQL Server Express, HTTPS y respaldos: vea [DESPLIEGUE_VPS.md](DESPLIEGUE_VPS.md).
+
 ## Secretos y configuración
 
 Use variables de entorno o el almacén de secretos de la plataforma. Tome `deploy/production.env.example` únicamente como catálogo de claves. No copie claves JWT, contraseñas SMTP ni cadenas de conexión al repositorio.
@@ -15,8 +17,10 @@ Antes de iniciar, reemplace `AllowedHosts` y `ReverseProxy:KnownProxy` por el do
 ```powershell
 dotnet publish src/Jurigest.API/Jurigest.API.csproj -c Release -o build/api
 dotnet publish src/Jurigest.Web/Jurigest.Web.csproj -c Release -o build/web
-dotnet ef database update --project src/Jurigest.Persistence --startup-project src/Jurigest.API --configuration Release
+dotnet ef database update --project src/Jurigest.Persistence --startup-project src/Jurigest.API --configuration Release --connection "<cadena de conexión de producción>"
 ```
+
+`--connection` es obligatorio: sin él, `dotnet ef` usa la cadena fija de `JurigestDbContextFactory` (`localhost\SQLEXPRESS`) y migra la base local en vez de la de producción.
 
 Ejecute las migraciones una sola vez antes de habilitar la nueva versión. Use una identidad de servicio sin permisos administrativos del sistema operativo.
 
