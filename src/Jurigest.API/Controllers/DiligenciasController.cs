@@ -672,6 +672,10 @@ public sealed class DiligenciasController : ControllerBase
         {
             return Conflict(new { mensaje = ex.MensajeParaUsuario() });
         }
+        catch (Jurigest.Domain.Judicial.CausaNoAdmiteDiligenciasException ex)
+        {
+            return Conflict(new { mensaje = ex.Message });
+        }
         catch (InvalidOperationException ex)
         {
             return NotFound(new

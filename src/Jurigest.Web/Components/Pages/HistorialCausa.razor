@@ -28,8 +28,32 @@
     else if (_causa is not null)
     {
         <section class="case-card">
-            <div><span>RIT</span><strong>@_causa.Rit</strong></div><div><span>Tribunal</span><strong>@_causa.Tribunal</strong></div><div class="description"><span>Descripción</span><strong>@_causa.Descripcion</strong></div>
+            <div><span>RIT</span><strong>@_causa.Rit</strong></div><div><span>Tribunal</span><strong>@_causa.Tribunal</strong></div><div><span>Estado</span><strong>@NombreEstadoCausa(_causa.Estado)</strong></div><div class="description"><span>Descripción</span><strong>@_causa.Descripcion</strong></div>
         </section>
+
+        <AuthorizeView Policy="CausasEscritura">
+            <Authorized>
+                <section class="status-editor">
+                    <label>
+                        <span>Cambiar estado de la causa</span>
+                        <select class="form-control" @bind="_estadoSeleccionado" disabled="@_guardandoEstado">
+                            @foreach (var estado in EstadosDisponibles)
+                            {
+                                <option value="@estado">@NombreEstadoCausa(estado)</option>
+                            }
+                        </select>
+                    </label>
+                    <button type="button" class="btn btn-primary" @onclick="GuardarEstadoAsync"
+                            disabled="@(_guardandoEstado || _estadoSeleccionado == _causa.Estado)">
+                        @(_guardandoEstado ? "Guardando…" : "Guardar estado")
+                    </button>
+                    @if (!string.IsNullOrWhiteSpace(_mensajeEstado))
+                    {
+                        <p class="status-message" role="status">@_mensajeEstado</p>
+                    }
+                </section>
+            </Authorized>
+        </AuthorizeView>
 
         <section class="parties-card">
             <header><div><span class="eyebrow">Partes</span><h2>Demandados</h2></div></header>
@@ -183,6 +207,51 @@
     private ParteForm _editarParte = new();
     private Guid? _editandoDemandadoId, _editandoAvalId;
     private int _tipoPersonaEditada;
+    private int _estadoSeleccionado;
+    private bool _guardandoEstado;
+    private string? _mensajeEstado;
+
+    // "Ingresada" solo se ofrece mientras la causa no tenga gestiones.
+    private IEnumerable<int> EstadosDisponibles =>
+        new[] { 1, 2, 3, 4, 5 }.Where(e => e != 1 || _causa?.FechaGestionCausa is null);
+
+    private static string NombreEstadoCausa(int estado) => estado switch
+    {
+        1 => "Ingresada",
+        2 => "En tramitación",
+        3 => "Suspendida",
+        4 => "Terminada",
+        5 => "Archivada",
+        _ => "Sin estado"
+    };
+
+    private async Task GuardarEstadoAsync()
+    {
+        if (_causa is null || _estadoSeleccionado == _causa.Estado) return;
+        _guardandoEstado = true;
+        _mensajeEstado = null;
+        try
+        {
+            using var response = await ApiClient.PutAsync($"/api/Causas/{CausaId}/estado",
+                JsonContent.Create(new { estado = _estadoSeleccionado }));
+            if (!response.IsSuccessStatusCode)
+            {
+                var error = await response.Content.ReadFromJsonAsync<RespuestaError>();
+                _mensajeEstado = $"No se pudo cambiar el estado: {error?.Mensaje ?? "intente nuevamente."}";
+                _estadoSeleccionado = _causa.Estado;
+                return;
+            }
+            _causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{CausaId}");
+            _estadoSeleccionado = _causa?.Estado ?? _estadoSeleccionado;
+            _mensajeEstado = $"La causa quedó en estado {NombreEstadoCausa(_estadoSeleccionado)}.";
+        }
+        catch (UnauthorizedAccessException) { Navigation.NavigateTo("/login", true); }
+        catch (HttpRequestException) { _mensajeEstado = "No se pudo conectar con el servicio. Inténtalo nuevamente."; }
+        catch (System.Text.Json.JsonException) { _mensajeEstado = "No se pudo cambiar el estado. Intente nuevamente."; }
+        finally { _guardandoEstado = false; }
+    }
+
+    private sealed record RespuestaError(string? Mensaje);
 
     private sealed class ParteForm
     {
@@ -324,6 +393,7 @@
         {
             _causa = await ApiClient.GetAsync<CausaResumen>($"/api/Causas/{CausaId}");
             if (_causa is null) { _error = "La causa solicitada no existe."; return; }
+            _estadoSeleccionado = _causa.Estado;
             var diligencias = await ApiClient.GetAsync<List<DiligenciaHistorialResumen>>($"/api/Diligencias/causa/{CausaId}");
             var resoluciones = await ApiClient.GetAsync<List<ResolucionResumen>>($"/api/Causas/{CausaId}/resoluciones");
             var documentos = await ApiClient.GetAsync<List<DocumentoResumen>>($"/api/Causas/{CausaId}/documentos");

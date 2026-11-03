@@ -274,6 +274,8 @@ public sealed class Causa
     public void RegistrarGestion(
         DateTime fechaGestion)
     {
+        ValidarAdmiteDiligencias();
+
         if (fechaGestion == default)
         {
             throw new ArgumentException(
@@ -300,6 +302,51 @@ public sealed class Causa
 
         FechaGestionCausa =
             fechaGestion;
+
+        // La primera gestión deja la causa en tramitación.
+        if (Estado == EstadoCausa.Ingresada)
+            Estado = EstadoCausa.EnTramitacion;
+    }
+
+    public void CambiarEstado(
+        EstadoCausa nuevoEstado)
+    {
+        if (!Enum.IsDefined(nuevoEstado))
+        {
+            throw new ArgumentException(
+                "El estado de la causa no es válido.",
+                nameof(nuevoEstado));
+        }
+
+        if (nuevoEstado == EstadoCausa.Ingresada &&
+            !EstaSinGestion)
+        {
+            throw new InvalidOperationException(
+                "Una causa con gestiones registradas no puede " +
+                "volver al estado Ingresada.");
+        }
+
+        Estado = nuevoEstado;
+    }
+
+    /// <summary>
+    /// Una causa suspendida, terminada o archivada no recibe
+    /// diligencias nuevas ni resultados de las existentes.
+    /// </summary>
+    public bool AdmiteDiligencias =>
+        Estado is not (EstadoCausa.Suspendida or EstadoCausa.Terminada or EstadoCausa.Archivada);
+
+    public void ValidarAdmiteDiligencias()
+    {
+        if (!AdmiteDiligencias)
+        {
+            throw new CausaNoAdmiteDiligenciasException(Estado switch
+            {
+                EstadoCausa.Suspendida => "suspendida",
+                EstadoCausa.Terminada => "terminada",
+                _ => "archivada"
+            });
+        }
     }
 
     /// <summary>
@@ -356,6 +403,8 @@ public sealed class Causa
     public Diligencia AgregarDiligencia(
         string descripcion)
     {
+        ValidarAdmiteDiligencias();
+
         if (string.IsNullOrWhiteSpace(
                 descripcion))
         {

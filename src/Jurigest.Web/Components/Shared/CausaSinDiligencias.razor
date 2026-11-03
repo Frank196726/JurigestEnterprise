@@ -1,0 +1,26 @@
+@* Aviso para causas suspendidas, terminadas o archivadas, que no admiten diligencias. *@
+<div class="causa-cerrada" role="alert">
+    <strong>Esta causa está @NombreEstadoActual y no admite diligencias</strong>
+    <p>No se pueden agregar diligencias ni registrar resultados mientras la causa esté @NombreEstadoActual. Para continuar, cambie su estado desde el historial de la causa.</p>
+    <div class="acciones">
+        <a class="btn btn-primary" href="@($"/causas/{CausaId}/historial")">Ir al historial</a>
+        <a class="btn btn-secondary" href="@VolverA">Volver</a>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid CausaId { get; set; }
+    [Parameter, EditorRequired] public int Estado { get; set; }
+    [Parameter] public string VolverA { get; set; } = "/causas";
+
+    public static bool NoAdmite(int estado) => estado is 3 or 4 or 5;
+
+    public static string NombreEstado(int estado) => estado switch
+    {
+        3 => "suspendida",
+        4 => "terminada",
+        _ => "archivada"
+    };
+
+    private string NombreEstadoActual => NombreEstado(Estado);
+}

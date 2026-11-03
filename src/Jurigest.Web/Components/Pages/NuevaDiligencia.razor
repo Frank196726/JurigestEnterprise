@@ -46,6 +46,12 @@
             </button>
         </div>
     }
+    else if (_causa is not null &&
+             Jurigest.Web.Components.Shared.CausaSinDiligencias.NoAdmite(_causa.Estado))
+    {
+        <Jurigest.Web.Components.Shared.CausaSinDiligencias CausaId="_causa.Id" Estado="_causa.Estado"
+                                                            VolverA="@($"/diligencias?causaId={_causa.Id}")" />
+    }
     else if (_causa is not null)
     {
         <div class="table-card">

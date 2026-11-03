@@ -57,6 +57,14 @@
         </div>
     }
     else if (_causa is not null &&
+             _diligencia is not null &&
+             _diligencia.Resultado == 0 &&
+             Jurigest.Web.Components.Shared.CausaSinDiligencias.NoAdmite(_causa.Estado))
+    {
+        <Jurigest.Web.Components.Shared.CausaSinDiligencias CausaId="_causa.Id" Estado="_causa.Estado"
+                                                            VolverA="@($"/diligencias?causaId={_causa.Id}")" />
+    }
+    else if (_causa is not null &&
              _diligencia is not null)
     {
         <div class="table-card">
@@ -148,6 +156,13 @@
                 }
 
                 @if (_diligencia.Resultado != 0 &&
+                     Jurigest.Web.Components.Shared.CausaSinDiligencias.NoAdmite(_causa.Estado))
+                {
+                    <p class="alert alert-warning" style="margin-top:1rem;">
+                        La causa está @Jurigest.Web.Components.Shared.CausaSinDiligencias.NombreEstado(_causa.Estado): el resultado no se puede editar.
+                    </p>
+                }
+                else if (_diligencia.Resultado != 0 &&
                      !_editandoResultado)
                 {
                     <div style="
