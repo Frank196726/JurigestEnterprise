@@ -1,0 +1,25 @@
+[Unit]
+Description=Jurigest Enterprise - Web
+After=network.target jurigest-api.service
+
+[Service]
+Type=simple
+User=jurigest
+Group=jurigest
+WorkingDirectory=/opt/jurigest/actual/web
+ExecStart=/opt/jurigest/actual/web/Jurigest.Web
+EnvironmentFile=/etc/jurigest/web.env
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+SyslogIdentifier=jurigest-web
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/jurigest
+
+[Install]
+WantedBy=multi-user.target

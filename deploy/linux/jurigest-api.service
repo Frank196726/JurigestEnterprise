@@ -1,0 +1,27 @@
+[Unit]
+Description=Jurigest Enterprise - API
+After=network.target mssql-server.service
+Wants=mssql-server.service
+
+[Service]
+Type=simple
+User=jurigest
+Group=jurigest
+WorkingDirectory=/opt/jurigest/actual/api
+ExecStart=/opt/jurigest/actual/api/Jurigest.API
+EnvironmentFile=/etc/jurigest/api.env
+Restart=always
+RestartSec=5
+KillSignal=SIGINT
+TimeoutStopSec=30
+SyslogIdentifier=jurigest-api
+
+# Endurecimiento: solo puede escribir en sus directorios de datos.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/jurigest
+
+[Install]
+WantedBy=multi-user.target
